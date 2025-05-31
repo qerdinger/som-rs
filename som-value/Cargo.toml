@@ -5,9 +5,14 @@ edition = "2021"
 
 [dependencies]
 static_assertions = "1.1.0"
+som-value-lbits = { path = "../som-value-lbits", optional = true }
 
 # not that hard a dependency, just used for type hinting in generic code in `value.rs`. If need be, can be removed
 num-bigint = "0.4.6"
 
 anyhow = "1.0.51"
 
+[features]
+default = ["use-self"]
+use-self = []
+use-lbits = ["som-value-lbits"]

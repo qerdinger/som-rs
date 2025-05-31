@@ -1467,6 +1467,7 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "num-bigint",
+ "som-value-lbits",
  "static_assertions",
 ]
 
