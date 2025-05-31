@@ -12,18 +12,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
     bench_group.warm_up_time(Duration::from_millis(1));
     bench_group.measurement_time(Duration::from_secs(1));
 
-    bench_group.bench_function("create_string", |b| {
-        b.iter_with_setup(
-            || GCInterface::init(DEFAULT_HEAP_SIZE, get_callbacks_for_gc()),
-            |gc_interface| {
-                let s = black_box("This is a string !".to_string());
-                let gc_string: Gc<String> = gc_interface.alloc(s);
-                let fstr = BaseValue::new_string(gc_string);
-                black_box(fstr);
-            },
-        )
-    });
-
     bench_group.bench_function("create_integer", |b| {
         b.iter(|| {
             let val: i32 = black_box(random());
@@ -55,10 +43,25 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
         })
     });
 
+    bench_group.bench_function("create_string", |b| {
+        b.iter_with_setup(
+            || GCInterface::init(DEFAULT_HEAP_SIZE, get_callbacks_for_gc()),
+            |gc_interface| {
+                let s = black_box("This is a string !".to_string());
+                let gc_string: Gc<String> = gc_interface.alloc(s);
+                let fstr = BaseValue::new_string(gc_string);
+                black_box(fstr);
+            },
+        )
+    });
+
     let int_val = BaseValue::new_integer(42);
     let double_val = BaseValue::new_double(3.14);
     let bool_val = BaseValue::new_boolean(true);
     let nil_val = BaseValue::NIL;
+    let gc_interface = GCInterface::init(DEFAULT_HEAP_SIZE, get_callbacks_for_gc());
+    let gc_string: Gc<String> = gc_interface.alloc("This is a string !".to_string());
+    let string_val = BaseValue::new_string(gc_string);
 
     bench_group.bench_function("is_integer_check", |b| {
         b.iter(|| {
@@ -66,6 +69,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_integer());
             black_box(bool_val.is_integer());
             black_box(nil_val.is_integer());
+            black_box(string_val.is_integer());
         })
     });
 
@@ -75,6 +79,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_double());
             black_box(bool_val.is_double());
             black_box(nil_val.is_double());
+            black_box(string_val.is_double());
         })
     });
 
@@ -84,6 +89,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_boolean());
             black_box(bool_val.is_boolean());
             black_box(nil_val.is_boolean());
+            black_box(string_val.is_boolean());
         })
     });
 
@@ -93,6 +99,17 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_nil());
             black_box(bool_val.is_nil());
             black_box(nil_val.is_nil());
+            black_box(string_val.is_nil());
+        })
+    });
+
+    bench_group.bench_function("is_string_check", |b| {
+        b.iter(|| {
+            black_box(int_val.is_string());
+            black_box(double_val.is_string());
+            black_box(bool_val.is_string());
+            black_box(nil_val.is_string());
+            black_box(string_val.is_string());
         })
     });
 
@@ -102,6 +119,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_ptr_type());
             black_box(bool_val.is_ptr_type());
             black_box(nil_val.is_ptr_type());
+            black_box(string_val.is_ptr_type());
         })
     });
 
@@ -129,12 +147,19 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
         })
     });
 
+    bench_group.bench_function("extract_string", |b| {
+        b.iter(|| {
+            black_box(string_val.as_string::<Gc<String>>());
+        })
+    });
+
     bench_group.bench_function("tag_extraction", |b| {
         b.iter(|| {
             black_box(int_val.tag());
             black_box(double_val.tag());
             black_box(bool_val.tag());
             black_box(nil_val.tag());
+            black_box(string_val.tag());
         })
     });
 
@@ -144,6 +169,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.payload());
             black_box(bool_val.payload());
             black_box(nil_val.payload());
+            black_box(string_val.payload());
         })
     });
 
