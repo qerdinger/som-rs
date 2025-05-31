@@ -6,9 +6,13 @@ use som_gc::gcref::Gc;
 use som_gc::gc_interface::{GCInterface, SOMAllocator};
 use som_interpreter_bc::gc::get_callbacks_for_gc;
 use som_interpreter_bc::universe::DEFAULT_HEAP_SIZE;
+use std::env;
 
 pub fn bench_nan_boxing(c: &mut Criterion) {
-    let mut bench_group = c.benchmark_group("nan_boxing");
+    let args: Vec<String>  = env::args().collect();
+    let bench_name: &str = if args.len() > 2 { &args[1] } else { "bench_tagging_scheme" };
+    println!("Saving benchmarks as : [{}]", bench_name);
+    let mut bench_group = c.benchmark_group(bench_name);
     bench_group.warm_up_time(Duration::from_millis(1));
     bench_group.measurement_time(Duration::from_secs(1));
 
