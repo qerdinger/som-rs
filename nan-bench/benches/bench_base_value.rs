@@ -1,12 +1,20 @@
+use std::env;
+use rand::random;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::{hint::black_box, time::Duration};
-use rand::random;
-use som_value::value::BaseValue;
+
 use som_gc::gcref::Gc;
 use som_gc::gc_interface::{GCInterface, SOMAllocator};
+
 use som_interpreter_bc::gc::get_callbacks_for_gc;
 use som_interpreter_bc::universe::DEFAULT_HEAP_SIZE;
-use std::env;
+
+#[cfg(feature = "use-som-value")]
+use som_value::value::BaseValue;
+
+#[cfg(feature = "use-som-value-lbits")]
+use som_value_lbits::value::BaseValue;
+
 
 pub fn bench_nan_boxing(c: &mut Criterion) {
     let args: Vec<String>  = env::args().collect();

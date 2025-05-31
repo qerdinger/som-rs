@@ -3,11 +3,19 @@ name = "nan-bench"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["use-som-value"]
+use-som-value = ["som-value"]
+use-som-value-lbits = ["som-value-lbits"]
+
 [dependencies]
 num-bigint = "0.4.6"
-som-value = { path = "../som-value" }
 som-gc = { path = "../som-gc" }
 som-interpreter-bc = { path = "../som-interpreter-bc" }
+
+# Optional som-value implementations
+som-value = { path = "../som-value", optional = true }
+som-value-lbits = { path = "../som-value-lbits", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.6", features = ["html_reports"] }

@@ -938,6 +938,7 @@ dependencies = [
  "som-gc",
  "som-interpreter-bc",
  "som-value",
+ "som-value-lbits",
 ]
 
 [[package]]
@@ -1462,6 +1463,15 @@ dependencies = [
 
 [[package]]
 name = "som-value"
+version = "0.0.3"
+dependencies = [
+ "anyhow",
+ "num-bigint",
+ "static_assertions",
+]
+
+[[package]]
+name = "som-value-lbits"
 version = "0.0.3"
 dependencies = [
  "anyhow",
