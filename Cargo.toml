@@ -7,7 +7,7 @@ members = [
     "som-lexer",
     "som-parser-core",
     "som-parser-symbols",
-    "som-gc", "som-value",
+    "som-gc", "som-value", "nan-bench",
 #    "som-parser-text",
 ]
 resolver = "2"

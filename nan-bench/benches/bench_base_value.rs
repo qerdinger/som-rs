@@ -14,9 +14,9 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             || GCInterface::init(DEFAULT_HEAP_SIZE, get_callbacks_for_gc()),
             |gc_interface| {
                 let s = black_box("Hello, World!".to_string());
-                let gc_string: Gc<String> = gc_interface.alloc(s);
-                let v = BaseValue::new_string(gc_string);
-                black_box(v);
+                //let gc_string: Gc<String> = gc_interface.alloc(s);
+                //let v = BaseValue::new_string(gc_string);
+                black_box(s);
             },
         )
     });
