@@ -2,7 +2,7 @@ use std::{marker::PhantomData, ops::Deref};
 
 use num_bigint::BigInt;
 
-use crate::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
+use crate::value::{BaseValue, POINTER_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[repr(transparent)]
@@ -31,13 +31,15 @@ where
 
     #[inline(always)]
     pub fn is_valid(&self) -> bool {
-        self.value.tag() == T::get_tag()
+        self.value.is_ptr_type()
     }
 
     /// Returns the underlying pointer value.
     #[inline(always)]
     pub fn get(&self) -> Option<PTR> {
-        self.is_valid().then(|| self.value.extract_gc_cell())
+        self.is_valid().then(|| {
+            PTR::from(self.value.extract_pointer_bits())
+        })
     }
 
     /// Returns the underlying pointer value, without checking if it is valid.
@@ -46,7 +48,7 @@ where
     #[inline(always)]
     pub unsafe fn get_unchecked(&self) -> PTR {
         debug_assert!(self.get().is_some());
-        self.value.extract_gc_cell()
+        PTR::from(self.value.extract_pointer_bits())
     }
 }
 
@@ -68,12 +70,12 @@ impl<T, PTR> From<TypedPtrValue<T, PTR>> for BaseValue {
 
 impl HasPointerTag for String {
     fn get_tag() -> u64 {
-        STRING_TAG
+        POINTER_TAG
     }
 }
 
 impl HasPointerTag for BigInt {
     fn get_tag() -> u64 {
-        BIG_INTEGER_TAG
+        POINTER_TAG
     }
 }
