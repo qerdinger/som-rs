@@ -8,6 +8,7 @@ use std::ops::Deref;
 static_assertions::const_assert_eq!(size_of::<f64>(), 8);
 static_assertions::assert_eq_size!(f64, u64, *const ());
 
+pub const VALUE_TAG_BITS: u64 = 3;
 pub const TAG_BITS: u64 = 0b111;
 
 /// Tag bits for the `Nil` type.
@@ -54,7 +55,7 @@ impl BaseValue {
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
         Self {
-            encoded: (value << 3) | tag,
+            encoded: (value << VALUE_TAG_BITS) | tag,
         }
     }
 
@@ -62,7 +63,7 @@ impl BaseValue {
     #[inline(always)]
     pub fn new_boolean(value: bool) -> Self {
         Self {
-            encoded: if value { BOOLEAN_TAG | 1 << 3 } else { BOOLEAN_TAG },
+            encoded: if value { BOOLEAN_TAG | 1 << VALUE_TAG_BITS } else { BOOLEAN_TAG },
         }
     }
 
@@ -96,7 +97,7 @@ impl BaseValue {
     /// Returns the payload bits of the value.
     #[inline(always)]
     pub fn payload(self) -> u64 {
-        self.encoded >> 3
+        self.encoded >> VALUE_TAG_BITS
     }
 
     #[inline(always)]
@@ -122,7 +123,7 @@ impl BaseValue {
     #[inline(always)]
     pub fn new_double(value: f64) -> Self {
         Self {
-            encoded: (value.to_bits() << 3) | DOUBLE_TAG,
+            encoded: (value.to_bits() & !TAG_BITS) | DOUBLE_TAG
         }
     }
 
@@ -260,7 +261,7 @@ impl BaseValue {
     /// Returns this value as a double, if such is its type.
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
-        self.is_double().then(|| f64::from_bits(self.payload()))
+        self.is_double().then(|| f64::from_bits(self.encoded & !TAG_BITS))
     }
 
     /// Returns this value as a boolean, if such is its type.
