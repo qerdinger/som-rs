@@ -1,0 +1,18 @@
+[package]
+name = "lbits-bench"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+num-bigint = "0.4.6"
+som-gc = { path = "../som-gc" }
+som-interpreter-bc = { path = "../som-interpreter-bc" }
+som-value-lbits = { path = "../som-value-lbits" }
+
+[dev-dependencies]
+criterion = { version = "0.6", features = ["html_reports"] }
+rand = "0.9.1"
+
+[[bench]]
+name = "bench_base_value"
+harness = false
