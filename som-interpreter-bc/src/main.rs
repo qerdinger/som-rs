@@ -105,9 +105,9 @@ fn disassemble_class(opts: CLIOptions) -> anyhow::Result<()> {
         _ => universe.load_class(file_stem)?,
     };
 
-    dump_class_methods(class, &opts, file_stem, &mut universe);
+    dump_class_methods(class.clone(), &opts, file_stem, &mut universe);
     println!("-----------------------------------------");
-    dump_class_methods(class.class, &opts, file_stem, &mut universe);
+    dump_class_methods(class.class.clone(), &opts, file_stem, &mut universe);
 
     Ok(())
 }

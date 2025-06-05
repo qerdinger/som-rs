@@ -1,5 +1,8 @@
 use mmtk::util::Address;
-use std::fmt::{Debug, Formatter};
+use std::{
+    fmt::{Debug, Formatter},
+    marker::PhantomPinned,
+};
 
 use crate::mmtk;
 use std::ops::{Deref, DerefMut};
@@ -22,7 +25,7 @@ macro_rules! debug_assert_valid_semispace_ptr_value {
                 if slice.get_true_size() >= 65535 {
                     // pass
                 } else {
-                    assert!(slice.0 .0.is_pointer_to_valid_space(), "Pointer to invalid space.");
+                    assert!(slice.ptr.is_pointer_to_valid_space(), "Pointer to invalid space.");
                 }
             } else if let Some(ptr) = $value.0.as_something::<Gc<()>>() {
                 assert!(ptr.is_pointer_to_valid_space(), "Pointer to invalid space.");
@@ -35,15 +38,16 @@ macro_rules! debug_assert_valid_semispace_ptr_value {
 ///
 /// To note: it could be a `NonNull` instead, and have places that need a "default" value rely on Option<Gc<T>>.
 /// That might be a mild speedup for all I know.
-pub struct Gc<T>(*mut T);
+pub struct Gc<T> {
+    pub ptr: *mut T,
+    _phantom: PhantomPinned,
+}
 
 impl<T> Clone for Gc<T> {
     fn clone(&self) -> Self {
-        *self
+        Gc::new(self.ptr)
     }
 }
-
-impl<T> Copy for Gc<T> {}
 
 impl<T: Debug> Debug for Gc<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -57,13 +61,16 @@ impl<T: Debug> Debug for Gc<T> {
 // Occasionally we want a placeholder. Code definitely refactorable to never need this (we could just use `Option<GCRef>`), but it would likely be a minor perf hit.
 impl<T> Default for Gc<T> {
     fn default() -> Self {
-        Gc(std::ptr::null_mut())
+        Gc {
+            ptr: std::ptr::null_mut(),
+            _phantom: PhantomPinned,
+        }
     }
 }
 
 impl<T> PartialEq for Gc<T> {
     fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.0, other.0)
+        std::ptr::eq(self.ptr, other.ptr)
     }
 }
 
@@ -72,48 +79,63 @@ impl<T> Deref for Gc<T> {
 
     fn deref(&self) -> &T {
         debug_assert_valid_semispace_ptr!(self);
-        unsafe { &*self.0 }
+        unsafe { &*self.ptr }
     }
 }
 
 impl<T> DerefMut for Gc<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         debug_assert_valid_semispace_ptr!(self);
-        unsafe { &mut *self.0 }
+        unsafe { &mut *self.ptr }
     }
 }
 
 impl<T> From<Gc<T>> for u64 {
     fn from(value: Gc<T>) -> Self {
         debug_assert!(!value.is_empty());
-        value.0 as usize as u64
+        value.ptr as usize as u64
     }
 }
 
 impl<T> From<u64> for Gc<T> {
     fn from(ptr: u64) -> Self {
         debug_assert!(ptr != 0);
-        Gc(ptr as usize as *mut T)
+        Gc {
+            ptr: ptr as usize as *mut T,
+            _phantom: PhantomPinned,
+        }
     }
 }
 
 /// Convert an MMTk address into a GC pointer.
 impl<T> From<Address> for Gc<T> {
     fn from(ptr: Address) -> Self {
-        unsafe { Gc(ptr.as_mut_ref()) }
+        unsafe {
+            Gc {
+                ptr: ptr.as_mut_ref(),
+                _phantom: PhantomPinned,
+            }
+        }
     }
 }
 
 impl<T> Gc<T> {
+    pub fn new(ptr: *mut T) -> Self {
+        Gc {
+            ptr,
+            _phantom: PhantomPinned,
+        }
+    }
+
     /// Checks if a frame is "empty", i.e. contains the default value
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
-        self.0.is_null()
+        self.ptr.is_null()
     }
 
     /// Get a const pointer to the underlying data.
     pub fn as_ptr(&self) -> *const T {
-        self.0
+        self.ptr
     }
 
     // /// Return a mutable pointer to the underlying data as an arbitrary type.
@@ -144,8 +166,8 @@ impl<T> Gc<T> {
         }
 
         match gc_interface.get_nbr_collections() % 2 == 0 {
-            true => leftmost_digit(self.0 as usize) == 2,
-            false => leftmost_digit(self.0 as usize) == 4,
+            true => leftmost_digit(self.ptr as usize) == 2,
+            false => leftmost_digit(self.ptr as usize) == 4,
         }
     }
 

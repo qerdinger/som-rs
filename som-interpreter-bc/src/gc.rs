@@ -34,7 +34,7 @@ pub enum BCObjMagicId {
     ArrayVal = 106,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct VecValue(pub GcSlice<Value>);
 
 impl Deref for VecValue {
@@ -246,7 +246,7 @@ pub fn scan_object<'a>(object: ObjectReference, slot_visitor: &'a mut (dyn SlotV
 
                 let instance_as_gc: Gc<Instance> = object.to_raw_address().into();
                 for i in 0..instance.class().get_nbr_fields() {
-                    let val: &Value = Instance::lookup_field(instance_as_gc, i);
+                    let val: &Value = Instance::lookup_field(&instance_as_gc, i);
                     visit_value(val, slot_visitor)
                 }
             }

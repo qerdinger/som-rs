@@ -234,7 +234,11 @@ impl InnerGenCtxt for BlockGenCtxt<'_> {
                     | Bytecode::JumpOnFalseTopNil(jump_offset)
                     | Bytecode::JumpOnTruePop(jump_offset)
                     | Bytecode::JumpOnFalsePop(jump_offset)
-                    | Bytecode::JumpIfGreater(jump_offset) => {
+                    | Bytecode::JumpIfGreater(jump_offset)
+                    | Bytecode::JumpOnNilPop(jump_offset)
+                    | Bytecode::JumpOnNotNilPop(jump_offset)
+                    | Bytecode::JumpOnNilTopTop(jump_offset)
+                    | Bytecode::JumpOnNotNilTopTop(jump_offset) => {
                         let bc_target_idx = maybe_jump_idx + *jump_offset as usize;
                         bc_target_idx == idx || bc_target_idx == idx + 2
                     }
@@ -906,7 +910,7 @@ pub fn compile_class(
     for method in &defn.static_methods {
         let signature = static_class_ctxt.interner.intern(method.signature.as_str());
         let mut method = compile_method(&mut static_class_ctxt, method, gc_interface)?;
-        method.set_holder(static_class_gc_ptr);
+        method.set_holder(&static_class_gc_ptr);
         static_class_ctxt.methods.insert(signature, gc_interface.alloc_with_marker(method, Some(AllocSiteMarker::Method)));
     }
 
@@ -917,14 +921,14 @@ pub fn compile_class(
             //    eprintln!("Warning: Primitive '{}' is not in class definition for class '{}'", signature, defn.name);
             //}
 
-            let method = Method::Primitive(primitive, BasicMethodInfo::new(String::from(signature), static_class_gc_ptr));
+            let method = Method::Primitive(primitive, BasicMethodInfo::new(String::from(signature), static_class_gc_ptr.clone()));
 
             let signature = static_class_ctxt.interner.intern(signature);
             static_class_ctxt.methods.insert(signature, gc_interface.alloc_with_marker(method, Some(AllocSiteMarker::Class)));
         }
     }
 
-    let mut static_class_mut = static_class_gc_ptr; // todo couldn't we have done that before
+    let mut static_class_mut = static_class_gc_ptr.clone(); // todo couldn't we have done that before
     static_class_mut.fields = vec![Value::NIL; static_class_ctxt.fields.len()];
     static_class_mut.field_names = static_class_ctxt.fields.into_iter().collect();
     static_class_mut.methods = static_class_ctxt.methods;
@@ -971,7 +975,7 @@ pub fn compile_class(
     for method in &defn.instance_methods {
         let signature = instance_class_ctxt.interner.intern(method.signature.as_str());
         let mut method = compile_method(&mut instance_class_ctxt, method, gc_interface)?;
-        method.set_holder(instance_class_gc_ptr);
+        method.set_holder(&instance_class_gc_ptr);
         instance_class_ctxt.methods.insert(signature, gc_interface.alloc_with_marker(method, Some(AllocSiteMarker::Method)));
     }
 
@@ -982,13 +986,13 @@ pub fn compile_class(
             //    eprintln!("Warning: Primitive '{}' is not in class definition for class '{}'", signature, defn.name);
             //}
 
-            let method = Method::Primitive(primitive, BasicMethodInfo::new(String::from(signature), instance_class_gc_ptr));
+            let method = Method::Primitive(primitive, BasicMethodInfo::new(String::from(signature), instance_class_gc_ptr.clone()));
             let signature = instance_class_ctxt.interner.intern(signature);
             instance_class_ctxt.methods.insert(signature, gc_interface.alloc_with_marker(method, Some(AllocSiteMarker::Method)));
         }
     }
 
-    let mut instance_class_mut = instance_class_gc_ptr;
+    let mut instance_class_mut = instance_class_gc_ptr.clone();
     // instance_class_mut.fields = instance_class_ctxt.fields.into_iter().map(|name| (name, Value::NIL)).collect();
     instance_class_mut.fields = vec![Value::NIL; instance_class_ctxt.fields.len()];
     instance_class_mut.field_names = instance_class_ctxt.fields.into_iter().collect();

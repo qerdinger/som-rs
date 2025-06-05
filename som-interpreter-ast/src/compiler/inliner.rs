@@ -103,7 +103,7 @@ impl PrimMessageInliner for AstMethodCompilerCtxt<'_> {
                         name
                     )
                 }
-                match self.class.unwrap().get_field_offset_by_name(name) {
+                match self.class.as_ref().unwrap().get_field_offset_by_name(name) {
                     Some(offset) => AstExpression::FieldWrite(offset as u8, Box::new(self.parse_expression_with_inlining(expr))),
                     _ => panic!(
                         "can't turn the GlobalWrite `{}` into a FieldWrite, and GlobalWrite shouldn't exist at runtime",

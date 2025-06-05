@@ -71,7 +71,7 @@ impl Evaluate for AstExpression {
             Self::Block(blk) => blk.evaluate(universe, value_stack),
             Self::LocalExit(expr) => {
                 let value = propagate!(expr.evaluate(universe, value_stack));
-                Return::NonLocal(value, universe.current_frame)
+                Return::NonLocal(value, universe.current_frame.clone())
             }
             Self::NonLocalExit(expr, scope) => {
                 debug_assert_ne!(*scope, 0);
@@ -80,7 +80,7 @@ impl Evaluate for AstExpression {
                 let method_frame = Frame::nth_frame_back(&universe.current_frame, *scope);
 
                 let has_not_escaped = {
-                    let mut current_frame = universe.current_frame;
+                    let mut current_frame = universe.current_frame.clone();
 
                     loop {
                         if current_frame == method_frame {
@@ -88,7 +88,7 @@ impl Evaluate for AstExpression {
                         } else if current_frame.is_empty() {
                             break false;
                         } else {
-                            current_frame = current_frame.prev_frame;
+                            current_frame = current_frame.prev_frame.clone();
                         }
                     }
                 };
@@ -99,7 +99,7 @@ impl Evaluate for AstExpression {
                 } else {
                     // Block has escaped its method frame.
                     let instance = method_frame.get_self();
-                    let frame = universe.current_frame;
+                    let frame = &universe.current_frame;
                     let block = match frame.lookup_argument(0).as_block() {
                         Some(blk) => blk,
                         _ => {
@@ -163,10 +163,10 @@ impl Evaluate for AstLiteral {
                 Return::Local(Value::Array(VecValue(universe.gc_interface.alloc_slice(&output))))
             }
             Self::Integer(int) => Return::Local(Value::Integer(*int)),
-            Self::BigInteger(bigint) => Return::Local(Value::BigInteger(*bigint)),
+            Self::BigInteger(bigint) => Return::Local(Value::BigInteger(bigint.clone())),
             Self::Double(double) => Return::Local(Value::Double(*double)),
             Self::Symbol(sym) => Return::Local(Value::Symbol(*sym)),
-            Self::String(string) => Return::Local(Value::String(*string)),
+            Self::String(string) => Return::Local(Value::String(string.clone())),
         }
     }
 }
@@ -182,8 +182,8 @@ impl Evaluate for Gc<AstBlock> {
         debug_assert_valid_semispace_ptr!(self);
         let mut block_ptr = universe.gc_interface.request_memory_for_type(size_of::<Block>(), Some(som_gc::gc_interface::AllocSiteMarker::Block));
         *block_ptr = Block {
-            block: *self,
-            frame: universe.current_frame,
+            block: self.clone(),
+            frame: universe.current_frame.clone(),
         };
         Return::Local(Value::Block(block_ptr))
     }
@@ -194,8 +194,8 @@ impl AstDispatchNode {
     fn lookup_and_dispatch(&mut self, nbr_args: usize, universe: &mut Universe, value_stack: &mut GlobalValueStack) -> Return {
         let receiver = *value_stack.iter().nth_back(nbr_args - 1).unwrap();
 
-        let invokable = match &self.inline_cache {
-            Some((cached_rcvr_ptr, mut method)) => {
+        let invokable = match &mut self.inline_cache {
+            Some((cached_rcvr_ptr, ref mut method)) => {
                 debug_assert_valid_semispace_ptr!(method);
 
                 if *cached_rcvr_ptr == receiver.class(universe) {
@@ -215,7 +215,7 @@ impl AstDispatchNode {
                 debug_assert_valid_semispace_ptr_value!(receiver);
                 let receiver_class_ref = receiver.class(universe);
                 debug_assert_valid_semispace_ptr!(receiver_class_ref);
-                self.inline_cache = Some((receiver_class_ref, invokable));
+                self.inline_cache = Some((receiver_class_ref, invokable.clone()));
 
                 invokable.invoke(universe, value_stack, nbr_args)
             }

@@ -48,27 +48,6 @@ impl FromArgs for Nil {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct System;
-
-impl TryFrom<Value> for System {
-    type Error = Error;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        if value == Value::SYSTEM {
-            Ok(Self)
-        } else {
-            bail!("could not resolve `Value` as `System`")
-        }
-    }
-}
-
-impl FromArgs for System {
-    fn from_args(arg: Value) -> Result<Self, Error> {
-        Self::try_from(arg)
-    }
-}
-
 impl FromArgs for StringLike {
     fn from_args(arg: Value) -> Result<Self, Error> {
         Self::try_from(arg.0)
@@ -168,7 +147,7 @@ impl IntoValue for Interned {
 
 impl IntoValue for Gc<String> {
     fn into_value(&self) -> Value {
-        Value::String(*self)
+        Value::String(self.clone())
     }
 }
 
@@ -180,37 +159,37 @@ impl IntoValue for char {
 
 impl IntoValue for Gc<BigInt> {
     fn into_value(&self) -> Value {
-        Value::BigInteger(*self)
+        Value::BigInteger(self.clone())
     }
 }
 
 impl IntoValue for VecValue {
     fn into_value(&self) -> Value {
-        Value::Array(*self)
+        Value::Array(self.clone())
     }
 }
 
 impl IntoValue for Gc<Class> {
     fn into_value(&self) -> Value {
-        Value::Class(*self)
+        Value::Class(self.clone())
     }
 }
 
 impl IntoValue for Gc<Instance> {
     fn into_value(&self) -> Value {
-        Value::Instance(*self)
+        Value::Instance(self.clone())
     }
 }
 
 impl IntoValue for Gc<Block> {
     fn into_value(&self) -> Value {
-        Value::Block(*self)
+        Value::Block(self.clone())
     }
 }
 
 impl IntoValue for Gc<Method> {
     fn into_value(&self) -> Value {
-        Value::Invokable(*self)
+        Value::Invokable(self.clone())
     }
 }
 
@@ -250,12 +229,6 @@ impl IntoValue for Value {
 impl IntoValue for Nil {
     fn into_value(&self) -> Value {
         Value::NIL
-    }
-}
-
-impl IntoValue for System {
-    fn into_value(&self) -> Value {
-        Value::SYSTEM
     }
 }
 

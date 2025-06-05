@@ -17,7 +17,7 @@ pub struct Instance {
 impl Instance {
     /// Get the class of which this is an instance from.
     pub fn class(&self) -> Gc<Class> {
-        self.class
+        self.class.clone()
     }
 
     /// Get the superclass of this instance's class.
@@ -31,7 +31,7 @@ impl Instance {
     }
 
     /// Lookup a field in an instance.
-    pub(crate) fn lookup_field(_self: Gc<Instance>, idx: usize) -> &'static Value {
+    pub(crate) fn lookup_field(_self: &Gc<Instance>, idx: usize) -> &'static Value {
         unsafe {
             let field_ptr = Self::get_field_ptr(_self.as_ptr() as usize, idx);
             &*field_ptr
@@ -39,7 +39,7 @@ impl Instance {
     }
 
     /// Assign a field to an instance.
-    pub(crate) fn assign_field(_self: Gc<Self>, idx: usize, value: Value) {
+    pub(crate) fn assign_field(_self: &Gc<Self>, idx: usize, value: Value) {
         unsafe {
             let field_ptr = Self::get_field_ptr(_self.as_ptr() as usize, idx);
             *field_ptr = value

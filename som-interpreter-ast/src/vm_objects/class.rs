@@ -80,7 +80,7 @@ impl Class {
             instance_locals
         };
 
-        let maybe_static_superclass = super_class.map(|cls| cls.class);
+        let maybe_static_superclass = super_class.clone().map(|cls| cls.class.clone());
 
         let static_class = Self {
             name: format!("{} class", defn.name),
@@ -96,7 +96,7 @@ impl Class {
 
         let instance_class = Self {
             name: defn.name.clone(),
-            class: static_class_gc_ptr,
+            class: static_class_gc_ptr.clone(),
             super_class,
             fields: vec![Value::NIL; instance_locals.len()],
             field_names: defn.instance_locals,
@@ -111,11 +111,11 @@ impl Class {
             .iter()
             .map(|method| {
                 let signature = method.signature.clone();
-                let kind = AstMethodCompilerCtxt::get_method_kind(method, Some(static_class_gc_ptr), gc_interface, interner);
+                let kind = AstMethodCompilerCtxt::get_method_kind(method, Some(static_class_gc_ptr.clone()), gc_interface, interner);
                 let method = Method {
                     kind,
                     signature: signature.clone(),
-                    holder: static_class_gc_ptr,
+                    holder: static_class_gc_ptr.clone(),
                 };
                 (interner.intern(signature.as_str()), gc_interface.alloc(method))
             })
@@ -132,7 +132,7 @@ impl Class {
                 let method = Method {
                     kind: MethodKind::Primitive(*primitive),
                     signature: signature.to_string(),
-                    holder: static_class_gc_ptr,
+                    holder: static_class_gc_ptr.clone(),
                 };
                 static_methods.insert(interned_signature, gc_interface.alloc(method));
             }
@@ -143,11 +143,11 @@ impl Class {
             .iter()
             .map(|method| {
                 let interned_signature = interner.intern(&method.signature);
-                let kind = AstMethodCompilerCtxt::get_method_kind(method, Some(instance_class_gc_ptr), gc_interface, interner);
+                let kind = AstMethodCompilerCtxt::get_method_kind(method, Some(instance_class_gc_ptr.clone()), gc_interface, interner);
                 let method = Method {
                     kind,
                     signature: method.signature.clone(),
-                    holder: instance_class_gc_ptr,
+                    holder: instance_class_gc_ptr.clone(),
                 };
                 (interned_signature, gc_interface.alloc(method))
             })
@@ -164,7 +164,7 @@ impl Class {
                 let method = Method {
                     kind: MethodKind::Primitive(*primitive),
                     signature: signature.to_string(),
-                    holder: instance_class_gc_ptr,
+                    holder: instance_class_gc_ptr.clone(),
                 };
                 instance_methods.insert(interned_signature, gc_interface.alloc(method));
             }
@@ -183,17 +183,17 @@ impl Class {
 
     /// Get the class of this class.
     pub fn class(&self) -> Gc<Self> {
-        self.class
+        self.class.clone()
     }
 
     /// Set the class of this class (as a weak reference).
     pub fn set_class(&mut self, class: &Gc<Self>) {
-        self.class = *class;
+        self.class = class.clone()
     }
 
     /// Get the superclass of this class.
     pub fn super_class(&self) -> Option<Gc<Self>> {
-        self.super_class
+        self.super_class.clone()
     }
 
     /// Set the superclass of this class (as a weak reference).
@@ -205,12 +205,12 @@ impl Class {
             self.fields.insert(0, *local);
         }
 
-        self.super_class = Some(*class);
+        self.super_class = Some(class.clone());
     }
 
     /// Search for a given method within this class.
     pub fn lookup_method(&self, signature: Interned) -> Option<Gc<Method>> {
-        self.methods.get(&signature).cloned().or_else(|| self.super_class?.lookup_method(signature))
+        self.methods.get(&signature).cloned().or_else(|| self.super_class()?.lookup_method(signature))
     }
 
     /// Search for a local binding.
@@ -237,7 +237,7 @@ impl Class {
         self.field_names
             .iter()
             .position(|field_name| field_name == name)
-            .map(|pos| pos + self.super_class.map(|scls| scls.get_total_field_nbr()).unwrap_or(0))
+            .map(|pos| pos + self.super_class().map(|scls| scls.get_total_field_nbr()).unwrap_or(0))
             .or_else(|| match self.super_class() {
                 Some(super_class) => super_class.get_field_offset_by_name(name),
                 _ => None,
@@ -245,7 +245,7 @@ impl Class {
     }
 
     pub fn get_total_field_nbr(&self) -> usize {
-        let scls_nbr_fields = match self.super_class {
+        let scls_nbr_fields = match self.super_class() {
             Some(scls) => scls.get_total_field_nbr(),
             None => 0,
         };

@@ -62,7 +62,7 @@ impl TrivialGetterMethod {
         if let Some(cls) = arg.as_class() {
             interpreter.get_current_frame().stack_push(cls.class().lookup_field(self.field_idx as usize))
         } else if let Some(instance) = arg.as_instance() {
-            interpreter.get_current_frame().stack_push(*Instance::lookup_field(instance, self.field_idx as usize))
+            interpreter.get_current_frame().stack_push(*Instance::lookup_field(&instance, self.field_idx as usize))
         } else {
             panic!("trivial getter not called on a class/instance?")
         }
@@ -83,7 +83,7 @@ impl TrivialSetterMethod {
         if let Some(cls) = rcvr.as_class() {
             cls.class().assign_field(self.field_idx as usize, val);
         } else if let Some(instance) = rcvr.as_instance() {
-            Instance::assign_field(instance, self.field_idx as usize, val)
+            Instance::assign_field(&instance, self.field_idx as usize, val)
         } else {
             panic!("trivial getter not called on a class/instance?")
         }

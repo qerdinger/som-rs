@@ -129,6 +129,8 @@ fn basic_interpreter_tests(universe: &mut Universe, stack: &mut GlobalValueStack
         ("NumberOfTests numberOfTests", Value::Integer(65)),
     ];
 
+    let system_value = universe.lookup_global(universe.interner.reverse_lookup("system").unwrap()).unwrap();
+
     for (expr, expected) in tests {
         println!("testing: '{}'", expr);
 
@@ -140,7 +142,7 @@ fn basic_interpreter_tests(universe: &mut Universe, stack: &mut GlobalValueStack
         let mut compiler = AstMethodCompilerCtxt::new(universe.gc_interface, &mut universe.interner);
         let mut ast = compiler.parse_expression(&ast_parser);
 
-        stack.push(Value::SYSTEM);
+        stack.push(system_value);
         let output = universe.eval_with_frame(stack, 0, 1, &mut ast);
 
         match &output {

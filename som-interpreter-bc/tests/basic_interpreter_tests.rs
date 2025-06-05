@@ -64,9 +64,9 @@ fn basic_interpreter_tests(universe: &mut Universe) {
         ("Blocks testEmptyZeroArg", Value::Integer(1)),
         ("Blocks testEmptyOneArg", Value::Integer(1)),
         ("Blocks testEmptyTwoArg", Value::Integer(1)),
-        ("Return testReturnSelf", Value::Class(return_class_ptr)),
-        ("Return testReturnSelfImplicitly", Value::Class(return_class_ptr)),
-        ("Return testNoReturnReturnsSelf", Value::Class(return_class_ptr)),
+        ("Return testReturnSelf", Value::Class(return_class_ptr.clone())),
+        ("Return testReturnSelfImplicitly", Value::Class(return_class_ptr.clone())),
+        ("Return testNoReturnReturnsSelf", Value::Class(return_class_ptr.clone())),
         ("Return testBlockReturnsImplicitlyLastValue", Value::Integer(4)),
         ("IfTrueIfFalse test", Value::Integer(42)),
         ("IfTrueIfFalse test2", Value::Integer(33)),
@@ -80,7 +80,10 @@ fn basic_interpreter_tests(universe: &mut Universe) {
         ("IfTrueIfFalse testIfFalseTrueResult", Value::Class(universe.core.nil_class())),
         ("IfTrueIfFalse testIfFalseFalseResult", Value::Class(universe.core.integer_class())),
         ("CompilerSimplification testReturnConstantInt", Value::Integer(42)),
-        ("CompilerSimplification testReturnSelf", Value::Class(compiler_simplification_class_ptr)),
+        (
+            "CompilerSimplification testReturnSelf",
+            Value::Class(compiler_simplification_class_ptr.clone()),
+        ),
         (
             "CompilerSimplification testReturnSelfImplicitly",
             Value::Class(compiler_simplification_class_ptr),
@@ -122,6 +125,8 @@ fn basic_interpreter_tests(universe: &mut Universe) {
         ("NumberOfTests numberOfTests", Value::Integer(65)),
     ];
 
+    let system_value = universe.lookup_global(universe.interner.reverse_lookup("system").unwrap()).unwrap();
+
     for (counter, (expr, expected)) in tests.iter().enumerate() {
         println!("testing: '{}'", expr);
 
@@ -145,7 +150,7 @@ fn basic_interpreter_tests(universe: &mut Universe) {
 
         let method = class.lookup_method(method_name).expect("method not found ??");
 
-        let frame = Frame::alloc_initial_method(method, &[Value::SYSTEM], universe.gc_interface);
+        let frame = Frame::alloc_initial_method(method, &[system_value], universe.gc_interface);
         let mut interpreter = Interpreter::new(frame);
         if let Some(output) = interpreter.run(universe) {
             assert_eq!(&output, expected, "unexpected test output value");

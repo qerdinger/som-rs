@@ -5,6 +5,7 @@ use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;
 use crate::vm_objects::frame::Frame;
+use crate::vm_objects::instance::Instance;
 use anyhow::{anyhow, Error};
 use som_core::core_classes::CoreClasses;
 use som_core::interner::Interner;
@@ -13,6 +14,7 @@ use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 use std::fs;
 use std::io;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
 /// GC default heap size
@@ -50,7 +52,7 @@ impl Universe {
         let gc_interface = GCInterface::init(heap_size, get_callbacks_for_gc());
 
         // TODO: really, we should take and set the superclass, like the AST does.
-        let mut core: CoreClasses<Gc<Class>> = CoreClasses::from_load_cls_fn(|name: &str, _super_cls: Option<Gc<Class>>| {
+        let mut core: CoreClasses<Gc<Class>> = CoreClasses::from_load_cls_fn(|name: &str, _super_cls: Option<&Gc<Class>>| {
             Self::load_system_class(&mut interner, classpath.as_slice(), name, gc_interface).unwrap()
         });
 
@@ -76,13 +78,18 @@ impl Universe {
         set_super_class(&mut core.false_class, &core.boolean_class, &core.metaclass_class);
 
         for (cls_name, global_cls) in core.iter() {
-            globals.push((interner.intern(cls_name), Value::Class(*global_cls)));
+            globals.push((interner.intern(cls_name), Value::Class(global_cls.clone())));
         }
 
         globals.push((interner.intern("true"), Value::Boolean(true)));
         globals.push((interner.intern("false"), Value::Boolean(false)));
         globals.push((interner.intern("nil"), Value::NIL));
-        globals.push((interner.intern("system"), Value::SYSTEM));
+
+        let system_instance = Value::Instance(gc_interface.alloc(Instance {
+            class: core.system_class(),
+            fields_marker: PhantomData,
+        }));
+        globals.push((interner.intern("system"), system_instance));
 
         Ok(Self {
             globals,
@@ -127,7 +134,7 @@ impl Universe {
                     _ => self.load_class(super_class)?,
                 }
             } else {
-                self.core.object_class
+                self.core.object_class.clone()
             };
 
             let mut class =
@@ -135,7 +142,7 @@ impl Universe {
             set_super_class(&mut class, &super_class, &self.core.metaclass_class);
 
             let symbol = self.intern_symbol(class.name());
-            self.globals.push((symbol, Value::Class(class)));
+            self.globals.push((symbol, Value::Class(class.clone())));
 
             return Ok(class);
         }
@@ -255,10 +262,11 @@ impl Universe {
     /// Call `System>>#initialize:` with the given name, if it is defined.
     pub fn initialize(&mut self, args: Vec<Value>) -> Option<Interpreter> {
         let method_name = self.interner.intern("initialize:");
-        let method = Value::SYSTEM.lookup_method(self, method_name)?;
+        let initialize = self.core.system_class().lookup_method(method_name)?;
+        let system_value = self.lookup_global(self.interner.reverse_lookup("system")?)?;
 
         let args_vec = VecValue(self.gc_interface.alloc_slice(&args));
-        let frame_ptr = Frame::alloc_initial_method(method, &[Value::SYSTEM, Value::Array(args_vec)], self.gc_interface);
+        let frame_ptr = Frame::alloc_initial_method(initialize, &[system_value, Value::Array(args_vec)], self.gc_interface);
         let interpreter = Interpreter::new(frame_ptr);
 
         Some(interpreter)

@@ -8,7 +8,7 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::convert::{Nil, Primitive, StringLike, System};
+use crate::value::convert::{Nil, Primitive, StringLike};
 use crate::value::Value;
 use crate::vm_objects::class::Class;
 use anyhow::{Context, Error};
@@ -50,14 +50,14 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
     Ok(Some(universe.gc_interface.alloc(value)))
 }
 
-fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<System, Error> {
-    pop_args_from_stack!(interp, _a => Value, string => StringLike);
+fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => StringLike);
 
     let string = string.as_str(|sym| universe.lookup_symbol(sym));
     print!("{string}");
     std::io::stdout().flush()?;
 
-    Ok(System)
+    Ok(system)
 }
 
 fn print_newline(_: Value) -> Result<Nil, Error> {
@@ -65,22 +65,22 @@ fn print_newline(_: Value) -> Result<Nil, Error> {
     Ok(Nil)
 }
 
-fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<System, Error> {
-    pop_args_from_stack!(interp, _a => Value, string => StringLike);
+fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => StringLike);
 
     let string = string.as_str(|sym| universe.lookup_symbol(sym));
 
     eprint!("{string}");
     std::io::stderr().flush()?;
 
-    Ok(System)
+    Ok(system)
 }
 
-fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<System, Error> {
-    pop_args_from_stack!(interp, _a => Value, string => StringLike);
+fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => StringLike);
     let string = string.as_str(|sym| universe.lookup_symbol(sym));
     eprintln!("{string}");
-    Ok(System)
+    Ok(system)
 }
 
 fn load(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Class>, Error> {
@@ -145,8 +145,8 @@ fn print_stack_trace(interpreter: &mut Interpreter, _: &mut Universe) -> Result<
         let mut frame_stack = vec![];
         let mut current_frame = interpreter.get_current_frame();
         while !current_frame.is_empty() {
-            frame_stack.push(current_frame);
-            current_frame = current_frame.prev_frame;
+            frame_stack.push(current_frame.clone());
+            current_frame = current_frame.prev_frame.clone();
         }
         frame_stack
     };

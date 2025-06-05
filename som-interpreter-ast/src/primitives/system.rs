@@ -51,7 +51,7 @@ fn load_file(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Va
 }
 
 fn print_string(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, Error> {
-    get_args_from_stack!(stack, _a => Value, string => StringLike);
+    get_args_from_stack!(stack, system => Value, string => StringLike);
     let string = match string {
         StringLike::String(ref string) => string,
         StringLike::Char(char) => &*String::from(char),
@@ -59,7 +59,7 @@ fn print_string(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result
     };
 
     print!("{}", string);
-    Ok(Value::SYSTEM)
+    Ok(system)
 }
 
 fn print_newline(_: Value) -> Result<Value, Error> {
@@ -68,7 +68,7 @@ fn print_newline(_: Value) -> Result<Value, Error> {
 }
 
 fn error_print(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, Error> {
-    get_args_from_stack!(stack, _a => Value, string => StringLike);
+    get_args_from_stack!(stack, system => Value, string => StringLike);
 
     let string = match string {
         StringLike::String(ref string) => string,
@@ -77,13 +77,13 @@ fn error_print(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<
     };
 
     eprint!("{}", string);
-    Ok(Value::SYSTEM)
+    Ok(system)
 }
 
 fn error_println(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, Error> {
     const _: &str = "System>>#errorPrintln:";
 
-    get_args_from_stack!(stack, _a => Value, string => StringLike);
+    get_args_from_stack!(stack, system => Value, string => StringLike);
     let string = match string {
         StringLike::String(ref string) => string,
         StringLike::Char(char) => &*String::from(char),
@@ -91,7 +91,7 @@ fn error_println(universe: &mut Universe, stack: &mut GlobalValueStack) -> Resul
     };
 
     eprintln!("{}", string);
-    Ok(Value::SYSTEM)
+    Ok(system)
 }
 
 fn load(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, Error> {

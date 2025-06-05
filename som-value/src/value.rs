@@ -60,8 +60,6 @@ pub const CELL_BASE_TAG: u64 = 0x8000 | BASE_TAG;
 
 /// Tag bits for the `Nil` type.
 pub const NIL_TAG: u64 = 0b001 | BASE_TAG;
-/// Tag bits for the `System` type.
-pub const SYSTEM_TAG: u64 = 0b010 | BASE_TAG;
 /// Tag bits for the `Integer` type.
 pub const INTEGER_TAG: u64 = 0b011 | BASE_TAG; // Same bit position as `BIG_INTEGER_TAG`
 /// Tag bits for the `Boolean` type.
@@ -72,6 +70,7 @@ pub const SYMBOL_TAG: u64 = 0b101 | BASE_TAG;
 pub const CHAR_TAG: u64 = 0b110 | BASE_TAG;
 
 // /// Tag bits for the `???` type.
+// const RESERVED1_TAG: u64 = 0b010 | BASE_TAG;
 // const RESERVED2_TAG: u64 = 0b111 | BASE_TAG;
 
 // Tags for pointer types
@@ -114,8 +113,6 @@ impl BaseValue {
     pub const FALSE: BaseValue = Self::new(BOOLEAN_TAG, 0);
     /// The `nil` value.
     pub const NIL: BaseValue = Self::new(NIL_TAG, 0);
-    /// The `system` value.
-    pub const SYSTEM: Self = Self::new(SYSTEM_TAG, 0);
     /// The integer `0` value.
     pub const INTEGER_ZERO: Self = Self::new(INTEGER_TAG, 0);
     /// The integer `1` value.
@@ -260,11 +257,6 @@ impl BaseValue {
         self.tag() == NIL_TAG
     }
 
-    /// Returns whether this value is `system`.
-    #[inline(always)]
-    pub fn is_system(self) -> bool {
-        self.tag() == SYSTEM_TAG
-    }
     /// Returns whether this value is an integer.
     #[inline(always)]
     pub fn is_integer(self) -> bool {

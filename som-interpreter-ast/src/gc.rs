@@ -35,7 +35,7 @@ pub enum AstObjMagicId {
 }
 
 // we have to wrap it in our own type to be able to implement traits on it
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct VecValue(pub GcSlice<Value>);
 
 impl Deref for VecValue {
