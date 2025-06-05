@@ -12,9 +12,9 @@ pub const VALUE_TAG_BITS: u64 = 3;
 pub const TAG_BITS: u64 = 0b111;
 
 /// Tag bits for the `Nil` type.
-pub const NIL_TAG: u64 = 0b000;
+pub const NIL_TAG: u64 = 0b000; 
 /// Tag bits for the `System` type.
-pub const SYSTEM_TAG: u64 = 0b001;
+pub const SYSTEM_TAG: u64 = 0b001; // TB removed
 /// Tag bits for the `Integer` type.
 pub const INTEGER_TAG: u64 = 0b010; // Same bit position as `BIG_INTEGER_TAG`
 /// Tag bits for the `Boolean` type.

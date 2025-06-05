@@ -2,6 +2,7 @@
 #[cfg(all(feature = "use-self", feature = "use-lbits"))]
 compile_error!("Only one tagging scheme should be enabled at a time.");
 
+
 #[cfg(feature = "use-lbits")]
 pub use som_value_lbits::*;
 

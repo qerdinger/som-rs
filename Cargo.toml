@@ -10,7 +10,9 @@ members = [
     "som-gc",
     "som-value",
     "som-value-lbits",
+    "g-bench",
     "nan-bench",
+    "lbits-bench",
 #    "som-parser-text",
 ]
 resolver = "2"
