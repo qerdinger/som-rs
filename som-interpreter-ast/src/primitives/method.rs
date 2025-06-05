@@ -22,7 +22,7 @@ pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
 fn holder(invokable: Gc<Method>) -> Result<Value, Error> {
     let holder = invokable.holder();
-    Ok(Value::Class(*holder))
+    Ok(Value::Class(holder.clone()))
 
     // match maybe_holder {
     //     Some(holder) => Ok(Value::Class(holder)),

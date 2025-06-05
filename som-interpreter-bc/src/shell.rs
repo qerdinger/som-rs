@@ -8,9 +8,9 @@ use anyhow::Error;
 use som_gc::gcref::Gc;
 use som_interpreter_bc::compiler;
 use som_interpreter_bc::compiler::compile::compile_class;
+use som_interpreter_bc::vm_objects::frame::Frame;
 use som_interpreter_bc::vm_objects::method::Invoke;
 use som_interpreter_bc::{interpreter::Interpreter, universe::Universe, value::Value};
-use som_interpreter_bc::vm_objects::frame::Frame;
 use som_lexer::{Lexer, Token};
 use som_parser::lang;
 

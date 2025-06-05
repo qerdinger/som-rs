@@ -69,7 +69,7 @@ impl Frame {
         *frame_ptr = Frame::from_block(block_value.as_block().unwrap());
 
         let args = prev_frame.stack_n_last_elements(nbr_args);
-        Frame::init_frame_post_alloc(frame_ptr, args, max_stack_size, *prev_frame);
+        Frame::init_frame_post_alloc(frame_ptr.clone(), args, max_stack_size, prev_frame.clone());
         prev_frame.remove_n_last_elements(nbr_args);
 
         frame_ptr
@@ -96,26 +96,24 @@ impl Frame {
         );
 
         *frame_ptr = Frame::from_method(init_method);
-        Frame::init_frame_post_alloc(frame_ptr, args, max_stack_size, Gc::default());
+        Frame::init_frame_post_alloc(frame_ptr.clone(), args, max_stack_size, Gc::default());
 
         frame_ptr
     }
 
-    pub(crate) fn init_frame_post_alloc(frame_ptr: Gc<Frame>, args: &[Value], stack_size: usize, prev_frame: Gc<Frame>) {
+    pub(crate) fn init_frame_post_alloc(mut frame: Gc<Frame>, args: &[Value], stack_size: usize, prev_frame: Gc<Frame>) {
         unsafe {
-            let mut frame = frame_ptr;
-
             frame.stack_ptr = 0;
 
             frame.max_stack_size = stack_size as u8;
             frame.nbr_args = args.len() as u8;
 
             // initializing arguments from the args slice
-            let args_ptr = frame_ptr.as_ptr().byte_add(OFFSET_TO_STACK + stack_size * size_of::<Value>()) as *mut Value;
+            let args_ptr = frame.as_ptr().byte_add(OFFSET_TO_STACK + stack_size * size_of::<Value>()) as *mut Value;
             std::slice::from_raw_parts_mut(args_ptr, args.len()).copy_from_slice(args);
 
             // setting all locals to NIL.
-            let locals_ptr = frame_ptr.as_ptr().byte_add(OFFSET_TO_STACK + (stack_size + args.len()) * size_of::<Value>()) as *mut Value;
+            let locals_ptr = frame.as_ptr().byte_add(OFFSET_TO_STACK + (stack_size + args.len()) * size_of::<Value>()) as *mut Value;
             for idx in 0..frame.get_nbr_locals() {
                 *locals_ptr.add(idx) = Value::NIL;
             }
@@ -128,7 +126,7 @@ impl Frame {
     fn from_block(block: Gc<Block>) -> Self {
         Self {
             prev_frame: Gc::default(),
-            current_context: block.blk_info,
+            current_context: block.blk_info.clone(),
             bytecode_idx: 0,
             stack_ptr: 0,
             nbr_args: 0,
@@ -194,7 +192,7 @@ impl Frame {
         let self_arg = self.lookup_argument(0);
         match self_arg.as_block() {
             Some(b) => {
-                let block_frame = b.frame.unwrap();
+                let block_frame = b.frame.as_ref().unwrap();
                 block_frame.get_self()
             }
             None => *self_arg,
@@ -209,7 +207,7 @@ impl Frame {
                 let block_frame = b.frame.as_ref().unwrap();
                 block_frame.get_method_holder()
             }
-            None => *self.current_context.holder(),
+            None => self.current_context.holder().clone(),
         }
     }
 
@@ -261,11 +259,11 @@ impl Frame {
 
     pub fn nth_frame_back(current_frame: &Gc<Frame>, n: u8) -> Gc<Frame> {
         if n == 0 {
-            return *current_frame;
+            return current_frame.clone();
         }
 
         let mut target_frame: Gc<Frame> = match current_frame.lookup_argument(0).as_block() {
-            Some(block) => *block.frame.as_ref().unwrap(),
+            Some(block) => block.frame.as_ref().unwrap().clone(),
             None => panic!(
                 "attempting to access a non local var/arg from a method instead of a block: self wasn't blockself but {:?}.",
                 current_frame.lookup_argument(0)
@@ -274,7 +272,7 @@ impl Frame {
         for _ in 1..n {
             target_frame = match &target_frame.lookup_argument(0).as_block() {
                 Some(block) => {
-                    *block.frame.as_ref().unwrap()
+                    block.frame.as_ref().unwrap().clone()
                 }
                 None => panic!("attempting to access a non local var/arg from a method instead of a block (but the original frame we were in was a block): self wasn't blockself but {:?}.", current_frame.lookup_argument(0))
             };
@@ -285,9 +283,9 @@ impl Frame {
     /// nth_frame_back but through prev_frame ptr. TODO: clarify why different implems are needed
     pub fn nth_frame_back_through_frame_list(current_frame: &Gc<Frame>, n: u8) -> Gc<Frame> {
         debug_assert_ne!(n, 0);
-        let mut target_frame = *current_frame;
+        let mut target_frame = current_frame.clone();
         for _ in 1..n {
-            target_frame = target_frame.prev_frame;
+            target_frame = target_frame.prev_frame.clone();
             if target_frame.is_empty() {
                 panic!("empty target frame");
             }

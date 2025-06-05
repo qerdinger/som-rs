@@ -15,8 +15,6 @@ use std::fmt;
 pub enum ValueEnum {
     /// The **nil** value.
     Nil,
-    /// The **system** value.
-    System,
     /// A boolean value (**true** or **false**).
     Boolean(bool),
     /// An integer value.
@@ -47,8 +45,6 @@ impl From<Value> for ValueEnum {
             Self::Double(value)
         } else if value.is_nil() {
             Self::Nil
-        } else if value.is_system() {
-            Self::System
         } else if let Some(value) = value.as_integer() {
             Self::Integer(value)
         } else if let Some(value) = value.as_big_integer() {
@@ -81,7 +77,6 @@ impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
         match value {
             ValueEnum::Nil => Self::NIL,
-            ValueEnum::System => Self::SYSTEM,
             ValueEnum::Boolean(value) => Self::new_boolean(value),
             ValueEnum::Integer(value) => Self::new_integer(value),
             ValueEnum::BigInteger(value) => Self::new_big_integer(value),
@@ -104,7 +99,6 @@ impl ValueEnum {
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         match self {
             Self::Nil => universe.core.nil_class(),
-            Self::System => universe.core.system_class(),
             Self::Boolean(true) => universe.core.true_class(),
             Self::Boolean(false) => universe.core.false_class(),
             Self::Integer(_) => universe.core.integer_class(),
@@ -130,7 +124,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn lookup_local(&self, idx: usize) -> Self {
         match self {
-            Self::Instance(instance_ptr) => (*Instance::lookup_field(*instance_ptr, idx)).into(),
+            Self::Instance(instance_ptr) => (*Instance::lookup_field(instance_ptr, idx)).into(),
             Self::Class(class) => class.lookup_field(idx).into(),
             v => unreachable!("Attempting to look up a local in {:?}", v),
         }
@@ -139,7 +133,7 @@ impl ValueEnum {
     /// Assign a value to a local binding within this value.
     pub fn assign_local(&mut self, idx: usize, value: Self) {
         match self {
-            Self::Instance(instance_ptr) => Instance::assign_field(*instance_ptr, idx, value.into()),
+            Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
             Self::Class(class) => class.assign_field(idx, value.into()),
             v => unreachable!("Attempting to assign a local in {:?}", v),
         }
@@ -149,7 +143,6 @@ impl ValueEnum {
     pub fn to_string(&self, universe: &Universe) -> String {
         match self {
             Self::Nil => "nil".to_string(),
-            Self::System => "system".to_string(),
             Self::Boolean(value) => value.to_string(),
             Self::Integer(value) => value.to_string(),
             Self::BigInteger(value) => value.to_string(),
@@ -183,7 +176,7 @@ impl ValueEnum {
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Nil, Self::Nil) | (Self::System, Self::System) => true,
+            (Self::Nil, Self::Nil) => true,
             (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
             (Self::Integer(a), Self::Integer(b)) => a.eq(b),
             (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
@@ -209,7 +202,6 @@ impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Nil => f.debug_tuple("Nil").finish(),
-            Self::System => f.debug_tuple("System").finish(),
             Self::Boolean(val) => f.debug_tuple("Boolean").field(val).finish(),
             Self::Integer(val) => f.debug_tuple("Integer").field(val).finish(),
             Self::BigInteger(val) => f.debug_tuple("BigInteger").field(val).finish(),
@@ -272,11 +264,7 @@ impl ValueEnum {
     pub fn is_nil(&self) -> bool {
         matches!(self, ValueEnum::Nil)
     }
-    /// Returns whether this value is `system`.
-    #[inline(always)]
-    pub fn is_system(&self) -> bool {
-        matches!(self, ValueEnum::System)
-    }
+
     /// Returns whether this value is an integer.
     #[inline(always)]
     pub fn is_integer(&self) -> bool {
@@ -318,7 +306,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_big_integer(&self) -> Option<Gc<BigInt>> {
         if let ValueEnum::BigInteger(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -327,7 +315,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_string(&self) -> Option<Gc<String>> {
         if let ValueEnum::String(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -336,7 +324,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
         if let ValueEnum::Array(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -345,7 +333,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_block(&self) -> Option<Gc<Block>> {
         if let ValueEnum::Block(blk) = self {
-            Some(*blk)
+            Some(blk.clone())
         } else {
             None
         }
@@ -355,7 +343,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_class(&self) -> Option<Gc<Class>> {
         if let ValueEnum::Class(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -364,7 +352,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_instance(&self) -> Option<Gc<Instance>> {
         if let Self::Instance(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -373,7 +361,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_invokable(&self) -> Option<Gc<Method>> {
         if let Self::Invokable(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -421,8 +409,6 @@ impl ValueEnum {
 
     /// The `nil` value.
     pub const NIL: Self = ValueEnum::Nil;
-    /// The `system` value.
-    pub const SYSTEM: Self = ValueEnum::System;
     /// The boolean `true` value.
     pub const TRUE: Self = ValueEnum::Boolean(true);
     /// The boolean `false` value.

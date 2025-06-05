@@ -61,7 +61,7 @@ impl Frame {
             let args = value_stack.drain_n_last(nbr_args);
             std::slice::from_raw_parts_mut(frame_args_ptr!(frame_ptr), nbr_args).copy_from_slice(args.as_slice());
 
-            frame_ptr.prev_frame = universe.current_frame;
+            frame_ptr.prev_frame = universe.current_frame.clone();
 
             #[cfg(debug_assertions)]
             if !frame_ptr.prev_frame.is_empty() {
@@ -95,7 +95,7 @@ impl Frame {
             let args = value_stack.borrow_n_last(nbr_args);
             std::slice::from_raw_parts_mut(frame_args_ptr!(frame_ptr), nbr_args).copy_from_slice(args);
 
-            frame_ptr.prev_frame = universe.current_frame;
+            frame_ptr.prev_frame = universe.current_frame.clone();
         };
 
         frame_ptr
@@ -103,11 +103,11 @@ impl Frame {
 
     pub fn nth_frame_back(current_frame: &Gc<Frame>, n: u8) -> Gc<Frame> {
         if n == 0 {
-            return *current_frame;
+            return current_frame.clone();
         }
 
         let mut target_frame: Gc<Frame> = match current_frame.lookup_argument(0).as_block() {
-            Some(block) => block.frame,
+            Some(block) => block.frame.clone(),
             v => panic!(
                 "attempting to access a non local var/arg from a method instead of a block: self wasn't blockself but {:?}.",
                 v
@@ -116,7 +116,7 @@ impl Frame {
         for _ in 1..n {
             target_frame = match target_frame.lookup_argument(0).as_block() {
                 Some(block) => {
-                    block.frame
+                    block.frame.clone()
                 }
                 v => panic!("attempting to access a non local var/arg from a method instead of a block (but the original frame we were in was a block): self wasn't blockself but {:?}.", v)
             };

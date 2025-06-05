@@ -74,8 +74,8 @@ impl Interpreter {
         Self {
             start_time: Instant::now(),
             bytecode_idx: 0,
-            current_frame: UnsafeCell::from(base_frame),
             current_bytecodes: base_frame.get_bytecode_ptr(),
+            current_frame: UnsafeCell::from(base_frame),
             frame_method_root: Gc::default(),
             frame_args_root: None,
         }
@@ -85,7 +85,7 @@ impl Interpreter {
     /// It's in an `UnsafeCell` for moving GC reasons: you get many bugs by using Gc<Frame> by
     /// itself, since Rust assumes that it hasn't moved when it in fact very much has
     pub fn get_current_frame(&self) -> Gc<Frame> {
-        unsafe { *self.current_frame.get() }
+        unsafe { (*self.current_frame.get()).clone() }
     }
 
     pub fn get_current_frame_mut(&mut self) -> &mut Gc<Frame> {
@@ -95,7 +95,7 @@ impl Interpreter {
     /// Creates and allocates a new frame corresponding to a method.
     /// nbr_args is the number of arguments, including the self value, which it takes from the previous frame.
     pub fn push_method_frame(&mut self, method: Gc<Method>, nbr_args: usize, mutator: &mut GCInterface) -> Gc<Frame> {
-        self.frame_method_root = method;
+        self.frame_method_root = method.clone();
         std::hint::black_box(&self.frame_method_root); // paranoia
 
         let (max_stack_size, nbr_locals) = match &*method {
@@ -106,23 +106,23 @@ impl Interpreter {
         let size = Frame::get_true_size(max_stack_size, nbr_args, nbr_locals);
         let mut frame_ptr: Gc<Frame> = mutator.request_memory_for_type(size, Some(AllocSiteMarker::MethodFrame));
 
-        *frame_ptr = Frame::from_method(self.frame_method_root);
+        *frame_ptr = Frame::from_method(self.frame_method_root.clone());
 
         let mut prev_frame = self.get_current_frame();
         let args = prev_frame.stack_n_last_elements(nbr_args);
-        Frame::init_frame_post_alloc(frame_ptr, args, max_stack_size, prev_frame);
+        Frame::init_frame_post_alloc(frame_ptr.clone(), args, max_stack_size, prev_frame.clone());
         prev_frame.remove_n_last_elements(nbr_args);
 
         self.bytecode_idx = 0;
         self.current_bytecodes = frame_ptr.get_bytecode_ptr();
-        self.current_frame = UnsafeCell::from(frame_ptr);
+        self.current_frame = UnsafeCell::from(frame_ptr.clone());
         frame_ptr
     }
 
     /// Creates and allocates a new frame corresponding to a method, with arguments provided.
     /// Used in primitives and corner cases like DNU calls.
     pub fn push_method_frame_with_args(&mut self, method: Gc<Method>, args: Vec<Value>, mutator: &mut GCInterface) -> Gc<Frame> {
-        self.frame_method_root = method;
+        self.frame_method_root = method.clone();
         std::hint::black_box(&self.frame_method_root); // paranoia
 
         let (max_stack_size, nbr_locals) = match &*method {
@@ -136,9 +136,9 @@ impl Interpreter {
 
         let mut frame_ptr: Gc<Frame> = mutator.request_memory_for_type(size, Some(AllocSiteMarker::MethodFrameWithArgs));
 
-        *frame_ptr = Frame::from_method(self.frame_method_root);
+        *frame_ptr = Frame::from_method(self.frame_method_root.clone());
         Frame::init_frame_post_alloc(
-            frame_ptr,
+            frame_ptr.clone(),
             self.frame_args_root.as_ref().unwrap(),
             max_stack_size,
             self.get_current_frame(),
@@ -146,7 +146,7 @@ impl Interpreter {
 
         self.bytecode_idx = 0;
         self.current_bytecodes = frame_ptr.get_bytecode_ptr();
-        self.current_frame = UnsafeCell::from(frame_ptr);
+        self.current_frame = UnsafeCell::from(frame_ptr.clone());
         self.frame_args_root = None;
 
         frame_ptr
@@ -157,14 +157,14 @@ impl Interpreter {
         let frame_ptr = Frame::alloc_from_block(nbr_args, self.get_current_frame_mut(), mutator);
         self.bytecode_idx = 0;
         self.current_bytecodes = frame_ptr.get_bytecode_ptr();
-        self.current_frame = UnsafeCell::from(frame_ptr);
+        self.current_frame = UnsafeCell::from(frame_ptr.clone());
         frame_ptr
     }
 
     pub fn pop_frame(&mut self) {
         // dbg!(self.get_current_frame().prev_frame.ptr);
-        let new_current_frame = self.get_current_frame().prev_frame;
-        self.current_frame = UnsafeCell::from(new_current_frame);
+        let new_current_frame = &self.get_current_frame().prev_frame;
+        self.current_frame = UnsafeCell::from(new_current_frame.clone());
         match new_current_frame.is_empty() {
             true => {}
             false => {
@@ -175,8 +175,8 @@ impl Interpreter {
     }
 
     pub fn pop_n_frames(&mut self, n: u8) {
-        let new_current_frame = Frame::nth_frame_back_through_frame_list(&self.get_current_frame(), n + 1);
-        self.current_frame = UnsafeCell::from(new_current_frame);
+        let new_current_frame = &Frame::nth_frame_back_through_frame_list(&self.get_current_frame(), n + 1);
+        self.current_frame = UnsafeCell::from(new_current_frame.clone());
         match new_current_frame.is_empty() {
             true => {}
             false => {
@@ -190,7 +190,6 @@ impl Interpreter {
         loop {
             // Actually safe, there's always a reference to the current bytecodes. Need unsafe because we want to store a ref for quick access in perf-critical code
             let bytecode = *(unsafe { (*self.current_bytecodes).get_unchecked(self.bytecode_idx as usize) });
-
 
             // unsafe {
             //     dbg!(&(*self.current_frame.get()).current_context.class(universe).name);
@@ -259,7 +258,7 @@ impl Interpreter {
                     let self_val = self.get_current_frame().get_self();
                     let val = {
                         if let Some(instance) = self_val.as_instance() {
-                            *Instance::lookup_field(instance, idx as usize)
+                            *Instance::lookup_field(&instance, idx as usize)
                         } else if let Some(cls) = self_val.as_class() {
                             cls.class().lookup_field(idx as usize)
                         } else {
@@ -400,7 +399,7 @@ impl Interpreter {
                     let value = self.get_current_frame().stack_pop();
                     let self_val = self.get_current_frame().get_self();
                     if let Some(instance) = self_val.as_instance() {
-                        Instance::assign_field(instance, idx as usize, value);
+                        Instance::assign_field(&instance, idx as usize, value);
                     } else if let Some(cls) = self_val.as_class() {
                         cls.class().assign_field(idx as usize, value)
                     } else {
@@ -458,7 +457,7 @@ impl Interpreter {
                             } else if current_frame.is_empty() {
                                 break None;
                             } else {
-                                current_frame = current_frame.prev_frame;
+                                current_frame = current_frame.prev_frame.clone();
                                 count += 1;
                             }
                         }
@@ -683,11 +682,11 @@ impl Interpreter {
             let maybe_found = unsafe { frame.get_inline_cache_entry(bytecode_idx as usize) };
 
             match maybe_found {
-                Some(CacheEntry::Send(receiver, method)) if receiver.as_ptr() == class.as_ptr() => Some(*method),
+                Some(CacheEntry::Send(receiver, method)) if receiver.as_ptr() == class.as_ptr() => Some(method.clone()),
                 Some(CacheEntry::Global(_)) => panic!("global cache entry for a send?"),
                 place @ None => {
                     let found = class.lookup_method(signature);
-                    *place = found.map(|method| CacheEntry::Send(*class, method));
+                    *place = found.clone().map(|method| CacheEntry::Send(class.clone(), method));
                     found
                 }
                 _ => class.lookup_method(signature),

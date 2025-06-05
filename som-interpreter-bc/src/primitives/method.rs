@@ -23,7 +23,7 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
 fn holder(invokable: Gc<Method>) -> Result<Gc<Class>, Error> {
-    Ok(*invokable.holder())
+    Ok(invokable.holder().clone())
 }
 
 fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {

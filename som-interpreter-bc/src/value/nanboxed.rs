@@ -54,7 +54,6 @@ impl Value {
     pub const TRUE: Self = Value(BaseValue::TRUE);
     pub const FALSE: Self = Value(BaseValue::FALSE);
     pub const NIL: Self = Value(BaseValue::NIL);
-    pub const SYSTEM: Self = Value(BaseValue::SYSTEM);
     pub const INTEGER_ZERO: Self = Value(BaseValue::INTEGER_ZERO);
     pub const INTEGER_ONE: Self = Value(BaseValue::INTEGER_ONE);
 
@@ -121,7 +120,6 @@ impl Value {
         debug_assert_valid_semispace_ptr_value!(self);
         match self.tag() {
             NIL_TAG => universe.core.nil_class(),
-            SYSTEM_TAG => universe.core.system_class(),
             BOOLEAN_TAG => {
                 if self.as_boolean().unwrap() {
                     universe.core.true_class()
@@ -157,7 +155,6 @@ impl Value {
     pub fn to_string(&self, universe: &Universe) -> String {
         match self.tag() {
             NIL_TAG => "nil".to_string(),
-            SYSTEM_TAG => "system".to_string(),
             BOOLEAN_TAG => self.as_boolean().unwrap().to_string(),
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
             BIG_INTEGER_TAG => self.as_big_integer::<Gc<BigInt>>().unwrap().to_string(),

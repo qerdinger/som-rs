@@ -170,7 +170,7 @@ fn inst_var_at(receiver: Value, index: i32) -> Result<Option<Value>, Error> {
 
     if let Some(instance) = receiver.as_instance() {
         match idx < instance.get_nbr_fields() {
-            true => Ok(Some(*Instance::lookup_field(instance, idx))),
+            true => Ok(Some(*Instance::lookup_field(&instance, idx))),
             false => Ok(None),
         }
     } else if let Some(class) = receiver.as_class() {
@@ -186,7 +186,7 @@ fn inst_var_at(receiver: Value, index: i32) -> Result<Option<Value>, Error> {
 fn inst_var_at_put(receiver: Value, index: i32, value: Value) -> Result<Option<Value>, Error> {
     let index = usize::try_from(index.saturating_sub(1))?;
     if let Some(instance) = receiver.as_instance() {
-        Instance::assign_field(instance, index, value)
+        Instance::assign_field(&instance, index, value)
     } else if let Some(mut class) = receiver.as_class() {
         class.assign_field(index, value);
     } else {

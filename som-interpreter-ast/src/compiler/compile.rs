@@ -264,8 +264,10 @@ impl<'a> AstMethodCompilerCtxt<'a> {
             return AstExpression::SuperMessage(Box::new(AstSuperMessage {
                 super_class: self
                     .class
+                    .as_ref()
                     .unwrap()
                     .super_class
+                    .clone()
                     .unwrap_or_else(|| panic!("no super class set, even though the method has a super call?")),
                 signature: interned_signature,
                 values: msg.values.iter().map(|e| expr_parsing_func(self, e)).collect(),
@@ -318,7 +320,7 @@ impl<'a> AstMethodCompilerCtxt<'a> {
             return AstExpression::GlobalRead(Box::new(GlobalNode::from(self.interner.intern(name.as_str()))));
         }
 
-        match self.class.unwrap().get_field_offset_by_name(&name) {
+        match self.class.as_ref().unwrap().get_field_offset_by_name(&name) {
             Some(offset) => AstExpression::FieldRead(offset as u8),
             _ => AstExpression::GlobalRead(Box::new(GlobalNode::from(self.interner.intern(name.as_str())))),
         }
@@ -332,7 +334,7 @@ impl<'a> AstMethodCompilerCtxt<'a> {
             );
         }
 
-        match self.class.unwrap().get_field_offset_by_name(name) {
+        match self.class.as_ref().unwrap().get_field_offset_by_name(name) {
             Some(offset) => AstExpression::FieldWrite(offset as u8, Box::new(self.parse_expression(expr))),
             _ => panic!(
                 "can't turn the GlobalWrite `{}` into a FieldWrite, and GlobalWrite shouldn't exist at runtime",

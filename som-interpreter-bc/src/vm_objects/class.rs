@@ -41,27 +41,22 @@ impl Class {
 
     /// Get the class of this class.
     pub fn class(&self) -> Gc<Self> {
-        self.class
+        self.class.clone()
     }
 
     /// Set the class of this class (as a weak reference).
     pub fn set_class(&mut self, class: &Gc<Self>) {
-        self.class = *class;
-    }
-
-    /// Set the class of this class (as a strong reference). TODO now useless
-    pub fn set_class_owned(&mut self, class: &Gc<Self>) {
-        self.class = *class;
+        self.class = class.clone();
     }
 
     /// Get the superclass of this class.
     pub fn super_class(&self) -> Option<Gc<Self>> {
-        self.super_class
+        self.super_class.clone()
     }
 
     /// Set the superclass of this class (as a weak reference).
     pub fn set_super_class(&mut self, class: &Gc<Self>) {
-        self.super_class = Some(*class);
+        self.super_class = Some(class.clone());
     }
 
     /// Search for a given method within this class.

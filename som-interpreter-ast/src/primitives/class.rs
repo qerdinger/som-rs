@@ -48,7 +48,7 @@ fn name(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, 
 
 fn methods(universe: &mut Universe, stack: &mut GlobalValueStack) -> Result<Value, Error> {
     get_args_from_stack!(stack, receiver => Gc<Class>);
-    let methods: Vec<Value> = receiver.methods.values().map(|invokable| Value::Invokable(*invokable)).collect();
+    let methods: Vec<Value> = receiver.methods.values().map(|invokable| Value::Invokable(invokable.clone())).collect();
 
     Ok(Value::Array(VecValue(universe.gc_interface.alloc_slice(&methods))))
 }

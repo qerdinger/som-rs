@@ -86,7 +86,7 @@ impl PrimMessageInliner for ast::Message {
         ctxt.pop_instr(); // removing the PUSH_BLOCK
 
         let cond_block_ref = match ctxt.get_literal(block_idx as usize)? {
-            Literal::Block(val) => *val,
+            Literal::Block(val) => val.clone(),
             _ => return None,
         };
         ctxt.remove_literal(block_idx as usize);
@@ -152,8 +152,8 @@ impl PrimMessageInliner for ast::Message {
                     Bytecode::PushBlock(block_idx) => {
                         match block.literals.get(*block_idx as usize)? {
                             Literal::Block(inner_block) => {
-                                self.adapt_block_after_outer_inlined(*inner_block, 1, ctxt.get_interner());
-                                let idx = ctxt.push_literal(Literal::Block(*inner_block));
+                                self.adapt_block_after_outer_inlined(inner_block.clone(), 1, ctxt.get_interner());
+                                let idx = ctxt.push_literal(Literal::Block(inner_block.clone()));
                                 ctxt.push_instr(Bytecode::PushBlock(idx as u8));
                             }
                             _ => panic!("PushBlock not actually pushing a block somehow"),
@@ -262,11 +262,11 @@ impl PrimMessageInliner for ast::Message {
                         .get(*block_idx as usize)
                         .unwrap_or_else(|| panic!("PushBlock is associated with no literal whatsoever?"));
                     let inner_block = match inner_lit {
-                        Literal::Block(inner_blk) => inner_blk,
+                        Literal::Block(inner_blk) => inner_blk.clone(),
                         _ => panic!("PushBlock is not actually pushing a block somehow"),
                     };
 
-                    self.adapt_block_after_outer_inlined(*inner_block, adjust_scope_by, interner);
+                    self.adapt_block_after_outer_inlined(inner_block, adjust_scope_by, interner);
 
                     Bytecode::PushBlock(*block_idx)
                 }

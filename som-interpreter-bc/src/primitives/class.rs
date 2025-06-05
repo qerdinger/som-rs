@@ -51,7 +51,7 @@ fn new(interp: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     };
 
     for idx in 0..nbr_fields {
-        Instance::assign_field(instance_ptr, idx, Value::NIL)
+        Instance::assign_field(&instance_ptr, idx, Value::NIL)
     }
 
     interp.get_current_frame().stack_pop();
@@ -72,7 +72,7 @@ fn methods(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue
     let slice_addr = universe.gc_interface.request_bytes_for_slice(slice_size, None);
 
     pop_args_from_stack!(interp, receiver => Gc<Class>);
-    let methods: Vec<Value> = receiver.methods.values().copied().map(Value::Invokable).collect();
+    let methods: Vec<Value> = receiver.methods.values().cloned().map(Value::Invokable).collect();
     let allocated: GcSlice<Value> = universe.gc_interface.write_slice_to_addr(slice_addr, &methods);
 
     Ok(VecValue(allocated))

@@ -13,8 +13,6 @@ impl Hash for Value {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         if self.is_nil() {
             hasher.write(b"#nil#");
-        } else if self.is_system() {
-            hasher.write(b"#system#");
         } else if let Some(value) = self.as_boolean() {
             hasher.write(b"#bool#");
             value.hash(hasher);

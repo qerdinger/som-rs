@@ -33,7 +33,7 @@ impl Evaluate for GlobalNode {
                 Return::Local(global)
             })
             .or_else(|| {
-                let frame = universe.current_frame;
+                let frame = &universe.current_frame;
                 let self_value = frame.get_self();
                 universe.unknown_global(value_stack, self_value, self.global)
             })

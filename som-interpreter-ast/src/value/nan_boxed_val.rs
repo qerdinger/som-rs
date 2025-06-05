@@ -118,7 +118,6 @@ impl Value {
     pub const TRUE: Self = Value(BaseValue::TRUE);
     pub const FALSE: Self = Value(BaseValue::FALSE);
     pub const NIL: Self = Value(BaseValue::NIL);
-    pub const SYSTEM: Self = Value(BaseValue::SYSTEM);
     pub const INTEGER_ZERO: Self = Value(BaseValue::INTEGER_ZERO);
     pub const INTEGER_ONE: Self = Value(BaseValue::INTEGER_ONE);
 
@@ -143,7 +142,6 @@ impl Value {
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         match self.tag() {
             NIL_TAG => universe.core.nil_class(),
-            SYSTEM_TAG => universe.core.system_class(),
             BOOLEAN_TAG => {
                 if self.as_boolean().unwrap() {
                     universe.core.true_class()
@@ -179,7 +177,6 @@ impl Value {
     pub fn to_string(&self, universe: &Universe) -> String {
         match self.tag() {
             NIL_TAG => "nil".to_string(),
-            SYSTEM_TAG => "system".to_string(),
             BOOLEAN_TAG => self.as_boolean().unwrap().to_string(),
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
             BIG_INTEGER_TAG => self.as_big_integer::<Gc<BigInt>>().unwrap().to_string(),
@@ -224,8 +221,6 @@ impl From<Value> for ValueEnum {
             Self::Double(value)
         } else if value.is_nil() {
             Self::Nil
-        } else if value.is_system() {
-            Self::System
         } else if let Some(value) = value.as_integer() {
             Self::Integer(value)
         } else if let Some(value) = value.as_big_integer() {
@@ -260,7 +255,6 @@ impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
         match value {
             ValueEnum::Nil => Self::NIL,
-            ValueEnum::System => Self::SYSTEM,
             ValueEnum::Boolean(value) => Self::new_boolean(value),
             ValueEnum::Integer(value) => Self::new_integer(value),
             ValueEnum::BigInteger(value) => Self::new_big_integer(value),
@@ -314,8 +308,6 @@ impl fmt::Debug for Value {
 pub enum ValueEnum {
     /// The **nil** value.
     Nil,
-    /// The **system** value.
-    System,
     /// A boolean value (**true** or **false**).
     Boolean(bool),
     /// An integer value.
@@ -347,7 +339,6 @@ impl ValueEnum {
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         match self {
             Self::Nil => universe.core.nil_class(),
-            Self::System => universe.core.system_class(),
             Self::Boolean(true) => universe.core.true_class(),
             Self::Boolean(false) => universe.core.false_class(),
             Self::Integer(_) => universe.core.integer_class(),
@@ -393,7 +384,6 @@ impl ValueEnum {
     pub fn to_string(&self, universe: &Universe) -> String {
         match self {
             Self::Nil => "nil".to_string(),
-            Self::System => "system".to_string(),
             Self::Boolean(value) => value.to_string(),
             Self::Integer(value) => value.to_string(),
             Self::BigInteger(value) => value.to_string(),
@@ -428,7 +418,7 @@ impl ValueEnum {
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Nil, Self::Nil) | (Self::System, Self::System) => true,
+            (Self::Nil, Self::Nil) => true,
             (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
             (Self::Integer(a), Self::Integer(b)) => a.eq(b),
             (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
@@ -451,7 +441,6 @@ impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Nil => f.debug_tuple("Nil").finish(),
-            Self::System => f.debug_tuple("System").finish(),
             Self::Boolean(val) => f.debug_tuple("Boolean").field(val).finish(),
             Self::Integer(val) => f.debug_tuple("Integer").field(val).finish(),
             Self::BigInteger(val) => f.debug_tuple("BigInteger").field(val).finish(),

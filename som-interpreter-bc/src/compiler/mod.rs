@@ -88,14 +88,14 @@ impl Hash for Literal {
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(*sym),
-        Literal::String(val) => Value::String(*val),
+        Literal::String(val) => Value::String(val.clone()),
         Literal::Double(val) => Value::Double(*val),
         Literal::Integer(val) => Value::Integer(*val),
-        Literal::BigInteger(val) => Value::BigInteger(*val),
+        Literal::BigInteger(val) => Value::BigInteger(val.clone()),
         Literal::Array(val) => {
             let arr = &val.iter().map(|lit| value_from_literal(lit, gc_interface)).collect::<Vec<_>>();
             Value::Array(VecValue(gc_interface.alloc_slice(arr)))
         }
-        Literal::Block(val) => Value::Block(*val),
+        Literal::Block(val) => Value::Block(val.clone()),
     }
 }

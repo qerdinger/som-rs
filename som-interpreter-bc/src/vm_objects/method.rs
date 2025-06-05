@@ -84,13 +84,13 @@ impl Method {
     }
 
     /// Used during initialization.
-    pub fn set_holder(&mut self, holder_ptr: Gc<Class>) {
+    pub fn set_holder(&mut self, holder_ptr: &Gc<Class>) {
         match self {
             Method::Defined(env) => {
-                env.base_method_info.holder = holder_ptr;
+                env.base_method_info.holder = holder_ptr.clone();
                 for lit in &mut env.literals {
                     if let Literal::Block(blk) = lit {
-                        blk.blk_info.set_holder(holder_ptr);
+                        blk.blk_info.set_holder(&holder_ptr);
                     }
                 }
             }
@@ -98,7 +98,7 @@ impl Method {
             | Method::TrivialGlobal(_, met_info)
             | Method::TrivialLiteral(_, met_info)
             | Method::TrivialGetter(_, met_info)
-            | Method::TrivialSetter(_, met_info) => met_info.holder = holder_ptr,
+            | Method::TrivialSetter(_, met_info) => met_info.holder = holder_ptr.clone(),
         }
     }
 
@@ -128,9 +128,9 @@ impl Method {
 impl Method {
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         if self.is_primitive() {
-            universe.core.primitive_class()
+            universe.core.primitive_class().clone()
         } else {
-            universe.core.method_class()
+            universe.core.method_class().clone()
         }
     }
 
@@ -156,7 +156,7 @@ impl Invoke for Gc<Method> {
             Method::Defined(_) => {
                 let mut frame_args = vec![receiver];
                 frame_args.append(&mut args);
-                interpreter.push_method_frame_with_args(*self, frame_args, universe.gc_interface);
+                interpreter.push_method_frame_with_args(self.clone(), frame_args, universe.gc_interface);
             }
             Method::Primitive(func, ..) => {
                 let nbr_args = args.len() + 1;

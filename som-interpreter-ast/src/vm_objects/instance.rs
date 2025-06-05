@@ -21,7 +21,7 @@ impl Instance {
 
     /// Get the class of which this is an instance from.
     pub fn class(&self) -> Gc<Class> {
-        self.class
+        self.class.clone()
     }
 
     /// Get the superclass of this instance's class.
