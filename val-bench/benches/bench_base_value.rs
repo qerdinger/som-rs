@@ -9,8 +9,7 @@ use som_gc::gc_interface::{GCInterface, SOMAllocator};
 use som_interpreter_bc::gc::get_callbacks_for_gc;
 use som_interpreter_bc::universe::DEFAULT_HEAP_SIZE;
 
-use som_value_lbits::value::BaseValue;
-
+use som_value::value::BaseValue;
 
 pub fn bench_nan_boxing(c: &mut Criterion) {
     let args: Vec<String>  = env::args().collect();
@@ -67,10 +66,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
     let int_max_val = BaseValue::new_integer(i32::MAX);
     let int_neg_val = BaseValue::new_integer(-5002);
     let int_min_val = BaseValue::new_integer(i32::MIN);
-    let double_val = BaseValue::new_double(f64::from_bits(0x4000000000000007));
-    println!("TMP  value: {:?}", f64::from_bits(0x4000000000000007));
-    println!("TMP  value: {:?}", f64::from_bits(0x4000000000000008));
-    println!("Double value: {:?}", double_val.as_double());
+    let double_val = BaseValue::new_double(3.14);
     let bool_val = BaseValue::new_boolean(true);
     let nil_val = BaseValue::NIL;
     let gc_interface = GCInterface::init(DEFAULT_HEAP_SIZE, get_callbacks_for_gc());
@@ -83,12 +79,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(int_neg_val.is_integer());
             black_box(int_max_val.is_integer());
             black_box(int_min_val.is_integer());
-            // if int_val.is_integer() {
-            //     println!("Integer value: {:?}", int_val.as_integer());
-            // }
-            // if int_neg_val.is_integer() {
-            //     println!("Negative Integer value: {:?}", int_neg_val.as_integer());
-            // }
             black_box(double_val.is_integer());
             black_box(bool_val.is_integer());
             black_box(nil_val.is_integer());
@@ -103,9 +93,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(int_max_val.is_double());
             black_box(int_min_val.is_double());
             black_box(double_val.is_double());
-            // if double_val.is_double() {
-            //     println!("Double value: {:?}", double_val.as_double());
-            // }
             black_box(bool_val.is_double());
             black_box(nil_val.is_double());
             black_box(string_val.is_double());
@@ -120,9 +107,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(int_min_val.is_boolean());
             black_box(double_val.is_boolean());
             black_box(bool_val.is_boolean());
-            // if bool_val.is_boolean() {
-            //     println!("Boolean value: {:?}", bool_val.as_boolean());
-            // }
             black_box(nil_val.is_boolean());
             black_box(string_val.is_boolean());
         })
@@ -137,9 +121,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(double_val.is_nil());
             black_box(bool_val.is_nil());
             black_box(nil_val.is_nil());
-            // if nil_val.is_nil() {
-            //     println!("Nil value detected");
-            // }
             black_box(string_val.is_nil());
         })
     });
@@ -154,9 +135,6 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
             black_box(bool_val.is_string());
             black_box(nil_val.is_string());
             black_box(string_val.is_string());
-            // if string_val.is_string() {
-            //     println!("String value: {:?}", string_val.as_string::<Gc<String>>());
-            // }
         })
     });
 

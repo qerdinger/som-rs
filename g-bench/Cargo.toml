@@ -7,8 +7,7 @@ edition = "2024"
 num-bigint = "0.4.6"
 som-gc = { path = "../som-gc" }
 som-interpreter-bc = { path = "../som-interpreter-bc" }
-som-value-lbits = { path = "../som-value-lbits" }
-som-value = { path = "../som-value" }
+som-value = { path = "../som-value", features = ["nan"] }
 
 [dev-dependencies]
 criterion = { version = "0.6", features = ["html_reports"] }
