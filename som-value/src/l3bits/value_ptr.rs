@@ -2,7 +2,7 @@ use std::{marker::PhantomData, ops::Deref};
 
 use num_bigint::BigInt;
 
-use crate::value::{BaseValue, POINTER_TAG};
+use crate::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[repr(transparent)]
@@ -22,8 +22,9 @@ where
     PTR: Deref<Target = T> + Into<u64> + From<u64>,
 {
     pub fn new(value: PTR) -> Self {
+        let ptr: u64 = value.into();
         Self {
-            value: BaseValue::new(T::get_tag(), value.into()),
+            value: BaseValue::from(BaseValue::encode_pointer(T::get_tag(), ptr)),
             _phantom: PhantomData,
             _phantom2: PhantomData,
         }
@@ -31,7 +32,7 @@ where
 
     #[inline(always)]
     pub fn is_valid(&self) -> bool {
-        self.value.is_ptr_type()
+        self.value.tag() == T::get_tag()
     }
 
     /// Returns the underlying pointer value.
@@ -70,12 +71,12 @@ impl<T, PTR> From<TypedPtrValue<T, PTR>> for BaseValue {
 
 impl HasPointerTag for String {
     fn get_tag() -> u64 {
-        POINTER_TAG
+        STRING_TAG
     }
 }
 
 impl HasPointerTag for BigInt {
     fn get_tag() -> u64 {
-        POINTER_TAG
+        BIG_INTEGER_TAG
     }
 }

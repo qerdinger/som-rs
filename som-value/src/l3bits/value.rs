@@ -3,59 +3,38 @@ use crate::{
     value_ptr::{HasPointerTag, TypedPtrValue},
 };
 use num_bigint::BigInt;
+use std::mem::size_of;
 use std::ops::Deref;
 
 static_assertions::const_assert_eq!(size_of::<f64>(), 8);
 static_assertions::assert_eq_size!(f64, u64, *const ());
 
-pub const BASE_TAG: u64 = 0x7FF8;
-pub const CELL_BASE_TAG: u64 = 0x8000 | BASE_TAG;
+pub const VALUE_TAG_BITS: u64 = 4;
+pub const TAG_BITS: u64 = 0b1111;
 
-pub const VALUE_TAG_BITS: u64 = 3;
-pub const TAG_BITS: u64 = 0b111;
-
-/// Tag bits for the `Nil` type.
-pub const NIL_TAG: u64 = 0b000; 
-/// Tag bits for the `System` type.
-//pub const SYSTEM_TAG: u64 = 0b001;
-/// Tag bits for the `Integer` type.
-pub const INTEGER_TAG: u64 = 0b010; // Same bit position as `BIG_INTEGER_TAG`
-/// Tag bits for the `Boolean` type.
-pub const BOOLEAN_TAG: u64 = 0b011;
-/// Tag bits for the `Symbol` type.
-pub const SYMBOL_TAG: u64 = 0b100;
-/// Tag bits for the `Char` type.
-pub const CHAR_TAG: u64 = 0b101;
-/// Tag bits for the `Double` type.
-pub const DOUBLE_TAG: u64 = 0b110;
-/// Tag bits for the `Pointer` type.
-pub const POINTER_TAG: u64 = 0b111;
-
-pub const BIG_INTEGER_TAG: u64 = INTEGER_TAG; // Same bit position as `INTEGER_TAG`
-pub const STRING_TAG: u64 = POINTER_TAG; // Same bit position as `POINTER_TAG`
+pub const NIL_TAG: u64 = 0b0001;
+pub const INTEGER_TAG: u64 = 0b0010;
+pub const BOOLEAN_TAG: u64 = 0b0011;
+pub const SYMBOL_TAG: u64 = 0b0100;
+pub const CHAR_TAG: u64 = 0b0101;
+pub const DOUBLE_TAG: u64 = 0b0110;
+pub const BIG_INTEGER_TAG: u64 = 0b0111;
+pub const STRING_TAG: u64 = 0b1000;
 
 pub const PTR_MASK: u64 = !TAG_BITS;
 
-// #[repr(transparent)]
 #[repr(C)]
-#[allow(clippy::derived_hash_with_manual_eq)] // TODO: manually implement Hash instead...
+#[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Copy, Clone, Hash)]
 pub struct BaseValue {
     encoded: u64,
 }
 
 impl BaseValue {
-    /// The boolean `true` value.
     pub const TRUE: BaseValue = Self::new(BOOLEAN_TAG, 1);
-    /// The boolean `false` value.
     pub const FALSE: BaseValue = Self::new(BOOLEAN_TAG, 0);
-    /// The `nil` value.
     pub const NIL: BaseValue = Self::new(NIL_TAG, 0);
-    /// The `system` value.
-    //pub const SYSTEM: Self = Self::new(SYSTEM_TAG, 0);
-    /// The integer `0` value.
     pub const INTEGER_ZERO: Self = Self::new(INTEGER_TAG, 0);
-    /// The integer `1` value.
     pub const INTEGER_ONE: Self = Self::new(INTEGER_TAG, 1);
 
     #[inline(always)]
@@ -65,44 +44,53 @@ impl BaseValue {
         }
     }
 
-    /// Returns a new boolean value.
+    pub fn encode_pointer(tag: u64, ptr: u64) -> u64 {
+        assert_eq!(ptr & 0b111, 0, "Pointer must be 8-byte (3b) aligned");
+        let encoded = (ptr << VALUE_TAG_BITS) | (tag & TAG_BITS);
+        //println!("Encoding pointer: tag = {tag}, ptr = {ptr} -> encoded = {encoded}");
+        encoded
+    }
+
+    pub fn decode_pointer(encoded: u64) -> u64 {
+        let ptr = encoded >> VALUE_TAG_BITS;
+        //println!("Decoding pointer from encoded value: {encoded} → {ptr}");
+        ptr
+    }
+
     #[inline(always)]
     pub fn new_boolean(value: bool) -> Self {
-        Self {
-            encoded: if value { BOOLEAN_TAG | 1 << VALUE_TAG_BITS } else { BOOLEAN_TAG },
-        }
+        //println!("Creating new boolean value: {}", value);
+        Self::new(BOOLEAN_TAG, value as u64)
     }
 
-    /// Returns whether this value is a pointer type value.
     #[inline(always)]
     pub fn is_ptr_type(self) -> bool {
-        (self.encoded & TAG_BITS) == POINTER_TAG
+        //println!("Checking if value is a pointer type: {}", self.encoded);
+        matches!(self.tag(), STRING_TAG | BIG_INTEGER_TAG)
     }
 
-    /// Returns it at an arbitrary pointer. Used for debugging.
-    /// # Safety
-    /// "Don't"
     pub unsafe fn as_something<PTR>(self) -> Option<PTR>
     where
         PTR: From<u64>,
     {
+        //println!("Attempting to extract GC cell from value: {}", self.encoded);
         self.is_ptr_type().then(|| self.extract_gc_cell())
     }
 
-    /// Return the value as its internal representation: a u64 type.
     #[inline(always)]
     pub fn as_u64(self) -> u64 {
+        //println!("Returning encoded value: {}", self.encoded);
         self.encoded
     }
 
-    /// Returns the tag bits of the value.
-    //#[inline(always)]
     pub fn tag(self) -> u64 {
+        //println!("Extracting tag from encoded value: {}", self.encoded);
         self.encoded & TAG_BITS
     }
-    /// Returns the payload bits of the value.
+
     #[inline(always)]
     pub fn payload(self) -> u64 {
+        //println!("Extracting payload from encoded value: {}", self.encoded);
         self.encoded >> VALUE_TAG_BITS
     }
 
@@ -111,40 +99,42 @@ impl BaseValue {
     where
         Ptr: From<u64>,
     {
-        Ptr::from(self.extract_pointer_bits())
+        //println!("Extracting GC cell from encoded value: {}", self.encoded);
+        Ptr::from(Self::decode_pointer(self.encoded))
     }
 
     #[inline(always)]
     pub fn extract_pointer_bits(self) -> u64 {
-        self.encoded & PTR_MASK
+        //println!("Extracting pointer bits from encoded value: {}", self.encoded);
+        Self::decode_pointer(self.encoded)
     }
 
-    /// Returns a new integer value.
     #[inline(always)]
     pub fn new_integer(value: i32) -> Self {
+        //println!("Creating new integer value: {}", value);
         Self::new(INTEGER_TAG, value as u64)
     }
 
-    /// Returns a new double value.
     #[inline(always)]
     pub fn new_double(value: f64) -> Self {
+        //println!("Creating new double value: {}", value);
         Self {
             encoded: (value.to_bits() & !TAG_BITS) | DOUBLE_TAG
         }
     }
 
-    /// Returns a new symbol value.
     #[inline(always)]
     pub fn new_symbol(value: Interned) -> Self {
+        //println!("Creating new symbol value: {}", value.0);
         Self::new(SYMBOL_TAG, value.0.into())
     }
 
     #[inline(always)]
     pub fn new_char(value: char) -> Self {
+        //println!("Creating new char value: {}", value);
         Self::new(CHAR_TAG, value.into())
     }
 
-    /// Returns a new big integer value.
     #[inline(always)]
     pub fn new_big_integer<BigIntPtr>(value: BigIntPtr) -> Self
     where
@@ -152,11 +142,12 @@ impl BaseValue {
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
         let ptr: u64 = value.into();
+        //println!("Creating new big integer value with pointer: {}", ptr);
         Self {
-            encoded: ptr | POINTER_TAG,
+            encoded: Self::encode_pointer(BIG_INTEGER_TAG, ptr),
         }
     }
-    /// Returns a new string value.
+
     #[inline(always)]
     pub fn new_string<StringPtr>(value: StringPtr) -> Self
     where
@@ -164,133 +155,125 @@ impl BaseValue {
         StringPtr: Deref<Target = String> + From<u64>,
     {
         let ptr: u64 = value.into();
+        //println!("Creating new string value with pointer: {}", ptr);
         Self {
-            encoded: ptr | POINTER_TAG,
+            encoded: Self::encode_pointer(STRING_TAG, ptr),
         }
     }
 
-    // --------
-
-    /// Returns whether this value is a big integer.
     #[inline(always)]
     pub fn is_big_integer(self) -> bool {
-        self.is_ptr_type()
-    }
-    /// Returns whether this value is a string.
-    #[inline(always)]
-    pub fn is_string(self) -> bool {
-        self.is_ptr_type()
+        //println!("Checking if value is a big integer: {}", self.encoded);
+        self.tag() == BIG_INTEGER_TAG
     }
 
-    /// Returns whether this value is `nil``.
+    #[inline(always)]
+    pub fn is_string(self) -> bool {
+        //println!("Checking if value is a string: {}", self.encoded);
+        self.tag() == STRING_TAG
+    }
+
     #[inline(always)]
     pub fn is_nil(self) -> bool {
+        //println!("Checking if value is nil: {}", self.encoded);
         self.tag() == NIL_TAG
     }
 
-    /// Returns whether this value is `system`.
-    #[inline(always)]
-    pub fn is_system(self) -> bool {
-        //self.tag() == SYSTEM_TAG
-        false
-    }
-    /// Returns whether this value is an integer.
     #[inline(always)]
     pub fn is_integer(self) -> bool {
+        //println!("Checking if value is an integer: {}", self.encoded);
         self.tag() == INTEGER_TAG
     }
 
-    /// Returns whether this value is a double.
     #[inline(always)]
     pub fn is_double(self) -> bool {
+        //println!("Checking if value is a double: {}", self.encoded);
         self.tag() == DOUBLE_TAG
     }
 
-    /// Returns whether this value is a boolean.
     #[inline(always)]
     pub fn is_boolean(self) -> bool {
+        //println!("Checking if value is a boolean: {}", self.encoded);
         self.tag() == BOOLEAN_TAG
     }
 
-    /// Returns whether or not it's a boolean corresponding to true. NB: does NOT check if the type actually is a boolean.
     #[inline(always)]
     pub fn is_boolean_true(self) -> bool {
+        //println!("Checking if boolean value is true: {}", self.encoded);
         self.payload() == 1
     }
 
-    /// Returns whether or not it's a boolean corresponding to false. NB: does NOT check if the type actually is a boolean.
     #[inline(always)]
     pub fn is_boolean_false(self) -> bool {
+        //println!("Checking if boolean value is false: {}", self.encoded);
         self.payload() == 0
     }
 
-    /// Returns whether this value is a symbol.
     #[inline(always)]
     pub fn is_symbol(self) -> bool {
+        //println!("Checking if value is a symbol: {}", self.encoded);
         self.tag() == SYMBOL_TAG
     }
 
     #[inline(always)]
     pub fn is_char(self) -> bool {
+        //println!("Checking if value is a char: {}", self.encoded);
         self.tag() == CHAR_TAG
     }
 
-    // ----------------
-
-    /// Returns this value as a big integer, if such is its type.
     #[inline(always)]
     pub fn as_big_integer<BigIntPtr>(self) -> Option<BigIntPtr>
     where
         u64: From<BigIntPtr>,
         BigIntPtr: From<u64>,
     {
+        //println!("Attempting to extract big integer from value: {}", self.encoded);
         self.is_big_integer().then(|| self.extract_gc_cell())
     }
 
-    /// Returns this value as a string, if such is its type.
     #[inline(always)]
     pub fn as_string<StringPtr>(self) -> Option<StringPtr>
     where
         StringPtr: From<u64>,
         StringPtr: Deref<Target = String>,
     {
+        //println!("Attempting to extract string from value: {}", self.encoded);
         self.is_string().then(|| self.extract_gc_cell())
     }
 
-    // `as_*` for non pointer types
-
-    /// Returns this value as an integer, if such is its type.
     #[inline(always)]
     pub fn as_integer(self) -> Option<i32> {
+        //println!("Attempting to extract integer from value: {}", self.encoded);
         self.is_integer().then_some(self.payload() as i32)
     }
 
-    /// Returns this value as a double, if such is its type.
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
+        //println!("Attempting to extract double from value: {}", self.encoded);
         self.is_double().then(|| f64::from_bits(self.encoded & !TAG_BITS))
     }
 
-    /// Returns this value as a boolean, if such is its type.
     #[inline(always)]
     pub fn as_boolean(self) -> Option<bool> {
+        //println!("Attempting to extract boolean from value: {}", self.encoded);
         self.is_boolean().then_some(self.is_boolean_true())
     }
 
     #[inline(always)]
     pub fn as_char(self) -> Option<char> {
+        //println!("Attempting to extract char from value: {}", self.encoded);
         self.is_char().then_some(self.payload() as u8 as char)
     }
 
-    /// Returns this value as a boolean, but without checking whether or not it really is one.
     #[inline(always)]
     pub fn as_boolean_unchecked(self) -> bool {
+        //println!("Unchecked extraction of boolean from value: {}", self.encoded);
         self.payload() != 0
     }
 
-    /// Returns this value as a symbol, if such is its type.
     #[inline(always)]
     pub fn as_symbol(self) -> Option<Interned> {
+        //println!("Attempting to extract symbol from value: {}", self.encoded);
         self.is_symbol().then_some(Interned(self.payload() as u16))
     }
 
@@ -301,6 +284,7 @@ impl BaseValue {
         PTR: Deref<Target = T> + From<u64> + Into<u64>,
     {
         let value_ptr: TypedPtrValue<T, PTR> = (*self).into();
+        //println!("Checking if value is a pointer");
         value_ptr.is_valid()
     }
 
@@ -310,51 +294,52 @@ impl BaseValue {
         PTR: Deref<Target = T> + From<u64> + Into<u64>,
     {
         let value_ptr: TypedPtrValue<T, PTR> = (*self).into();
+        //println!("Attempting to extract pointer");
         value_ptr.get()
     }
 
-    /// # Safety
-    /// Only use when the type of the pointer was previously checked.
     #[inline(always)]
     pub unsafe fn as_ptr_unchecked<T: HasPointerTag, PTR>(&self) -> PTR
     where
         PTR: Deref<Target = T> + From<u64> + Into<u64>,
     {
         let value_ptr: TypedPtrValue<T, PTR> = (*self).into();
+        //println!("Unchecked extraction of pointer");
         value_ptr.get_unchecked()
     }
-
-    // ----------------
-
-    // these are all for backwards compatibility (i.e.: i don't want to do massive amounts of refactoring), but also maybe clever-ish replacement with normal Value enums
 
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn Boolean(value: bool) -> Self {
+        //println!("Creating new boolean value: {}", value);
         Self::new_boolean(value)
     }
 
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn Integer(value: i32) -> Self {
+        //println!("Creating new integer value: {}", value);
         Self::new_integer(value)
     }
 
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn Double(value: f64) -> Self {
+        //println!("Creating new double value: {}", value);
         Self::new_double(value)
     }
 
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn Symbol(value: Interned) -> Self {
+        //println!("Creating new symbol value: {}", value.0);
         Self::new_symbol(value)
     }
 
     #[allow(non_snake_case)]
     #[inline(always)]
     pub fn Char(value: char) -> Self {
+        //println!("Creating new char value: {}", value);
         Self::new_char(value)
     }
 
@@ -365,6 +350,7 @@ impl BaseValue {
         u64: From<BigIntPtr>,
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
+        //println!("Creating new big integer value with pointer");
         Self::new_big_integer(value)
     }
 
@@ -375,20 +361,16 @@ impl BaseValue {
         u64: From<Ptr>,
         Ptr: Deref<Target = String> + From<u64>,
     {
+        //println!("Creating new string value with pointer");
         Self::new_string(value)
     }
 
-    /// Returns a pointer to the underlying data, given a reference to a Value type.
-    /// Not actually unsafe in itself, but considered as such because it's VERY dangerous unless used correctly.
-    /// Why does it exist? Because GC needs to store mutable references to values to modify them when moving memory around. Most values are stored as &Value, so this function is convenient.
-    /// # Safety
-    /// The value used as a reference must be long-lived: if it is dropped at any point before invoking this function, we'll get undefined behavior.
-    /// In practice for our cases, this means any reference passed to this function must be A POINTER TO THE GC HEAP.
     pub unsafe fn as_mut_ptr(&self) -> *mut BaseValue {
         debug_assert!(
             self.is_ptr_type(),
-            "calling as_mut_ptr() on a value that's not a pointer, thus not meant to hold data to the GC heap: why?"
+            "calling as_mut_ptr() on a value that's not a pointer"
         );
+        //println!("Converting BaseValue to mutable pointer",);
         self as *const Self as *mut Self
     }
 }
@@ -400,9 +382,6 @@ impl From<u64> for BaseValue {
 }
 
 #[macro_export]
-/// Macro used to make AST-specific and BC-specific Value type "inherit" behavior from the base value type.
-/// Rust *could* avoid this by inferring that a BaseValue and a Value are the same.
-/// ...but I'm not sure there's a way for me to inform it. Maybe in a future version.
 macro_rules! delegate_to_base_value {
     ($($fn_name:ident($($arg:ident : $arg_ty:ty),*) -> $ret:ty),* $(,)?) => {
         $(

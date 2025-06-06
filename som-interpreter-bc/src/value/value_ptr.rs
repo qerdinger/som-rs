@@ -1,5 +1,12 @@
 use crate::gc::VecValue;
+
+#[cfg(feature = "nan")]
 use crate::value::nanboxed::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_TAG};
+
+#[cfg(feature = "l3bits")]
+use crate::value::l3bits::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_TAG};
+
+
 use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;

@@ -47,6 +47,8 @@ jemalloc = ["jemallocator"]
 frame-debug-info = []
 inlining-disabled = []
 profiler = ["measureme"]
+nan = []
+l3bits = []
 
 ## mmtk stuff
 #default = ["mmtk/extreme_assertions"]
