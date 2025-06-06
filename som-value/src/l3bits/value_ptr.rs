@@ -24,7 +24,7 @@ where
     pub fn new(value: PTR) -> Self {
         let ptr: u64 = value.into();
         Self {
-            value: BaseValue::from(BaseValue::encode_pointer(T::get_tag(), ptr)),
+            value: BaseValue::new(T::get_tag(), ptr),
             _phantom: PhantomData,
             _phantom2: PhantomData,
         }

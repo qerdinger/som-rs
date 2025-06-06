@@ -17,12 +17,10 @@ pub const INTEGER_TAG: u64 = 0b0010;
 pub const BOOLEAN_TAG: u64 = 0b0011;
 pub const SYMBOL_TAG: u64 = 0b0100;
 pub const CHAR_TAG: u64 = 0b0101;
-pub const DOUBLE_TAG: u64 = 0b0110;
 pub const BIG_INTEGER_TAG: u64 = 0b0111;
 pub const STRING_TAG: u64 = 0b1000;
 
-pub const PTR_MASK: u64 = !TAG_BITS;
-
+pub const DOUBLE_TAG: u64 = 0b1111;
 #[repr(C)]
 #[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Copy, Clone, Hash)]
@@ -40,33 +38,37 @@ impl BaseValue {
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
         Self {
-            encoded: (value << VALUE_TAG_BITS) | tag,
+            encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
     }
 
-    pub fn encode_pointer(tag: u64, ptr: u64) -> u64 {
-        assert_eq!(ptr & 0b111, 0, "Pointer must be 8-byte (3b) aligned");
-        let encoded = (ptr << VALUE_TAG_BITS) | (tag & TAG_BITS);
-        //println!("Encoding pointer: tag = {tag}, ptr = {ptr} -> encoded = {encoded}");
-        encoded
-    }
+    // pub fn encode_pointer(tag: u64, ptr: u64) -> u64 {
+    //     assert_eq!(ptr & 0b111, 0, "Pointer must be 8-byte aligned");
+    //     // Shift left by 4 bits to make a space for the tag
+    //     (ptr << VALUE_TAG_BITS) | (tag & TAG_BITS)
+    // }
 
-    pub fn decode_pointer(encoded: u64) -> u64 {
-        let ptr = encoded >> VALUE_TAG_BITS;
-        //println!("Decoding pointer from encoded value: {encoded} → {ptr}");
-        ptr
-    }
+    // pub fn decode_pointer(encoded: u64) -> u64 {
+    //     let ptr = encoded >> VALUE_TAG_BITS;
+    //     //println!("Decoding pointer from encoded value: {encoded} → {ptr}");
+    //     ptr
+    // }
 
     #[inline(always)]
     pub fn new_boolean(value: bool) -> Self {
+        // println!("create [bool] : {:#b}", value);
+        // println!("[ in] bool: {:#64b}", value as u64);
         //println!("Creating new boolean value: {}", value);
-        Self::new(BOOLEAN_TAG, value as u64)
+        let tr = Self::new(BOOLEAN_TAG, value as u64);
+        // println!("[out] bool: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
     pub fn is_ptr_type(self) -> bool {
         //println!("Checking if value is a pointer type: {}", self.encoded);
-        matches!(self.tag(), STRING_TAG | BIG_INTEGER_TAG)
+        //matches!(self.tag(), STRING_TAG | BIG_INTEGER_TAG)
+        self.tag() == STRING_TAG || self.tag() == BIG_INTEGER_TAG
     }
 
     pub unsafe fn as_something<PTR>(self) -> Option<PTR>
@@ -100,39 +102,55 @@ impl BaseValue {
         Ptr: From<u64>,
     {
         //println!("Extracting GC cell from encoded value: {}", self.encoded);
-        Ptr::from(Self::decode_pointer(self.encoded))
+        // Ptr::from(Self::decode_pointer(self.encoded))
+        Ptr::from(self.payload())
     }
 
     #[inline(always)]
     pub fn extract_pointer_bits(self) -> u64 {
         //println!("Extracting pointer bits from encoded value: {}", self.encoded);
-        Self::decode_pointer(self.encoded)
+        // Self::decode_pointer(self.encoded)
+        self.payload()
     }
 
     #[inline(always)]
     pub fn new_integer(value: i32) -> Self {
-        //println!("Creating new integer value: {}", value);
-        Self::new(INTEGER_TAG, value as u64)
+        // println!("[ in] int: {:#64b}", value as u64);
+        // println!("Creating new integer value: {}", value);
+        let tr = Self::new(INTEGER_TAG, value as u64);
+        // println!("[out] int: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
     pub fn new_double(value: f64) -> Self {
-        //println!("Creating new double value: {}", value);
-        Self {
-            encoded: (value.to_bits() & !TAG_BITS) | DOUBLE_TAG
-        }
+        println!("[ in] double: {:#64b}", value.to_bits() as u64);
+        // println!("Creating new double value: {}", value);
+        // let bits = value.to_bits();
+        // Self {
+        //     encoded: (bits << VALUE_TAG_BITS) | DOUBLE_TAG,
+        // }
+        let tr = Self::new(DOUBLE_TAG, value.to_bits());
+        println!("[out] double: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
     pub fn new_symbol(value: Interned) -> Self {
-        //println!("Creating new symbol value: {}", value.0);
-        Self::new(SYMBOL_TAG, value.0.into())
+        // println!("Creating new symbol value: {}", value.0);
+        // println!("[ in] symbol: {:#64b}", value.0 as u64);
+        let tr = Self::new(SYMBOL_TAG, value.0.into());
+        // println!("[out] symbol: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
     pub fn new_char(value: char) -> Self {
-        //println!("Creating new char value: {}", value);
-        Self::new(CHAR_TAG, value.into())
+        // println!("Creating new char value: {}", value);
+        // println!("[ in] char: {:#64b}", value as u64);
+        let tr = Self::new(CHAR_TAG, value.into());
+        // println!("[out] char: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
@@ -143,9 +161,13 @@ impl BaseValue {
     {
         let ptr: u64 = value.into();
         //println!("Creating new big integer value with pointer: {}", ptr);
-        Self {
-            encoded: Self::encode_pointer(BIG_INTEGER_TAG, ptr),
-        }
+        // Self {
+        //     en(BIG_INTEGER_TAG, ptr),
+        // }
+        // println!("[ in] big integer: {:#64b}", ptr);
+        let tr = Self::new(BIG_INTEGER_TAG, ptr);
+        // println!("[out] big integer: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
@@ -155,10 +177,14 @@ impl BaseValue {
         StringPtr: Deref<Target = String> + From<u64>,
     {
         let ptr: u64 = value.into();
-        //println!("Creating new string value with pointer: {}", ptr);
-        Self {
-            encoded: Self::encode_pointer(STRING_TAG, ptr),
-        }
+        // println!("Creating new string value with pointer: {}", ptr);
+        // Self {
+        //     encoded: Self::encode_pointer(STRING_TAG, ptr),
+        // }
+        // println!("[ in] string: {:#64b}", ptr);
+        let tr = Self::new(STRING_TAG, ptr);
+        // println!("[out] string: {:#64b}", tr.encoded);
+        tr
     }
 
     #[inline(always)]
@@ -249,8 +275,10 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
-        //println!("Attempting to extract double from value: {}", self.encoded);
-        self.is_double().then(|| f64::from_bits(self.encoded & !TAG_BITS))
+        self.is_double().then(|| {
+            let bits = self.payload();
+            f64::from_bits(bits)
+        })
     }
 
     #[inline(always)]
@@ -350,8 +378,9 @@ impl BaseValue {
         u64: From<BigIntPtr>,
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
-        //println!("Creating new big integer value with pointer");
-        Self::new_big_integer(value)
+        let tr = Self::new_big_integer(value);
+        println!("[out] big integer: {:#64b}", tr.encoded);
+        tr
     }
 
     #[allow(non_snake_case)]
