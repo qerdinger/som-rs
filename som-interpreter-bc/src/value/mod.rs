@@ -8,8 +8,8 @@ pub mod convert;
 #[cfg(feature = "nan")]
 pub mod nanboxed;
 
-#[cfg(feature = "l3bits")]
-pub mod l3bits;
+#[cfg(feature = "lbits")]
+pub mod lbits;
 
 /// Our enum based type
 pub mod value_enum;

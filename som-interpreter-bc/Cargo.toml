@@ -48,7 +48,7 @@ frame-debug-info = []
 inlining-disabled = []
 profiler = ["measureme"]
 nan = []
-l3bits = []
+lbits = []
 
 ## mmtk stuff
 #default = ["mmtk/extreme_assertions"]

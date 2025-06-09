@@ -23,6 +23,7 @@ where
 {
     pub fn new(value: PTR) -> Self {
         let ptr: u64 = value.into();
+        println!("Creating TypedPtrValue with tag: {} : {:#64b}", T::get_tag(), ptr);
         Self {
             value: BaseValue::new(T::get_tag(), ptr),
             _phantom: PhantomData,

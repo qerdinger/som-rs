@@ -524,13 +524,17 @@ impl Interpreter {
                     let mut current_frame = self.get_current_frame();
                     let condition_result = current_frame.stack_last_mut();
 
+                    println!("Val : {:?}", condition_result);
+                    println!("Val : {} / {:#64b}", condition_result.as_u64(), condition_result.as_u64());
+                    println!("Val tag {}", condition_result.tag());
+
                     if condition_result.is_boolean_true() {
                         self.get_current_frame().stack_pop();
                     } else if condition_result.is_boolean_false() {
                         self.bytecode_idx += offset - 1;
                         *condition_result = Value::NIL;
                     } else {
-                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:?})", condition_result)
+                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:#b} {:?})", condition_result.as_u64(), condition_result)
                     };
                     profiler_maybe_stop!(_timing);
                 }

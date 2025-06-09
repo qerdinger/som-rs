@@ -1,8 +1,8 @@
 #[cfg(feature = "nan")]
 mod nan;
 
-#[cfg(feature = "l3bits")]
-mod l3bits;
+#[cfg(feature = "lbits")]
+mod lbits;
 
 pub mod convert;
 pub mod value;
