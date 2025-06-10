@@ -6,9 +6,7 @@ use num_bigint::BigInt;
 use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 
 #[cfg(feature = "lbits")]
-use crate::lbits::value::{BaseValue};
-#[cfg(feature = "lbits")]
-use crate::lbits::value::{BIG_INTEGER_TAG, STRING_TAG};
+use crate::lbits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[repr(transparent)]
