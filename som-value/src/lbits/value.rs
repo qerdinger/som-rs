@@ -21,6 +21,13 @@ pub const BIG_INTEGER_TAG: u64 = 0b0111;
 pub const STRING_TAG: u64 = 0b1000;
 pub const DOUBLE_TAG: u64 = 0b1111;
 
+// 4-bit pointer tags object types
+pub const ARRAY_TAG: u64 = 0b1001;
+pub const BLOCK_TAG: u64 = 0b1010;
+pub const CLASS_TAG: u64 = 0b1011;
+pub const INSTANCE_TAG: u64 = 0b1100;
+pub const INVOKABLE_TAG: u64 = 0b1101;
+
 #[repr(C)]
 #[allow(clippy::derived_hash_with_manual_eq)]
 #[derive(Copy, Clone, Hash)]
@@ -228,7 +235,6 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
-        //println!("as_double : {}", self.encoded);
         self.is_double().then(|| {
             let bits = self.payload();
             f64::from_bits(bits)

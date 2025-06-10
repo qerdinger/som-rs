@@ -80,6 +80,17 @@ pub const STRING_TAG: u64 = 0b001 | CELL_BASE_TAG;
 /// Tag bits for the `BigInteger` type.
 pub const BIG_INTEGER_TAG: u64 = 0b011 | CELL_BASE_TAG; // Same bit position as `INTEGER_TAG`
 
+/// Tag bits for the `Array` type.
+pub const ARRAY_TAG: u64 = 0b010 | CELL_BASE_TAG;
+/// Tag bits for the `Block` type.
+pub const BLOCK_TAG: u64 = 0b100 | CELL_BASE_TAG;
+/// Tag bits for the `Class` type.
+pub const CLASS_TAG: u64 = 0b101 | CELL_BASE_TAG;
+/// Tag bits for the `Instance` type.
+pub const INSTANCE_TAG: u64 = 0b110 | CELL_BASE_TAG;
+/// Tag bits for the `Invokable` type.
+pub const INVOKABLE_TAG: u64 = 0b111 | CELL_BASE_TAG;
+
 // Here is a nice diagram to summarize how our NaN-boxing works:
 // (s = sign bit, e = exponent bit, m = mantissa bit)
 //

@@ -18,13 +18,6 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
 
-// 4-bit pointer tags object types
-pub(crate) const ARRAY_TAG: u64 = 0b1001;
-pub(crate) const BLOCK_TAG: u64 = 0b1010;
-pub(crate) const CLASS_TAG: u64 = 0b1011;
-pub(crate) const INSTANCE_TAG: u64 = 0b1100;
-pub(crate) const INVOKABLE_TAG: u64 = 0b1101;
-
 impl Deref for Value {
     type Target = BaseValue;
     fn deref(&self) -> &Self::Target {
