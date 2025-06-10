@@ -1,2 +1,2 @@
-/// Shared value representation logic (NaN boxing really)
+/// NaN Boxing Implementation
 pub mod value;
