@@ -19,7 +19,7 @@ build-and-test-interpreters:
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
-    - lz4 ./target/nan/release/som-interpreter-bc som-interpreter-bc.lz4
+    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc.lz4
 
     - |
       sftp tmp-artifacts << EOF
