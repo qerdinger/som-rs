@@ -22,8 +22,8 @@ build-and-test-interpreters:
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
-    - lz4 ./target/nan/release/som-interpreter-bc-nan som-interpreter-bc-nan.lz4
-    - lz4 ./target/lbits/release/som-interpreter-bc-lbits som-interpreter-bc-lbits.lz4
+    - lz4 ./target/nan/release/som-interpreter-bc som-interpreter-bc-nan.lz4
+    - lz4 ./target/lbits/release/som-interpreter-bc som-interpreter-bc-lbits.lz4
 
     - |
       sftp tmp-artifacts << EOF
@@ -51,6 +51,8 @@ benchmark:
 #    - lz4 -d som-interpreter-ast.lz4 ./target/release/som-interpreter-ast
     - lz4 -d som-interpreter-bc-nan.lz4 ./target/release/som-interpreter-bc-nan
     - lz4 -d som-interpreter-bc-lbits.lz4 ./target/release/som-interpreter-bc-lbits
+
+    - ls ./target/release
 
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf t:$MACHINE
 
