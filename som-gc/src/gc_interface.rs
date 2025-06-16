@@ -492,15 +492,23 @@ pub trait HasTypeInfoForGC {
 
 pub const STRING_MAGIC_ID: u8 = 10;
 pub const BIGINT_MAGIC_ID: u8 = 11;
+pub const DOUBLE_MAGIC_ID: u8 = 12;
 
 impl HasTypeInfoForGC for String {
     fn get_magic_gc_id() -> u8 {
         STRING_MAGIC_ID
     }
 }
+
 impl HasTypeInfoForGC for BigInt {
     fn get_magic_gc_id() -> u8 {
         BIGINT_MAGIC_ID
+    }
+}
+
+impl HasTypeInfoForGC for f64 {
+    fn get_magic_gc_id() -> u8 {
+        DOUBLE_MAGIC_ID
     }
 }
 

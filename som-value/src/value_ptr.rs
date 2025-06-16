@@ -6,7 +6,7 @@ use num_bigint::BigInt;
 use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 
 #[cfg(feature = "lbits")]
-use crate::lbits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
+use crate::lbits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[repr(transparent)]
@@ -82,5 +82,12 @@ impl HasPointerTag for String {
 impl HasPointerTag for BigInt {
     fn get_tag() -> u64 {
         BIG_INTEGER_TAG
+    }
+}
+
+#[cfg(feature = "lbits")]
+impl HasPointerTag for f64 {
+    fn get_tag() -> u64 {
+        DOUBLE_BOXED_TAG
     }
 }
