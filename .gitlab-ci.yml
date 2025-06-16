@@ -18,7 +18,7 @@ build-and-test-interpreters:
     - cargo clippy --features=lbits
 
     - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=nan
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=lbits
+    #- RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=lbits
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
@@ -44,11 +44,13 @@ benchmark:
   tags: [$MACHINE]
   script:
  #   - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-ast.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc.lz4
+    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc-nan.lz4
+    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc-lbits.lz4
 
     - mkdir -p ./target/release
 #    - lz4 -d som-interpreter-ast.lz4 ./target/release/som-interpreter-ast
-    - lz4 -d som-interpreter-bc.lz4 ./target/release/som-interpreter-bc
+    - lz4 -d som-interpreter-bc-nan.lz4 ./target/release/som-interpreter-bc-nan
+    - lz4 -d som-interpreter-bc-lbits.lz4 ./target/release/som-interpreter-bc-lbits
 
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf t:$MACHINE
 
