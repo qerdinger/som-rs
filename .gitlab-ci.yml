@@ -22,8 +22,8 @@ build-and-test-interpreters:
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
-    - lz4 ./target/nan/release/som-interpreter-bc som-interpreter-bc-nan.lz4
-    - lz4 ./target/lbits/release/som-interpreter-bc som-interpreter-bc-lbits.lz4
+    - lz4 ./target/nan/release/som-interpreter-bc-nan som-interpreter-bc-nan.lz4
+    - lz4 ./target/lbits/release/som-interpreter-bc-lbits som-interpreter-bc-lbits.lz4
 
     - |
       sftp tmp-artifacts << EOF
