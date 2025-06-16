@@ -15,18 +15,27 @@ pub const TAG_BITS: u64 = 0b1111;
 pub const NIL_TAG: u64 = 0b0001;
 pub const INTEGER_TAG: u64 = 0b0010;
 pub const BOOLEAN_TAG: u64 = 0b0011;
-pub const SYMBOL_TAG: u64 = 0b0100;
+pub const DOUBLE_TAG: u64 = 0b0100;
 pub const CHAR_TAG: u64 = 0b0101;
+pub const STRING_TAG: u64 = 0b0110;
 pub const BIG_INTEGER_TAG: u64 = 0b0111;
-pub const STRING_TAG: u64 = 0b1000;
-pub const DOUBLE_TAG: u64 = 0b1111;
+
+pub const DOUBLE_NEG_TAG: u64 = 0b1100;
+pub const DOUBLE_BOXED_TAG: u64 = 0b1111;
 
 // 4-bit pointer tags object types
 pub const ARRAY_TAG: u64 = 0b1001;
 pub const BLOCK_TAG: u64 = 0b1010;
 pub const CLASS_TAG: u64 = 0b1011;
-pub const INSTANCE_TAG: u64 = 0b1100;
+pub const INSTANCE_TAG: u64 = 0b1000;
 pub const INVOKABLE_TAG: u64 = 0b1101;
+pub const SYMBOL_TAG: u64 = 0b1110;
+
+pub const IMMEDIATE_OFFSET: u64 = 0x7000_0000_0000_0000;
+pub const ROTATE_AMOUNT: u32 = 1;
+pub const PAYLOAD_SHIFT: u32 = 3;
+const IM_DOUBLE_RANGE_MIN: u64 = 0x380;
+const IM_DOUBLE_RANGE_MAX: u64 = 0x47F;
 
 #[repr(C)]
 #[allow(clippy::derived_hash_with_manual_eq)]
@@ -44,7 +53,7 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
-        if tag == STRING_TAG || tag == BIG_INTEGER_TAG || tag == 0b1001 || tag == 0b1010 || tag == 0b1011 || tag == 0b1100 || tag == 0b1101 {
+        if tag == STRING_TAG || tag == BIG_INTEGER_TAG || tag == ARRAY_TAG || tag == BLOCK_TAG || tag == CLASS_TAG || tag == INSTANCE_TAG || tag == INVOKABLE_TAG {
             return Self::new_ptr(tag, value);
         }
         Self {
@@ -60,7 +69,7 @@ impl BaseValue {
         }
     }
 
-     #[inline(always)]
+    #[inline(always)]
     pub fn encode_ptr(tag: u64, ptr: u64) -> u64 {
         assert_eq!(ptr & 0b111, 0, "Pointer must be 8byte aligned");
         let shifted = ptr << 1;
@@ -80,7 +89,13 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_ptr_type(self) -> bool {
-        self.tag() == STRING_TAG || self.tag() == BIG_INTEGER_TAG  || self.tag() == 0b1001 || self.tag() == 0b1010 || self.tag() == 0b1011 || self.tag() == 0b1100 || self.tag() == 0b1101
+        self.tag() == STRING_TAG
+            || self.tag() == BIG_INTEGER_TAG
+            || self.tag() == ARRAY_TAG
+            || self.tag() == BLOCK_TAG
+            || self.tag() == CLASS_TAG
+            || self.tag() == INSTANCE_TAG
+            || self.tag() == INVOKABLE_TAG
     }
 
     pub unsafe fn as_something<PTR>(self) -> Option<PTR>
@@ -127,7 +142,30 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn new_double(value: f64) -> Self {
-        Self::new(DOUBLE_TAG, value.to_bits())
+        let bits = value.to_bits();
+        let sign = bits >> 63;
+        let tag = if sign == 0 { DOUBLE_TAG } else { DOUBLE_NEG_TAG };
+        let exponent  = (bits >> 52) & 0x7FF;
+
+        let rolled = bits.rotate_left(ROTATE_AMOUNT);
+
+        let in_range  = (exponent >= IM_DOUBLE_RANGE_MIN && exponent <= IM_DOUBLE_RANGE_MAX)
+                 || bits == 0 || bits == 1;
+        
+        if !in_range {
+            let boxed_double: Box<f64> = Box::new(value);
+            println!("Initialized Boxed {:#64b}", boxed_double.to_bits());
+            let tbr = Self::new(DOUBLE_BOXED_TAG, boxed_double.to_bits());
+            println!("Initialized PTR {:#64b}", tbr.encoded);
+            return tbr;
+        }
+
+        // Handling +/- 0
+        let payload = if rolled <= 1 { rolled } else { rolled.wrapping_sub(IMMEDIATE_OFFSET) };
+
+        // Integrate tag
+        let encoded = (payload << PAYLOAD_SHIFT) | tag;
+        Self { encoded }
     }
 
     #[inline(always)]
@@ -182,7 +220,8 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_double(self) -> bool {
-        self.tag() == DOUBLE_TAG
+        let tag = self.tag();
+        tag == DOUBLE_TAG || tag == DOUBLE_NEG_TAG || tag == DOUBLE_BOXED_TAG
     }
 
     #[inline(always)]
@@ -235,10 +274,24 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
-        self.is_double().then(|| {
-            let bits = self.payload();
-            f64::from_bits(bits)
-        })
+        match self.tag() {
+            DOUBLE_TAG | DOUBLE_NEG_TAG => {
+                // Retrieve payload
+                let payload = self.encoded >> PAYLOAD_SHIFT;
+
+                // Payload is lower or equal to 1 handle special case +/- 0
+                let rebased = if payload <= 1 { payload } else { payload.wrapping_add(IMMEDIATE_OFFSET) };
+
+                let bits = rebased.rotate_right(ROTATE_AMOUNT);
+                Some(f64::from_bits(bits))
+            }
+            DOUBLE_BOXED_TAG => {
+                println!("Decoding : {:#64b}", self.encoded);
+                println!("Decoding PTR : {:#64b}", Self::decode_ptr(self.encoded));
+                Some((*Box::new(Self::decode_ptr(self.encoded))) as f64)
+            }
+            _ => None,
+        }
     }
 
     #[inline(always)]
@@ -340,10 +393,7 @@ impl BaseValue {
     }
 
     pub unsafe fn as_mut_ptr(&self) -> *mut BaseValue {
-        debug_assert!(
-            self.is_ptr_type(),
-            "calling as_mut_ptr() on a value that's not a pointer"
-        );
+        debug_assert!(self.is_ptr_type(), "calling as_mut_ptr() on a value that's not a pointer");
         self as *const Self as *mut Self
     }
 }
