@@ -13,7 +13,7 @@ build-and-test-interpreters:
   script:
     - cargo clean
     - cargo build --release --features=som-gc/semispace --features=nan
-    - cargo clippy
+    - cargo clippy --features=nan
 
     - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=nan
 
