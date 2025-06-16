@@ -25,6 +25,8 @@ pub fn interactive(universe: &mut Universe, verbose: bool) -> Result<(), Error> 
     let method_name = universe.intern_symbol("run:");
     let mut line = String::new();
 
+    let mut last_value = Value::NIL;
+
     loop {
         write!(&mut stdout, "({}) SOM Shell | ", counter)?;
         stdout.flush()?;
@@ -80,9 +82,9 @@ pub fn interactive(universe: &mut Universe, verbose: bool) -> Result<(), Error> 
         let method = class.lookup_method(method_name).expect("method not found ??");
         let start = Instant::now();
 
-        let frame_ptr = Frame::alloc_initial_method(method, &[Value::Class(class), Value::NIL], universe.gc_interface);
+        let frame_ptr = Frame::alloc_initial_method(method, &[Value::Class(class), last_value], universe.gc_interface);
         let mut interpreter = Interpreter::new(frame_ptr);
-        let _value = interpreter.run(universe);
+        last_value = interpreter.run(universe).expect("failed to run");
 
         let elapsed = start.elapsed();
         if verbose {

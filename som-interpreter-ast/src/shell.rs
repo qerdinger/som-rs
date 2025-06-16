@@ -9,7 +9,7 @@ use som_interpreter_ast::vm_objects::class::Class;
 use som_lexer::{Lexer, Token};
 use som_parser::lang;
 
-use som_interpreter_ast::invokable::Invoke;
+use som_interpreter_ast::invokable::{Invoke, Return};
 use som_interpreter_ast::universe::{GlobalValueStack, Universe};
 
 /// Launches an interactive Read-Eval-Print-Loop within the given universe.
@@ -21,8 +21,9 @@ pub fn interactive(universe: &mut Universe, verbose: bool) -> Result<(), Error> 
 
     let mut counter = 0;
     let mut line = String::new();
-    // let mut last_value = Value::Nil;
+    let mut last_value = Value::NIL;
     // let signature = universe.intern_symbol("run:");
+
     loop {
         write!(&mut stdout, "({}) SOM Shell | ", counter)?;
         stdout.flush()?;
@@ -65,29 +66,22 @@ pub fn interactive(universe: &mut Universe, verbose: bool) -> Result<(), Error> 
 
         let mut method = class_expr.lookup_method(universe.interner.reverse_lookup("run:").unwrap()).unwrap();
 
-        //dbg!(&method);
-
         let start = Instant::now();
 
-        let mut value_stack = GlobalValueStack::from(vec![Value::Class(class_expr)]);
-        let _output = method.invoke(universe, &mut value_stack, 1);
+        let mut value_stack = GlobalValueStack::from(vec![Value::Class(class_expr), last_value]);
+        last_value = {
+            match method.invoke(universe, &mut value_stack, 2) {
+                Return::Local(v) => v,
+                Return::NonLocal(v, _) => v,
+            }
+        };
+
         let elapsed = start.elapsed();
         if verbose {
             writeln!(&mut stdout, "Execution time: {} ms ({} µs)", elapsed.as_millis(), elapsed.as_micros(),)?;
             writeln!(&mut stdout)?;
         }
 
-        //match output {
-        //    Return::Local(value) => {
-        //        println!("returned: {} ({:?})", value.to_string(&universe), value);
-        //        // last_value = value;
-        //    }
-        //    Return::NonLocal(value, frame) => {
-        //        println!("returned (non-local, escaped): {} ({:?})", value.to_string(&universe), value);
-        //        println!("intended for frame: {:?}", frame);
-        //        // last_value = value;
-        //    }
-        //}
         counter += 1;
     }
 
