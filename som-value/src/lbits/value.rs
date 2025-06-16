@@ -89,13 +89,16 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_ptr_type(self) -> bool {
-        self.tag() == STRING_TAG
-            || self.tag() == BIG_INTEGER_TAG
-            || self.tag() == ARRAY_TAG
-            || self.tag() == BLOCK_TAG
-            || self.tag() == CLASS_TAG
-            || self.tag() == INSTANCE_TAG
-            || self.tag() == INVOKABLE_TAG
+        matches!(
+            self.tag(),
+            STRING_TAG |
+            BIG_INTEGER_TAG |
+            ARRAY_TAG |
+            BLOCK_TAG |
+            CLASS_TAG |
+            INSTANCE_TAG |
+            INVOKABLE_TAG
+        )
     }
 
     pub unsafe fn as_something<PTR>(self) -> Option<PTR>
@@ -220,8 +223,7 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_double(self) -> bool {
-        let tag = self.tag();
-        tag == DOUBLE_TAG || tag == DOUBLE_NEG_TAG || tag == DOUBLE_BOXED_TAG
+        matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG | DOUBLE_BOXED_TAG)
     }
 
     #[inline(always)]
