@@ -20,7 +20,6 @@ use std::ops::Deref;
 
 impl Deref for Value {
     type Target = BaseValue;
-
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -73,37 +72,31 @@ impl Value {
         self.0.as_ptr::<T, Gc<T>>()
     }
 
-    /// Returns this value as an array, if such is its type.
     #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
-        match self.tag() == ARRAY_TAG {
-            true => Some(VecValue(GcSlice::from(self.extract_pointer_bits()))),
-            false => None,
-        }
+        (self.tag() == ARRAY_TAG).then(|| VecValue(GcSlice::from(self.extract_pointer_bits())))
     }
-    /// Returns this value as a block, if such is its type.
+
     #[inline(always)]
     pub fn as_block(self) -> Option<Gc<Block>> {
         self.as_value_ptr::<Block>()
     }
 
-    /// Returns this value as a class, if such is its type.
     #[inline(always)]
     pub fn as_class(self) -> Option<Gc<Class>> {
         self.as_value_ptr::<Class>()
     }
-    /// Returns this value as an instance, if such is its type.
+
     #[inline(always)]
     pub fn as_instance(self) -> Option<Gc<Instance>> {
         self.as_value_ptr::<Instance>()
     }
-    /// Returns this value as an invokable, if such is its type.
+
     #[inline(always)]
     pub fn as_invokable(self) -> Option<Gc<Method>> {
         self.as_value_ptr::<Method>()
     }
 
-    /// Get the class of the current value.
     #[inline(always)]
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         debug_assert_valid_semispace_ptr_value!(self);
@@ -129,18 +122,16 @@ impl Value {
                 if self.is_double() {
                     universe.core.double_class()
                 } else {
-                    panic!("unknown tag");
+                    panic!("unknown tag")
                 }
             }
         }
     }
 
-    /// Search for a given method for this value.
     pub fn lookup_method(&self, universe: &Universe, signature: Interned) -> Option<Gc<Method>> {
         self.class(universe).lookup_method(signature)
     }
 
-    /// Get the string representation of this value.
     pub fn to_string(&self, universe: &Universe) -> String {
         match self.tag() {
             NIL_TAG => "nil".to_string(),
@@ -158,8 +149,13 @@ impl Value {
             }
             STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             ARRAY_TAG => {
-                // TODO: I think we can do better here (less allocations).
-                let strings: Vec<String> = self.as_array().unwrap().0.iter().map(|value| value.to_string(universe)).collect();
+                let strings: Vec<String> = self
+                    .as_array()
+                    .unwrap()
+                    .0
+                    .iter()
+                    .map(|value| value.to_string(universe))
+                    .collect();
                 format!("#({})", strings.join(" "))
             }
             BLOCK_TAG => {
@@ -168,26 +164,19 @@ impl Value {
             }
             INSTANCE_TAG => {
                 let instance = self.as_instance().unwrap();
-                format!("instance of {} class", instance.class().name(),)
+                format!("instance of {} class", instance.class().name())
             }
             CLASS_TAG => self.as_class().unwrap().name().to_string(),
             INVOKABLE_TAG => {
                 let invokable = self.as_invokable().unwrap();
-                format!("{}>>#{}", invokable.holder().name(), invokable.signature(),)
+                format!("{}>>#{}", invokable.holder().name(), invokable.signature())
             }
-            _ => {
-                panic!("unknown tag")
-            }
+            _ => panic!("unknown tag"),
         }
     }
-}
 
-// for backwards compatibility with current code... and maybe easy replacement with ValueEnum?
-#[allow(non_snake_case)]
-impl Value {
     #[inline(always)]
     pub fn Array(value: VecValue) -> Self {
-        // TODO use TypedPtrValue somehow instead
         Value(BaseValue::new(ARRAY_TAG, value.0.into()))
     }
 
@@ -215,7 +204,6 @@ impl Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         if self.as_u64() == other.as_u64() {
-            // this encapsulates every comparison between values of the same primitive type, e.g. comparing two i32s or two booleans, and pointer comparisons
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
             a == b

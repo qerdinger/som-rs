@@ -2,7 +2,11 @@ use std::{marker::PhantomData, ops::Deref};
 
 use num_bigint::BigInt;
 
-use crate::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
+#[cfg(feature = "nan")]
+use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
+
+#[cfg(feature = "lbits")]
+use crate::lbits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[repr(transparent)]
@@ -22,8 +26,9 @@ where
     PTR: Deref<Target = T> + Into<u64> + From<u64>,
 {
     pub fn new(value: PTR) -> Self {
+        let ptr: u64 = value.into();
         Self {
-            value: BaseValue::new(T::get_tag(), value.into()),
+            value: BaseValue::new(T::get_tag(), ptr),
             _phantom: PhantomData,
             _phantom2: PhantomData,
         }
@@ -37,7 +42,9 @@ where
     /// Returns the underlying pointer value.
     #[inline(always)]
     pub fn get(&self) -> Option<PTR> {
-        self.is_valid().then(|| self.value.extract_gc_cell())
+        self.is_valid().then(|| {
+            PTR::from(self.value.extract_pointer_bits())
+        })
     }
 
     /// Returns the underlying pointer value, without checking if it is valid.
@@ -46,7 +53,7 @@ where
     #[inline(always)]
     pub unsafe fn get_unchecked(&self) -> PTR {
         debug_assert!(self.get().is_some());
-        self.value.extract_gc_cell()
+        PTR::from(self.value.extract_pointer_bits())
     }
 }
 

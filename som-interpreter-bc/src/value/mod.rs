@@ -5,7 +5,11 @@ use som_value::value::BaseValue;
 pub mod convert;
 
 /// Our default type: NaN boxed
+#[cfg(feature = "nan")]
 pub mod nanboxed;
+
+#[cfg(feature = "lbits")]
+pub mod lbits;
 
 /// Our enum based type
 pub mod value_enum;

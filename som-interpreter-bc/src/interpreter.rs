@@ -530,7 +530,7 @@ impl Interpreter {
                         self.bytecode_idx += offset - 1;
                         *condition_result = Value::NIL;
                     } else {
-                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:?})", condition_result)
+                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:#b} {:?})", condition_result.as_u64(), condition_result)
                     };
                     profiler_maybe_stop!(_timing);
                 }

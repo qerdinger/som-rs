@@ -4,7 +4,12 @@ use std::borrow::Cow;
 use std::ops::Deref;
 
 use crate::interned::Interned;
-use crate::value::BaseValue;
+
+#[cfg(feature = "nan")]
+use crate::nan::value::BaseValue;
+
+#[cfg(feature = "lbits")]
+use crate::lbits::value::BaseValue;
 
 // Unfinished: using TryFrom to replace the convert.rs types FromArgs
 
