@@ -12,6 +12,7 @@ static_assertions::assert_eq_size!(f64, u64, *const ());
 pub const VALUE_TAG_BITS: u64 = 4;
 pub const TAG_BITS: u64 = 0b1111;
 
+pub const TINY_STRING_TAG: u64 = 0b0000;
 pub const NIL_TAG: u64 = 0b0001;
 pub const INTEGER_TAG: u64 = 0b0010;
 pub const BOOLEAN_TAG: u64 = 0b0011;
@@ -53,9 +54,17 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
-        if tag == STRING_TAG || tag == BIG_INTEGER_TAG || tag == ARRAY_TAG || tag == BLOCK_TAG || tag == CLASS_TAG || tag == INSTANCE_TAG || tag == INVOKABLE_TAG {
-            return Self::new_ptr(tag, value);
-        }
+        if matches!(
+            tag,
+            STRING_TAG |
+            BIG_INTEGER_TAG |
+            ARRAY_TAG |
+            BLOCK_TAG |
+            CLASS_TAG |
+            INSTANCE_TAG |
+            INVOKABLE_TAG
+        ) { return Self::new_ptr(tag, value); }
+
         Self {
             encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
@@ -80,11 +89,6 @@ impl BaseValue {
     pub fn decode_ptr(encoded: u64) -> u64 {
         // Remove the tag and shift right by 1 to get the original pointer
         (encoded & !TAG_BITS) >> 1
-    }
-
-    #[inline(always)]
-    pub fn new_boolean(value: bool) -> Self {
-        Self::new(BOOLEAN_TAG, value as u64)
     }
 
     #[inline(always)]
@@ -139,8 +143,26 @@ impl BaseValue {
     }
 
     #[inline(always)]
+    pub fn new_tiny_string(value: [u8; 8]) -> Self {
+        let mut ptr: u64 = 0;
+        ptr |= (value[0] as u64) << 0;
+        ptr |= (value[1] as u64) << 8;
+        ptr |= (value[2] as u64) << 16;
+        ptr |= (value[3] as u64) << 24;
+        ptr |= (value[4] as u64) << 32;
+        ptr |= (value[5] as u64) << 40;
+        ptr |= (value[6] as u64) << 48;
+        Self::new(TINY_STRING_TAG, ptr)
+    }
+    
+    #[inline(always)]
     pub fn new_integer(value: i32) -> Self {
         Self::new(INTEGER_TAG, value as u64)
+    }
+
+    #[inline(always)]
+    pub fn new_boolean(value: bool) -> Self {
+        Self::new(BOOLEAN_TAG, value as u64)
     }
 
     #[inline(always)]
@@ -212,6 +234,11 @@ impl BaseValue {
     }
 
     #[inline(always)]
+    pub fn is_tiny_string(self) -> bool {
+        self.tag() == TINY_STRING_TAG
+    }
+
+    #[inline(always)]
     pub fn is_nil(self) -> bool {
         self.tag() == NIL_TAG
     }
@@ -269,6 +296,20 @@ impl BaseValue {
         self.is_string().then(|| self.extract_gc_cell())
     }
 
+    #[inline(always)]
+    pub fn as_tiny_string(self) -> Option<[u8; 8]> {
+        let mut bytes = [0u8; 8];
+        let payload = self.payload();
+        bytes[0] = ((payload >>  0) & 0xFF) as u8;
+        bytes[1] = ((payload >>  8) & 0xFF) as u8;
+        bytes[2] = ((payload >> 16) & 0xFF) as u8;
+        bytes[3] = ((payload >> 24) & 0xFF) as u8;
+        bytes[4] = ((payload >> 32) & 0xFF) as u8;
+        bytes[5] = ((payload >> 40) & 0xFF) as u8;
+        bytes[6] = ((payload >> 48) & 0xFF) as u8;
+        Some(bytes)
+    }
+    
     #[inline(always)]
     pub fn as_integer(self) -> Option<i32> {
         self.is_integer().then_some(self.payload() as i32)
