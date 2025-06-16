@@ -12,19 +12,24 @@ build-and-test-interpreters:
   tags: [yuria2]
   script:
     - cargo clean
-    - cargo build --release --features=som-gc/semispace --features=nan
+    - cargo build --release --features=som-gc/semispace --features=nan --target-dir target/nan
+    - cargo build --release --features=som-gc/semispace --features=nan --target-dir target/lbits
     - cargo clippy --features=nan
+    - cargo clippy --features=lbits
 
     - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=nan
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=lbits
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc.lz4
+    - lz4 ./target/nan/release/som-interpreter-bc som-interpreter-bc-nan.lz4
+    - lz4 ./target/lbits/release/som-interpreter-bc som-interpreter-bc-lbits.lz4
 
     - |
       sftp tmp-artifacts << EOF
         -mkdir incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc.lz4 incoming/${CI_PIPELINE_ID}/
+        put som-interpreter-bc-nan.lz4 incoming/${CI_PIPELINE_ID}/
+        put som-interpreter-bc-lbits.lz4 incoming/${CI_PIPELINE_ID}/
       EOF
 #        put som-interpreter-ast.lz4 incoming/${CI_PIPELINE_ID}/
 
