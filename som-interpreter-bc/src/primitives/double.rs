@@ -475,10 +475,11 @@ fn modulo(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     Ok(value)
 }
 
-fn positive_infinity(_: Value) -> Result<f64, Error> {
+fn positive_infinity(_: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Double>>#positiveInfinity";
 
-    Ok(f64::INFINITY)
+    let heap = &mut universe.gc_interface;
+    Ok(Value::AllocatedDouble(heap.alloc(f64::INFINITY)))
 }
 
 /// Search for an instance primitive matching the given signature.

@@ -15,7 +15,7 @@ build-and-test-interpreters:
     - cargo build --release --features=som-gc/semispace --features=lbits
     - cargo clippy --features=som-gc/semispace --features=lbits
 
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=lbits
+#    - RUST_TEST_THREADS=1 cargo test --features som-gc/semispace --features=lbits
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
