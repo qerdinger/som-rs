@@ -12,7 +12,7 @@ use mmtk::util::ObjectReference;
 use mmtk::vm::{ObjectModel, SlotVisitor};
 use mmtk::Mutator;
 use num_bigint::BigInt;
-use som_gc::gc_interface::{HasTypeInfoForGC, MMTKtoVMCallbacks, SupportedSliceType, BIGINT_MAGIC_ID, STRING_MAGIC_ID};
+use som_gc::gc_interface::{HasTypeInfoForGC, MMTKtoVMCallbacks, SupportedSliceType, BIGINT_MAGIC_ID, DOUBLE_MAGIC_ID, STRING_MAGIC_ID};
 use som_gc::gcref::Gc;
 use som_gc::gcslice::GcSlice;
 use som_gc::object_model::VMObjectModel;
@@ -25,6 +25,7 @@ use std::ops::{Deref, DerefMut};
 pub enum BCObjMagicId {
     String = STRING_MAGIC_ID as isize,
     BigInt = BIGINT_MAGIC_ID as isize,
+    Double = DOUBLE_MAGIC_ID as isize,
     Frame = 100,
     ArrayLiteral = GCSLICE_LITERAL_MAGIC_ID as isize,
     Block = 102,
@@ -262,7 +263,7 @@ pub fn scan_object<'a>(object: ObjectReference, slot_visitor: &'a mut (dyn SlotV
                     visit_literal(lit, slot_visitor)
                 }
             }
-            BCObjMagicId::String | BCObjMagicId::BigInt => {
+            BCObjMagicId::String | BCObjMagicId::BigInt | BCObjMagicId::Double => {
                 // leaf nodes: no children.
             }
         }
@@ -320,6 +321,7 @@ fn get_object_size(object: ObjectReference) -> usize {
         match gc_id {
             BCObjMagicId::String => size_of::<String>(),
             BCObjMagicId::BigInt => size_of::<BigInt>(),
+            BCObjMagicId::Double => size_of::<f64>(),
             BCObjMagicId::ArrayLiteral => {
                 let literals: GcSlice<Literal> = GcSlice::from(object.to_raw_address());
                 literals.get_true_size()

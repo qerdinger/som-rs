@@ -52,14 +52,17 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub enum DoubleLike<BIGINTPTR> {
+pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     Double(f64),
     Integer(i32),
     BigInteger(BIGINTPTR),
+    #[doc(hidden)]
+    __Phantom(std::marker::PhantomData<DOUBLEPTR>),
 }
 
-impl<BIGINTPTR> TryFrom<BaseValue> for DoubleLike<BIGINTPTR>
+impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
+    DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
     BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
     u64: From<BIGINTPTR>,
 {
@@ -70,22 +73,35 @@ where
             .as_double()
             .map(Self::Double)
             .or_else(|| value.as_integer().map(Self::Integer))
+            // .or_else(|| value.as_allocated_double().map(|v: DOUBLEPTR | Self::Double(*v)))
             .or_else(|| value.as_big_integer().map(Self::BigInteger))
+            .or_else(|| {
+                value.as_allocated_double().map(|v: DOUBLEPTR| {
+                    Self::Double(*v)
+                })
+            })
             .context("could not resolve `Value` as `Double`, `Integer`, or `BigInteger`")
     }
+    // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
 }
 
-impl<BIGINTPTR> DoubleLike<BIGINTPTR>
+impl<DOUBLEPTR, BIGINTPTR> DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
+    DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
     BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
     u64: From<BIGINTPTR>,
 {
     #[inline(always)]
-    pub fn lt(&self, other: &DoubleLike<BIGINTPTR>) -> bool {
+    pub fn lt(&self, other: &DoubleLike<DOUBLEPTR, BIGINTPTR>) -> bool {
         match (self, other) {
             (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a < b,
             (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a < **b,
             (DoubleLike::Double(a), DoubleLike::Double(b)) => a < b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a < **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a < *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a < **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a < (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) < **b,
             (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) < *b,
             (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a < (*b as f64),
             (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) => **a < BigInt::from(*b),
@@ -97,13 +113,18 @@ where
     }
 
     #[inline(always)]
-    pub fn gt(&self, other: &DoubleLike<BIGINTPTR>) -> bool {
+    pub fn gt(&self, other: &DoubleLike<DOUBLEPTR, BIGINTPTR>) -> bool {
         match (self, other) {
             (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a > b,
             (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a > **b,
             (DoubleLike::Double(a), DoubleLike::Double(b)) => a > b,
             (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) > *b,
             (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a > (*b as f64),
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a > **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a > *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a > **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a > (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) > **b,
             (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) => **a > BigInt::from(*b),
             (DoubleLike::Integer(a), DoubleLike::BigInteger(b)) => BigInt::from(*a) > **b,
             _ => {
@@ -113,18 +134,19 @@ where
     }
 
     #[inline(always)]
-    pub fn lt_or_eq(&self, other: &DoubleLike<BIGINTPTR>) -> bool {
+    pub fn lt_or_eq(&self, other: &DoubleLike<DOUBLEPTR, BIGINTPTR>) -> bool {
         Self::lt(self, other) || Self::eq(self, other)
     }
 
     #[inline(always)]
-    pub fn gt_or_eq(&self, other: &DoubleLike<BIGINTPTR>) -> bool {
+    pub fn gt_or_eq(&self, other: &DoubleLike<DOUBLEPTR, BIGINTPTR>) -> bool {
         Self::gt(self, other) || Self::eq(self, other)
     }
 }
 
-impl<BIGINTPTR> PartialEq for DoubleLike<BIGINTPTR>
+impl<DOUBLEPTR, BIGINTPTR> PartialEq for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
+    DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
     BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -133,6 +155,11 @@ where
             (DoubleLike::Double(a), DoubleLike::Double(b)) => a == b,
             (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) == *b,
             (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a == (*b as f64),
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a == **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a == *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a == **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a == (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) == **b,
             (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a == **b,
             _ => false,
         }

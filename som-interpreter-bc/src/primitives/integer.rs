@@ -172,12 +172,30 @@ fn plus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
         (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
             demote!(heap, &*a + BigInt::from(b))
         }
-        (DoubleLike::Double(a), DoubleLike::Double(b)) => Value::Double(a + b),
-        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => Value::Double((a as f64) + b),
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            Value::Double(a + b)
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            Value::Double((a as f64) + b)
+        },
         (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
             Some(a) => Value::Double(a + b),
             None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
         },
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((*a) + (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => Value::AllocatedDouble(heap.alloc((*a) + (b))),
+        // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a) + (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => Value::AllocatedDouble(heap.alloc((*a) + (b as f64))),
+        // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a as f64) + (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::BigInteger(b)) => match b.to_f64() {
+        //     Some(b) => Value::AllocatedDouble(heap.alloc((*a) + (b))),
+        //     None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        // },
+        // (DoubleLike::BigInteger(a), DoubleLike::AllocatedDouble(b)) => match a.to_f64() {
+        //     Some(a) => Value::AllocatedDouble(heap.alloc((a) + (*b))),
+        //     None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        // },
+        (_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -217,6 +235,24 @@ fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((*a) - (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => Value::AllocatedDouble(heap.alloc((*a) - (b))),
+        // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a) - (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => Value::AllocatedDouble(heap.alloc((*a) - (b as f64))),
+        // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a as f64) - (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::BigInteger(b)) => match b.to_f64() {
+        //     Some(b) => Value::AllocatedDouble(heap.alloc((*a) + (b))),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
+        //     }
+        // },
+        // (DoubleLike::BigInteger(a), DoubleLike::AllocatedDouble(b)) => match a.to_f64() {
+        //     Some(a) => Value::AllocatedDouble(heap.alloc((a) - (*b))),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
+        //     }
+        // },
+        (_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -248,6 +284,24 @@ fn times(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((*a) * (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => Value::AllocatedDouble(heap.alloc((*a) * (b))),
+        // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a) * (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => Value::AllocatedDouble(heap.alloc((*a) * (b as f64))),
+        // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(heap.alloc((a as f64) * (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::BigInteger(b)) => match b.to_f64() {
+        //     Some(b) => Value::AllocatedDouble(heap.alloc((*a) * (b))),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
+        //     }
+        // },
+        // (DoubleLike::BigInteger(a), DoubleLike::AllocatedDouble(b)) => match a.to_f64() {
+        //     Some(a) => Value::AllocatedDouble(heap.alloc((*b) * (a))),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
+        //     }
+        // }
+        (_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -288,6 +342,24 @@ fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(universe.gc_interface.alloc((*a) / (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => Value::AllocatedDouble(universe.gc_interface.alloc((*a) / (b))),
+        // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(universe.gc_interface.alloc((a) / (*b))),
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => Value::AllocatedDouble(universe.gc_interface.alloc((*a) / (b as f64))),
+        // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => Value::AllocatedDouble(universe.gc_interface.alloc((a as f64) / (*b))),
+        // (DoubleLike::BigInteger(a), DoubleLike::AllocatedDouble(b)) => match a.to_f64() {
+        //     Some(a) => Value::AllocatedDouble(universe.gc_interface.alloc(a / (*b))),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `BigInteger` too big to be converted to `Double`");
+        //     }
+        // },
+        // (DoubleLike::AllocatedDouble(a), DoubleLike::BigInteger(b)) => match b.to_f64() {
+        //     Some(b) => Value::AllocatedDouble(universe.gc_interface.alloc((*a) / b)),
+        //     None => {
+        //         bail!("'{SIGNATURE}': `BigInteger` too big to be converted to `Double`");
+        //     }
+        // },
+        (_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -299,23 +371,37 @@ fn divide_float(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     let a = match a {
         DoubleLike::Double(a) => a,
         DoubleLike::Integer(a) => a as f64,
+        // DoubleLike::AllocatedDouble(a) => match a.to_f64() {
+        //     Some(a) => a,
+        //     None => {
+        //         bail!("'{SIGNATURE}': `AllocatedDouble` too big to be converted to `Double`");
+        //     }
+        // },
         DoubleLike::BigInteger(a) => match a.to_f64() {
             Some(a) => a,
             None => {
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
+        _ => panic!("Undefined!")
     };
 
     let b = match b {
         DoubleLike::Double(b) => b,
         DoubleLike::Integer(b) => b as f64,
+        // DoubleLike::AllocatedDouble(b) => match b.to_f64() {
+        //     Some(b) => b,
+        //     None => {
+        //         bail!("'{SIGNATURE}': `AllocatedDouble` too big to be converted to `Double`");
+        //     }
+        // },
         DoubleLike::BigInteger(b) => match b.to_f64() {
             Some(b) => b,
             None => {
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
+        _ => panic!("Undefined!")
     };
 
     Ok(a / b)
@@ -371,7 +457,9 @@ fn sqrt(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
                 Value::Double(sqrt)
             }
         }
+        // DoubleLike::AllocatedDouble(a) => Value::AllocatedDouble(universe.gc_interface.alloc(a.sqrt())),
         DoubleLike::BigInteger(a) => demote!(&mut universe.gc_interface, a.sqrt()),
+        _ => panic!("Undefined!")
     };
 
     Ok(value)
@@ -399,10 +487,18 @@ fn abs(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error
             true => Ok((-f).into_value()),
             false => Ok(f.into_value()),
         },
+        // DoubleLike::AllocatedDouble(v) => {
+        //     let val = *v;
+        //     let valabs = universe.gc_interface.alloc(val.abs());
+        //     Ok(valabs.into_value())
+        // }
         DoubleLike::Integer(i) => Ok(i.into_value()),
         DoubleLike::BigInteger(v) => {
             let bigint: Gc<BigInt> = universe.gc_interface.alloc(v.abs());
             Ok(bigint.into_value())
+        }
+        _ => {
+            panic!("Undefined!")
         }
     }
 }

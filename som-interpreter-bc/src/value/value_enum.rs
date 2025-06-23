@@ -23,6 +23,7 @@ pub enum ValueEnum {
     BigInteger(Gc<BigInt>),
     /// An floating-point value.
     Double(f64),
+    AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
@@ -47,6 +48,8 @@ impl From<Value> for ValueEnum {
             Self::Nil
         } else if let Some(value) = value.as_integer() {
             Self::Integer(value)
+        } else if let Some(value) = value.as_allocated_double() {
+            Self::AllocatedDouble(value)
         } else if let Some(value) = value.as_big_integer() {
             Self::BigInteger(value)
         } else if let Some(value) = value.as_boolean() {
@@ -81,6 +84,7 @@ impl From<ValueEnum> for Value {
             ValueEnum::Integer(value) => Self::new_integer(value),
             ValueEnum::BigInteger(value) => Self::new_big_integer(value),
             ValueEnum::Double(value) => Self::new_double(value),
+            ValueEnum::AllocatedDouble(value) => Self::new_allocated_double(value),
             ValueEnum::Symbol(value) => Self::new_symbol(value),
             ValueEnum::String(value) => Self::new_string(value),
             ValueEnum::Array(_value) => unimplemented!(
@@ -104,6 +108,7 @@ impl ValueEnum {
             Self::Integer(_) => universe.core.integer_class(),
             Self::BigInteger(_) => universe.core.integer_class(),
             Self::Double(_) => universe.core.double_class(),
+            Self::AllocatedDouble(_) => universe.core.double_class(),
             Self::Symbol(_) => universe.core.symbol_class(),
             Self::String(_) => universe.core.string_class(),
             Self::Array(_) => universe.core.array_class(),
@@ -147,6 +152,7 @@ impl ValueEnum {
             Self::Integer(value) => value.to_string(),
             Self::BigInteger(value) => value.to_string(),
             Self::Double(value) => value.to_string(),
+            Self::AllocatedDouble(value) => value.to_string(),
             Self::Symbol(value) => {
                 let symbol = universe.lookup_symbol(*value);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
@@ -206,6 +212,7 @@ impl fmt::Debug for ValueEnum {
             Self::Integer(val) => f.debug_tuple("Integer").field(val).finish(),
             Self::BigInteger(val) => f.debug_tuple("BigInteger").field(val).finish(),
             Self::Double(val) => f.debug_tuple("Double").field(val).finish(),
+            Self::AllocatedDouble(val) => f.debug_tuple("AllocatedDouble").field(val).finish(),
             Self::Symbol(val) => f.debug_tuple("Symbol").field(val).finish(),
             Self::String(val) => f.debug_tuple("String").field(val).finish(),
             Self::Array(val) => f.debug_tuple("Array").field(&val).finish(),
@@ -292,6 +299,11 @@ impl ValueEnum {
     #[inline(always)]
     pub fn is_symbol(&self) -> bool {
         matches!(self, ValueEnum::Symbol(_))
+    }
+
+    #[inline(always)]
+    pub fn is_allocated_double(&self) -> bool {
+        matches!(self, ValueEnum::AllocatedDouble(_))
     }
 
     /// Returns whether this value is a double.
@@ -407,6 +419,15 @@ impl ValueEnum {
         }
     }
 
+    #[inline(always)]
+    pub fn as_allocated_double(&self) -> Option<Gc<f64>> {
+        if let ValueEnum::AllocatedDouble(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
     /// The `nil` value.
     pub const NIL: Self = ValueEnum::Nil;
     /// The boolean `true` value.
@@ -445,6 +466,11 @@ impl ValueEnum {
     #[inline(always)]
     pub fn new_symbol(value: Interned) -> Self {
         ValueEnum::Symbol(value)
+    }
+
+    #[inline(always)]
+    pub fn new_allocated_double(value: Gc<f64>) -> Self {
+        ValueEnum::AllocatedDouble(value)
     }
 
     // `new_*` for pointer types

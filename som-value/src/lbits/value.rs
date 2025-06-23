@@ -97,6 +97,7 @@ impl BaseValue {
             self.tag(),
             STRING_TAG |
             BIG_INTEGER_TAG |
+            DOUBLE_BOXED_TAG |
             ARRAY_TAG |
             BLOCK_TAG |
             CLASS_TAG |
@@ -178,11 +179,11 @@ impl BaseValue {
                  || bits == 0 || bits == 1;
         
         if !in_range {
-            let boxed_double: Box<f64> = Box::new(value);
-            println!("Initialized Boxed {:#64b}", boxed_double.to_bits());
-            let tbr = Self::new(DOUBLE_BOXED_TAG, boxed_double.to_bits());
-            println!("Initialized PTR {:#64b}", tbr.encoded);
-            return tbr;
+            // let boxed_double: Box<f64> = Box::new(value);
+            // // println!("Initialized Boxed {:#64b}", boxed_double.to_bits());
+            // let tbr = Self::new(DOUBLE_BOXED_TAG, boxed_double.to_bits());
+            // // println!("Initialized PTR {:#64b}", tbr.encoded);
+            // return tbr;
         }
 
         // Handling +/- 0
@@ -190,7 +191,18 @@ impl BaseValue {
 
         // Integrate tag
         let encoded = (payload << PAYLOAD_SHIFT) | tag;
+
+        // println!("Final double addr : {:#64b}", encoded);
         Self { encoded }
+    }
+
+    #[inline(always)]
+    pub fn new_allocated_double<DoublePtr>(value: DoublePtr) -> Self
+    where
+        u64: From<DoublePtr>,
+        DoublePtr: Deref<Target = f64> + From<u64>,
+    {
+        Self::new_ptr(DOUBLE_BOXED_TAG, value.into())
     }
 
     #[inline(always)]
@@ -250,7 +262,12 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_double(self) -> bool {
-        matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG | DOUBLE_BOXED_TAG)
+        matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG)
+    }
+
+    #[inline(always)]
+    pub fn is_allocated_double(self) -> bool {
+        self.tag() == DOUBLE_BOXED_TAG
     }
 
     #[inline(always)]
@@ -327,15 +344,28 @@ impl BaseValue {
 
                 let bits = rebased.rotate_right(ROTATE_AMOUNT);
                 Some(f64::from_bits(bits))
-            }
-            DOUBLE_BOXED_TAG => {
-                println!("Decoding : {:#64b}", self.encoded);
-                println!("Decoding PTR : {:#64b}", Self::decode_ptr(self.encoded));
-                Some((*Box::new(Self::decode_ptr(self.encoded))) as f64)
-            }
+            },
+            // DOUBLE_BOXED_TAG => {
+            //     // println!("Decoding : {:#64b}", self.encoded);
+            //     // println!("Decoding PTR : {:#64b}", Self::decode_ptr(self.encoded));
+            //     // Some((*Box::new(Self::decode_ptr(self.encoded))) as f64)
+            //     // let data = u64::from(self.payload());
+            //     // println!("Data : {}", *data);
+            //     return Some(2.5 as f64);
+            // }
             _ => None,
         }
     }
+
+    #[inline(always)]
+    pub fn as_allocated_double<DoublePtr>(self) -> Option<DoublePtr>
+    where
+        DoublePtr: From<u64>,
+        DoublePtr: Deref<Target = f64>,
+    {
+        self.is_allocated_double().then(|| self.extract_gc_cell())
+    }
+
 
     #[inline(always)]
     pub fn as_boolean(self) -> Option<bool> {
@@ -401,6 +431,16 @@ impl BaseValue {
     #[inline(always)]
     pub fn Double(value: f64) -> Self {
         Self::new_double(value)
+    }
+
+    #[allow(non_snake_case)]
+    #[inline(always)]
+    pub fn AllocatedDouble<Ptr>(value: Ptr) -> Self
+    where
+        u64: From<Ptr>,
+        Ptr: Deref<Target = f64> + From<u64>,
+    {
+        Self::new_allocated_double(value)
     }
 
     #[allow(non_snake_case)]
