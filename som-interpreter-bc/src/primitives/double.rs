@@ -6,6 +6,7 @@ use crate::universe::Universe;
 use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 use crate::value::Value;
 use anyhow::{Context, Error};
+use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
@@ -48,6 +49,7 @@ macro_rules! promote {
     ($signature:expr, $value:expr) => {
         match $value {
             DoubleLike::Double(value) => value,
+            // DoubleLike::AllocatedDouble(value) => *value,
             DoubleLike::Integer(value) => value as f64,
             DoubleLike::BigInteger(value) => match value.to_f64() {
                 Some(value) => value,
@@ -55,6 +57,7 @@ macro_rules! promote {
                     panic!("'{}': `Integer` too big to be converted to `Double`", $signature)
                 }
             },
+            _ => panic!("Undefined!")
         }
     };
 }
@@ -81,12 +84,20 @@ fn as_integer(receiver: f64) -> Result<i32, Error> {
     Ok(receiver.trunc() as i32)
 }
 
-fn sqrt(receiver: DoubleLike) -> Result<f64, Error> {
+fn sqrt(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#sqrt";
 
+    
+    pop_args_from_stack!(interp, receiver => DoubleLike);
     let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.sqrt();
 
-    Ok(receiver.sqrt())
+    let bits = ops.to_bits();
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    //println!("In Range : {}", in_range);
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
 fn max(receiver: f64, other: DoubleLike) -> Result<Value, Error> {
@@ -109,12 +120,19 @@ fn min(receiver: f64, other: DoubleLike) -> Result<Value, Error> {
     }
 }
 
-fn round(receiver: DoubleLike) -> Result<f64, Error> {
+fn round(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#round";
 
+    pop_args_from_stack!(interp, receiver => DoubleLike);
     let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.round();
 
-    Ok(receiver.round())
+    let bits = ops.to_bits();
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    //println!("In Range : {}", in_range);
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
 fn cos(receiver: DoubleLike) -> Result<f64, Error> {
@@ -192,55 +210,276 @@ fn gt_or_eq(a: f64, b: DoubleLike) -> Result<bool, Error> {
     Ok(a >= promote!(SIGNATURE, b))
 }
 
-fn plus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+macro_rules! demote {
+    ($heap:expr, $expr:expr) => {{
+        let value = $expr;
+        match value.to_i32() {
+            Some(value) => Value::Integer((value)),
+            None => Value::BigInteger($heap.alloc(value)),
+        }
+    }};
+}
+
+fn plus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#+";
 
-    let a = promote!(SIGNATURE, a);
-    let b = promote!(SIGNATURE, b);
+    pop_args_from_stack!(interp, a => DoubleLike, b => DoubleLike);
+    let heap = &mut universe.gc_interface;
 
-    Ok(a + b)
+    let value = match (a, b) {
+        (DoubleLike::Integer(a), DoubleLike::Integer(b)) => match a.checked_add(b) {
+            Some(value) => Value::Integer(value),
+            None => demote!(heap, BigInt::from(a) + BigInt::from(b)),
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => {
+            demote!(heap, &*a + &*b)
+        }
+        (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
+            demote!(heap, &*a + BigInt::from(b))
+        }
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            let tot = a + b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            //println!("HERE total(2) : {}", a as f64 + b);
+            let tot = a as f64 + b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
+            Some(a) => {
+                let tot = a + b;
+                let bits = tot.to_bits();
+                let exponent  = (bits >> 52) & 0x7FF;
+                let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+                //println!("In Range : {}", in_range);
+                if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+            },
+            None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        },
+        (_, _) => panic!("Undefined!")
+    };
+
+    Ok(value)
 }
 
-fn minus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#-";
 
-    let a = promote!(SIGNATURE, a);
-    let b = promote!(SIGNATURE, b);
+    pop_args_from_stack!(interp, a => DoubleLike, b => DoubleLike);
+    let heap = &mut universe.gc_interface;
 
-    Ok(a - b)
+    let value = match (a, b) {
+        (DoubleLike::Integer(a), DoubleLike::Integer(b)) => match a.checked_add(b) {
+            Some(value) => Value::Integer(value),
+            None => demote!(heap, BigInt::from(a) - BigInt::from(b)),
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => {
+            demote!(heap, &*a - &*b)
+        }
+        (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
+            demote!(heap, &*a - BigInt::from(b))
+        }
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            let tot = a - b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            //println!("HERE total(2) : {}", a as f64 + b);
+            let tot = a as f64 - b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
+            Some(a) => {
+                let tot = a - b;
+                let bits = tot.to_bits();
+                let exponent  = (bits >> 52) & 0x7FF;
+                let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+                //println!("In Range : {}", in_range);
+                if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+            },
+            None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        },
+        (_, _) => panic!("Undefined!")
+    };
+
+    Ok(value)
 }
 
-fn times(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+fn times(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#*";
 
-    let a = promote!(SIGNATURE, a);
-    let b = promote!(SIGNATURE, b);
+    pop_args_from_stack!(interp, a => DoubleLike, b => DoubleLike);
+    let heap = &mut universe.gc_interface;
 
-    Ok(a * b)
+    let value = match (a, b) {
+        (DoubleLike::Integer(a), DoubleLike::Integer(b)) => match a.checked_add(b) {
+            Some(value) => Value::Integer(value),
+            None => demote!(heap, BigInt::from(a) * BigInt::from(b)),
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => {
+            demote!(heap, &*a * &*b)
+        }
+        (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
+            demote!(heap, &*a * BigInt::from(b))
+        }
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            let tot = a * b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            //println!("HERE total(2) : {}", a as f64 + b);
+            let tot = a as f64 * b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
+            Some(a) => {
+                let tot = a * b;
+                let bits = tot.to_bits();
+                let exponent  = (bits >> 52) & 0x7FF;
+                let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+                //println!("In Range : {}", in_range);
+                if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+            },
+            None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        },
+        (_, _) => panic!("Undefined!")
+    };
+
+    Ok(value)
 }
 
-fn divide(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#//";
 
-    let a = promote!(SIGNATURE, a);
-    let b = promote!(SIGNATURE, b);
+    pop_args_from_stack!(interp, a => DoubleLike, b => DoubleLike);
+    let heap = &mut universe.gc_interface;
 
-    Ok(a / b)
+    let value = match (a, b) {
+        (DoubleLike::Integer(a), DoubleLike::Integer(b)) => match a.checked_add(b) {
+            Some(value) => Value::Integer(value),
+            None => demote!(heap, BigInt::from(a) / BigInt::from(b)),
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => {
+            demote!(heap, &*a / &*b)
+        }
+        (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
+            demote!(heap, &*a / BigInt::from(b))
+        }
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            let tot = a / b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            //println!("HERE total(2) : {}", a as f64 + b);
+            let tot = a as f64 / b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
+            Some(a) => {
+                let tot = a / b;
+                let bits = tot.to_bits();
+                let exponent  = (bits >> 52) & 0x7FF;
+                let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+                //println!("In Range : {}", in_range);
+                if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+            },
+            None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        },
+        (_, _) => panic!("Undefined!")
+    };
+
+    Ok(value)
 }
 
-fn modulo(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+fn modulo(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#%";
 
-    let a = promote!(SIGNATURE, a);
-    let b = promote!(SIGNATURE, b);
+    pop_args_from_stack!(interp, a => DoubleLike, b => DoubleLike);
+    let heap = &mut universe.gc_interface;
 
-    Ok(a % b)
+    let value = match (a, b) {
+        (DoubleLike::Integer(a), DoubleLike::Integer(b)) => match a.checked_add(b) {
+            Some(value) => Value::Integer(value),
+            None => demote!(heap, BigInt::from(a) / BigInt::from(b)),
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => {
+            demote!(heap, &*a % &*b)
+        }
+        (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) | (DoubleLike::Integer(b), DoubleLike::BigInteger(a)) => {
+            demote!(heap, &*a % BigInt::from(b))
+        }
+        (DoubleLike::Double(a), DoubleLike::Double(b)) => {
+            let tot = a % b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::Integer(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::Integer(a)) => {
+            //println!("HERE total(2) : {}", a as f64 + b);
+            let tot = a as f64 % b;
+            let bits = tot.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            //println!("In Range : {}", in_range);
+            if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+        },
+        (DoubleLike::BigInteger(a), DoubleLike::Double(b)) | (DoubleLike::Double(b), DoubleLike::BigInteger(a)) => match a.to_f64() {
+            Some(a) => {
+                let tot = a % b;
+                let bits = tot.to_bits();
+                let exponent  = (bits >> 52) & 0x7FF;
+                let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+                //println!("In Range : {}", in_range);
+                if in_range { Value::Double(tot) } else { Value::AllocatedDouble(heap.alloc(tot)) }
+            },
+            None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
+        },
+        (_, _) => panic!("Undefined!")
+    };
+
+    Ok(value)
 }
 
-fn positive_infinity(_: Value) -> Result<f64, Error> {
+fn positive_infinity(_: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Double>>#positiveInfinity";
 
-    Ok(f64::INFINITY)
+    let heap = &mut universe.gc_interface;
+    Ok(Value::AllocatedDouble(heap.alloc(f64::INFINITY)))
 }
 
 /// Search for an instance primitive matching the given signature.

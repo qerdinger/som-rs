@@ -17,7 +17,7 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-pub type DoubleLike = som_value::convert::DoubleLike<Gc<BigInt>>;
+pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
 pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
 pub type StringLike = som_value::convert::StringLike<Gc<String>>;
 
@@ -140,6 +140,12 @@ impl IntoValue for Interned {
     }
 }
 
+impl IntoValue for Gc<f64> {
+    fn into_value(&self) -> Value {
+        Value::AllocatedDouble(self.clone())
+    }
+}
+
 impl IntoValue for Gc<String> {
     fn into_value(&self) -> Value {
         Value::String(self.clone())
@@ -251,8 +257,10 @@ impl IntoValue for DoubleLike {
     fn into_value(&self) -> Value {
         match self {
             DoubleLike::Double(value) => value.into_value(),
+            // DoubleLike::AllocatedDouble(value) => value.into_value(),
             DoubleLike::Integer(value) => value.into_value(),
             DoubleLike::BigInteger(value) => value.into_value(),
+            _ => panic!("Undefined!")
         }
     }
 }

@@ -49,6 +49,7 @@ impl Value {
         new_boolean(value: bool) -> Self,
         new_integer(value: i32) -> Self,
         new_double(value: f64) -> Self,
+        new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
         new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
@@ -57,6 +58,7 @@ impl Value {
         Char(value: char) -> Self,
         Integer(value: i32) -> Self,
         Double(value: f64) -> Self,
+        AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
         String(value: Gc<String>) -> Self,
@@ -120,6 +122,8 @@ impl Value {
             INVOKABLE_TAG => self.as_invokable().unwrap().class(universe),
             _ => {
                 if self.is_double() {
+                    universe.core.double_class()
+                } else if self.is_allocated_double() {
                     universe.core.double_class()
                 } else {
                     panic!("unknown tag")
