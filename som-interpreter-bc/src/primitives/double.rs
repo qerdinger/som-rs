@@ -135,20 +135,34 @@ fn round(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
     if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
-fn cos(receiver: DoubleLike) -> Result<f64, Error> {
+fn cos(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#cos";
 
+    pop_args_from_stack!(interp, receiver => DoubleLike);
     let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.cos();
+    let bits = ops.to_bits();
 
-    Ok(receiver.cos())
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    //println!("In Range : {}", in_range);
+
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
-fn sin(receiver: DoubleLike) -> Result<f64, Error> {
+fn sin(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#sin";
 
+    pop_args_from_stack!(interp, receiver => DoubleLike);
     let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.sin();
+    let bits = ops.to_bits();
 
-    Ok(receiver.sin())
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
 fn eq(a: Value, b: Value) -> Result<bool, Error> {
