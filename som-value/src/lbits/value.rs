@@ -145,7 +145,7 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn new_tiny_str(value: [u8; 8]) -> Self {
-        println!("new tiny str !");
+        //println!("new tiny str !");
         let mut ptr: u64 = 0;
         ptr |= (value[0] as u64) << 0;
         ptr |= (value[1] as u64) << 8;
@@ -155,10 +155,10 @@ impl BaseValue {
         ptr |= (value[5] as u64) << 40;
         ptr |= (value[6] as u64) << 48;
         //ptr |= (value[7] as u64) << 56;
-        println!("encoding with value : {:?}", value);
-        println!("encoded ptr : {:#64b}", ptr);
+        //println!("encoding with value : {:?}", value);
+        //println!("encoded ptr : {:#64b}", ptr);
         let finalptr = Self::new(TINY_STRING_TAG, ptr);
-        println!("encode + tag : {:#64b}", finalptr.encoded as u64);
+        //println!("encode + tag : {:#64b}", finalptr.encoded as u64);
         finalptr
     }
     
@@ -326,7 +326,7 @@ impl BaseValue {
         }
         let mut bytes = [0u8; 8];
         let payload: u64 = self.payload();
-        println!("payload : {:#64b}", payload);
+        //println!("payload : {:#64b}", payload);
         bytes[0] = ((payload >>  0) & 0xFF) as u8;
         bytes[1] = ((payload >>  8) & 0xFF) as u8;
         bytes[2] = ((payload >> 16) & 0xFF) as u8;
@@ -335,7 +335,7 @@ impl BaseValue {
         bytes[5] = ((payload >> 40) & 0xFF) as u8;
         bytes[6] = ((payload >> 48) & 0xFF) as u8;
         //bytes[7] = ((payload >> 56) & 0xFF) as u8;
-        println!("tmp : {:?}", bytes);
+        //println!("tmp : {:?}", bytes);
         Some(bytes)
     }
     
