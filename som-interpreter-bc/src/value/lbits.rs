@@ -53,6 +53,7 @@ impl Value {
         new_symbol(value: Interned) -> Self,
         new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
+        new_tiny_str(value: [u8; 8]) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Char(value: char) -> Self,
@@ -61,6 +62,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
+        TinyStr(value: [u8; 8]) -> Self,
         String(value: Gc<String>) -> Self,
     );
 
@@ -113,6 +115,7 @@ impl Value {
             }
             INTEGER_TAG | BIG_INTEGER_TAG => universe.core.integer_class(),
             SYMBOL_TAG => universe.core.symbol_class(),
+            TINY_STRING_TAG => universe.core.string_class(),
             STRING_TAG => universe.core.string_class(),
             CHAR_TAG => universe.core.string_class(),
             ARRAY_TAG => universe.core.array_class(),
@@ -151,6 +154,7 @@ impl Value {
                     format!("#{}", symbol)
                 }
             }
+            TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
             STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             ARRAY_TAG => {
                 let strings: Vec<String> = self

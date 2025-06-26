@@ -88,7 +88,17 @@ impl Hash for Literal {
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(*sym),
-        Literal::String(val) => Value::String(val.clone()),
+        Literal::String(val) => {
+            println!("Str length : {} content : [{:?}]", (*val).len(), *val);
+            let val_len = (*val).len();
+            if val_len < 8 {
+                let mut data_buf = [0u8; 8];
+                data_buf[..val_len].copy_from_slice((*val).as_bytes());
+                println!("buf : {:?}", data_buf);
+                return Value::TinyStr(data_buf);
+            }
+            Value::String(val.clone())
+        },
         Literal::Double(val) => {
             let bits = val.to_bits();
             let exponent  = (bits >> 52) & 0x7FF;

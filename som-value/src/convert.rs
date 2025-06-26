@@ -168,6 +168,7 @@ where
 
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
+    TinyStr([u8; 8]),
     String(SPTR),
     Symbol(Interned),
     Char(char),
@@ -181,8 +182,9 @@ where
 
     fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
         value
-            .as_string()
-            .map(Self::String)
+            .as_tiny_str().map(Self::TinyStr)
+            //.as_string().map(Self::String)
+            .or_else(|| value.as_string().map(Self::String))
             .or_else(|| value.as_symbol().map(Self::Symbol))
             .or_else(|| value.as_char().map(Self::Char))
             .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
@@ -195,6 +197,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         F: Fn(Interned) -> &'a str,
     {
         match self {
+            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
             StringLike::Char(char) => Cow::from(char.to_string()),

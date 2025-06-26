@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 num-bigint = "0.4.6"
-som-gc = { path = "../som-gc" }
+som-gc = { path = "../som-gc", features = ["marksweep"] }
 som-interpreter-bc = { path = "../som-interpreter-bc", features = ["lbits"] }
 som-value = { path = "../som-value", features = ["lbits"] }
 

@@ -146,6 +146,12 @@ impl IntoValue for Gc<f64> {
     }
 }
 
+impl IntoValue for [u8; 8] {
+    fn into_value(&self) -> Value {
+        Value::TinyStr(*self)
+    }
+}
+
 impl IntoValue for Gc<String> {
     fn into_value(&self) -> Value {
         Value::String(self.clone())
@@ -237,6 +243,7 @@ impl IntoReturn for () {
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
         match self {
+            StringLike::TinyStr(value) => value.into_value(),
             StringLike::String(value) => value.into_value(),
             StringLike::Char(value) => value.into_value(),
             StringLike::Symbol(value) => value.into_value(),

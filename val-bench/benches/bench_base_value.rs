@@ -62,11 +62,11 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
         )
     });
 
-    // let mut strbuf = [0u8; 8];
-    // strbuf[..7].copy_from_slice(b"HelloWo");
-    // println!("Strbuf : {:?}", strbuf);
+    let strbuf: [u8; 8] = ['S' as u8, 'O' as u8, 'M' as u8, '-' as u8, '-' as u8, '-' as u8, 'R' as u8, 'S' as u8];
+    //strbuf[..8].copy_from_slice(b"HelloWor");
+    println!("Strbuf : {:?}", strbuf);
 
-    // let tiny_str = BaseValue::new_tiny_string(strbuf);
+    let tiny_str = BaseValue::new_tiny_str(strbuf);
     let int_val = BaseValue::new_integer(5002);
     let int_max_val = BaseValue::new_integer(i32::MAX);
     let int_neg_val = BaseValue::new_integer(-5002);
@@ -80,7 +80,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
     let string_val = BaseValue::new_string(gc_string);
 
     // println!("Initial Tiny Str : {:?}", std::str::from_utf8(&strbuf));
-    // println!("Raw Tiny Str : {:?}", std::str::from_utf8(&tiny_str.as_tiny_string().unwrap()));
+    println!("Raw Tiny Str : {:?}", std::str::from_utf8(&tiny_str.as_tiny_str().unwrap()));
     println!("{:?}", int_val.as_integer().unwrap());
     println!("{:?}", int_neg_val.as_integer().unwrap());
     println!("{:?}", int_max_val.as_integer().unwrap());
