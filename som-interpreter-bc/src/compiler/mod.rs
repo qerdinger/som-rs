@@ -85,6 +85,7 @@ impl Hash for Literal {
     }
 }
 
+#[cfg(feature = "lbits")]
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(*sym),
@@ -108,6 +109,22 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
             }
             Value::new_allocated_double(gc_interface.alloc(*val))
         },
+        Literal::Integer(val) => Value::Integer(*val),
+        Literal::BigInteger(val) => Value::BigInteger(val.clone()),
+        Literal::Array(val) => {
+            let arr = &val.iter().map(|lit| value_from_literal(lit, gc_interface)).collect::<Vec<_>>();
+            Value::Array(VecValue(gc_interface.alloc_slice(arr)))
+        }
+        Literal::Block(val) => Value::Block(val.clone()),
+    }
+}
+
+#[cfg(feature = "nan")]
+pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
+    match literal {
+        Literal::Symbol(sym) => Value::Symbol(*sym),
+        Literal::String(val) => Value::String(val.clone()),
+        Literal::Double(val) => Value::Double(*val),
         Literal::Integer(val) => Value::Integer(*val),
         Literal::BigInteger(val) => Value::BigInteger(val.clone()),
         Literal::Array(val) => {

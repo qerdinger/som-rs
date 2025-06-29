@@ -86,6 +86,7 @@ impl FromArgs for i32 {
     }
 }
 
+#[cfg(feature = "lbits")]
 impl FromArgs for f64 {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg
@@ -95,6 +96,15 @@ impl FromArgs for f64 {
                     *v
                 })
             })
+            .context("could not resolve `Value` as `Double`")
+    }
+}
+
+#[cfg(feature = "nan")]
+impl FromArgs for f64 {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        arg
+            .as_double()
             .context("could not resolve `Value` as `Double`")
     }
 }
@@ -147,12 +157,14 @@ impl IntoValue for Interned {
     }
 }
 
+#[cfg(feature = "lbits")]
 impl IntoValue for Gc<f64> {
     fn into_value(&self) -> Value {
         Value::AllocatedDouble(self.clone())
     }
 }
 
+#[cfg(feature = "lbits")]
 impl IntoValue for [u8; 8] {
     fn into_value(&self) -> Value {
         Value::TinyStr(*self)
@@ -247,10 +259,22 @@ impl IntoReturn for () {
     }
 }
 
+#[cfg(feature = "lbits")]
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
         match self {
             StringLike::TinyStr(value) => value.into_value(),
+            StringLike::String(value) => value.into_value(),
+            StringLike::Char(value) => value.into_value(),
+            StringLike::Symbol(value) => value.into_value(),
+        }
+    }
+}
+
+#[cfg(feature = "nan")]
+impl IntoValue for StringLike {
+    fn into_value(&self) -> Value {
+        match self {
             StringLike::String(value) => value.into_value(),
             StringLike::Char(value) => value.into_value(),
             StringLike::Symbol(value) => value.into_value(),

@@ -60,6 +60,7 @@ pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     __Phantom(std::marker::PhantomData<DOUBLEPTR>),
 }
 
+#[cfg(feature = "lbits")]
 impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -80,6 +81,27 @@ where
                     Self::Double(*v)
                 })
             })
+            .context("could not resolve `Value` as `Double`, `Integer`, or `BigInteger`")
+    }
+    // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
+}
+
+#[cfg(feature = "nan")]
+impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
+where
+    DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
+    BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
+    u64: From<BIGINTPTR>,
+{
+    type Error = Error;
+
+    fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
+        value
+            .as_double()
+            .map(Self::Double)
+            .or_else(|| value.as_integer().map(Self::Integer))
+            // .or_else(|| value.as_allocated_double().map(|v: DOUBLEPTR | Self::Double(*v)))
+            .or_else(|| value.as_big_integer().map(Self::BigInteger))
             .context("could not resolve `Value` as `Double`, `Integer`, or `BigInteger`")
     }
     // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
@@ -166,6 +188,7 @@ where
     }
 }
 
+#[cfg(feature = "lbits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
     TinyStr([u8; 8]),
@@ -174,6 +197,15 @@ pub enum StringLike<SPTR> {
     Char(char),
 }
 
+#[cfg(feature = "nan")]
+#[derive(Debug, Clone)]
+pub enum StringLike<SPTR> {
+    String(SPTR),
+    Symbol(Interned),
+    Char(char),
+}
+
+#[cfg(feature = "lbits")]
 impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
 where
     SPTR: Deref<Target = String> + From<u64> + Into<u64>,
@@ -191,13 +223,43 @@ where
     }
 }
 
+#[cfg(feature = "nan")]
+impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
+where
+    SPTR: Deref<Target = String> + From<u64> + Into<u64>,
+{
+    type Error = anyhow::Error;
+
+    fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
+        value
+            .as_string().map(Self::String)
+            .or_else(|| value.as_symbol().map(Self::Symbol))
+            .or_else(|| value.as_char().map(Self::Char))
+            .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
+    }
+}
+
 impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
+
+    #[cfg(feature = "lbits")]
     pub fn as_str<'a, F>(&'a self, lookup_symbol_fn: F) -> Cow<'a, str>
     where
         F: Fn(Interned) -> &'a str,
     {
         match self {
             StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::String(ref value) => Cow::from(value.as_str()),
+            StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
+            StringLike::Char(char) => Cow::from(char.to_string()),
+        }
+    }
+
+    #[cfg(feature = "nan")]
+    pub fn as_str<'a, F>(&'a self, lookup_symbol_fn: F) -> Cow<'a, str>
+    where
+        F: Fn(Interned) -> &'a str,
+    {
+        match self {
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
             StringLike::Char(char) => Cow::from(char.to_string()),
