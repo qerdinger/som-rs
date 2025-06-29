@@ -12,8 +12,8 @@ build-and-test-interpreters:
   tags: [yuria2]
   script:
     - cargo clean
-    - cargo build --release --features=som-gc/marksweep --features=nan
-    - cargo clippy --features=som-gc/marksweep --features=nan
+    - cargo build --release --features=som-gc/marksweep --features=lbits
+    - cargo clippy --features=som-gc/marksweep --features=lbits
 
 #    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
 
