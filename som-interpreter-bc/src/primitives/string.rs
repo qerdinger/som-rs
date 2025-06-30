@@ -99,11 +99,11 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     let final_str = format!("{s1}{s2}");
     let final_str_len = final_str.len();
 
-    // if final_str_len < 8 {
-    //     let mut final_data_buf = [0u8; 8];
-    //     final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
-    //     return Ok(Value::TinyStr(final_data_buf));
-    // }
+    if final_str_len < 8 {
+        let mut final_data_buf = [0u8; 8];
+        final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
+        return Ok(Value::TinyStr(final_data_buf));
+    }
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 

@@ -3,7 +3,7 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::convert::{DoubleLike, IntoValue, Primitive};
+use crate::value::convert::{DoubleLike, StringLike, IntoValue, Primitive};
 use crate::value::Value;
 use anyhow::{Context, Error};
 use num_traits::ToPrimitive;
@@ -64,12 +64,40 @@ macro_rules! promote {
     };
 }
 
+#[cfg(feature = "nan")]
 fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
 
     string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
 }
 
+#[cfg(feature = "lbits")]
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#fromString:";
+
+    pop_args_from_stack!(interp, string => StringLike);
+
+    let string = match string {
+        StringLike::TinyStr(value) => &*String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+        StringLike::String(ref value) => value.as_str(),
+        StringLike::Char(char) => &*String::from(char),
+        StringLike::Symbol(sym) => universe.lookup_symbol(sym),
+    };
+
+    match string.parse() {
+        Ok(parsed) => {
+            let bits = (parsed as f64).to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            let heap = &mut universe.gc_interface;
+            if in_range { Ok(Value::Double(parsed)) } else { Ok(Value::AllocatedDouble(heap.alloc(parsed))) }
+        },
+        Err(err) => panic!("'{}': {}", SIGNATURE, err),
+    }
+    // string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
+}
+
+#[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     const SIGNATURE: &str = "Double>>#asString";
 
@@ -78,6 +106,27 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     let receiver = promote!(SIGNATURE, receiver);
 
     Ok(universe.gc_interface.alloc(receiver.to_string()))
+}
+
+#[cfg(feature = "lbits")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#asString";
+
+    pop_args_from_stack!(interp, receiver => DoubleLike);
+
+    let receiver = promote!(SIGNATURE, receiver);
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len < 8 {
+        let mut data_buf = [0u8; 8];
+        data_buf[..val_len].copy_from_slice((*val).as_bytes());
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(val)))
 }
 
 fn as_integer(receiver: f64) -> Result<i32, Error> {

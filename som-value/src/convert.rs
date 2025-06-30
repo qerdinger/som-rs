@@ -214,9 +214,8 @@ where
 
     fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
         value
-            .as_tiny_str().map(Self::TinyStr)
-            //.as_string().map(Self::String)
-            .or_else(|| value.as_string().map(Self::String))
+        .as_string().map(Self::String)
+            .or_else(|| value.as_tiny_str().map(Self::TinyStr))
             .or_else(|| value.as_symbol().map(Self::Symbol))
             .or_else(|| value.as_char().map(Self::Char))
             .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
@@ -279,8 +278,10 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => (*sym1 == *sym2) || (lookup_symbol_fn(*sym1).eq(lookup_symbol_fn(*sym2))),
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             _ => {
+                println!("Comparaison beween : {:?} & {:?}", self, other);
                 let a = self.as_str(lookup_symbol_fn);
                 let b = other.as_str(lookup_symbol_fn);
+                println!("readable values : [{}]==[{}] ret={}", a, b, *a == *b);
                 *a == *b
             }
         }

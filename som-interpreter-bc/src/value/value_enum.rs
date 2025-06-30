@@ -28,6 +28,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
+    TinyStr([u8; 8]),
     String(Gc<String>),
     /// An array of values.
     Array(Gc<Vec<ValueEnum>>),
@@ -87,6 +88,8 @@ impl From<Value> for ValueEnum {
             Self::Boolean(value)
         } else if let Some(value) = value.as_symbol() {
             Self::Symbol(value)
+        } else if let Some(value) = value.as_tiny_str() {
+            Self::TinyStr(value)
         } else if let Some(value) = value.as_string() {
             Self::String(value)
         } else if let Some(_value) = value.as_array() {
@@ -153,6 +156,7 @@ impl From<ValueEnum> for Value {
             ValueEnum::Double(value) => Self::new_double(value),
             ValueEnum::AllocatedDouble(value) => Self::new_allocated_double(value),
             ValueEnum::Symbol(value) => Self::new_symbol(value),
+            ValueEnum::TinyStr(value) => Self::new_tiny_str(value),
             ValueEnum::String(value) => Self::new_string(value),
             ValueEnum::Array(_value) => unimplemented!(
                 "no impl for arr. would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait"
@@ -200,6 +204,7 @@ impl ValueEnum {
             Self::Double(_) => universe.core.double_class(),
             Self::AllocatedDouble(_) => universe.core.double_class(),
             Self::Symbol(_) => universe.core.symbol_class(),
+            Self::TinyStr(_) => universe.core.string_class(),
             Self::String(_) => universe.core.string_class(),
             Self::Array(_) => universe.core.array_class(),
             Self::Block(block) => block.class(universe),
@@ -270,7 +275,8 @@ impl ValueEnum {
                 } else {
                     format!("#{}", symbol)
                 }
-            }
+            },
+            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
             Self::String(value) => value.as_str().to_string(),
             Self::Array(values) => {
                 // TODO (from nicolas): I think we can do better here (less allocations).
@@ -359,6 +365,7 @@ impl fmt::Debug for ValueEnum {
             Self::Double(val) => f.debug_tuple("Double").field(val).finish(),
             Self::AllocatedDouble(val) => f.debug_tuple("AllocatedDouble").field(val).finish(),
             Self::Symbol(val) => f.debug_tuple("Symbol").field(val).finish(),
+            Self::TinyStr(val) => f.debug_tuple("TinyStr").field(val).finish(),
             Self::String(val) => f.debug_tuple("String").field(val).finish(),
             Self::Array(val) => f.debug_tuple("Array").field(&val).finish(),
             Self::Block(val) => f.debug_tuple("Block").field(val).finish(),
@@ -473,6 +480,12 @@ impl ValueEnum {
     #[inline(always)]
     pub fn is_allocated_double(&self) -> bool {
         matches!(self, ValueEnum::AllocatedDouble(_))
+    }
+
+    #[cfg(feature = "lbits")]
+    #[inline(always)]
+    pub fn is_tiny_str(&self) -> bool {
+        matches!(self, ValueEnum::TinyStr(_))
     }
 
     /// Returns whether this value is a double.
@@ -593,6 +606,16 @@ impl ValueEnum {
     pub fn as_allocated_double(&self) -> Option<Gc<f64>> {
         if let ValueEnum::AllocatedDouble(v) = self {
             Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "lbits")]
+    #[inline(always)]
+    pub fn as_tiny_str(&self) -> Option<[u8; 8]> {
+        if let ValueEnum::TinyStr(v) = self {
+            Some(*v)
         } else {
             None
         }

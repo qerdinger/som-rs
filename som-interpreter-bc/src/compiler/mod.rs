@@ -92,14 +92,15 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
         Literal::String(val) => {
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
-            // let val_len = (*val).len();
-            // if val_len < 8 {
-            //     let mut data_buf = [0u8; 8];
-            //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
-            //     //println!("buf : {:?}", data_buf);
-            //     return Value::TinyStr(data_buf);
-            // }
-            
+            let val_len = (*val).len();
+            if val_len < 8 {
+                let mut data_buf = [0u8; 8];
+                data_buf[..val_len].copy_from_slice((*val).as_bytes());
+                // println!("buf : {:?}", data_buf);
+                // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+                return Value::TinyStr(data_buf);
+            }
+
             Value::String(val.clone())
         },
         Literal::Double(val) => {

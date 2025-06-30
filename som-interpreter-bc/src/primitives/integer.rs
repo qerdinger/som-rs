@@ -82,6 +82,7 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     }
 }
 
+#[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
 
@@ -91,6 +92,29 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     };
 
     Ok(universe.gc_interface.alloc(receiver))
+}
+
+#[cfg(feature = "lbits")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => IntegerLike);
+
+    let receiver = match receiver {
+        IntegerLike::Integer(value) => value.to_string(),
+        IntegerLike::BigInteger(value) => value.to_string(),
+    };
+    
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len < 8 {
+        let mut data_buf = [0u8; 8];
+        data_buf[..val_len].copy_from_slice((*val).as_bytes());
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(receiver)))
 }
 
 fn as_double(receiver: IntegerLike) -> Result<f64, Error> {
