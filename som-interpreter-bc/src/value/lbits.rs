@@ -215,10 +215,20 @@ impl PartialEq for Value {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
             a == b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_allocated_double::<Gc<f64>>()) {
+            *a == *b
+        } else if let (Some(a), Some(b)) = (self.as_double(), other.as_allocated_double::<Gc<f64>>()) {
+            a == *b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_double()) {
+            *a == b
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_double()) {
             (a as f64) == b
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_integer()) {
             (b as f64) == a
+        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_allocated_double::<Gc<f64>>()) {
+            (a as f64) == *b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), self.as_integer()) {
+            *a == (b as f64)
         } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_big_integer()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_integer()) {

@@ -118,13 +118,13 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = receiver.to_string();
     let val_len = val.len();
 
-    if val_len < 8 {
-        let mut data_buf = [0u8; 8];
-        data_buf[..val_len].copy_from_slice((*val).as_bytes());
-        // println!("buf : {:?}", data_buf);
-        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
-    }
+    // if val_len < 8 {
+    //     let mut data_buf = [0u8; 8];
+    //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
+    //     // println!("buf : {:?}", data_buf);
+    //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+    //     return Ok(Value::TinyStr(data_buf));
+    // }
 
     Ok(Value::String(universe.gc_interface.alloc(val)))
 }
@@ -276,6 +276,7 @@ fn eq_eq(a: Value, b: Value) -> Result<bool, Error> {
     let Ok(b) = DoubleLike::try_from(b.0) else {
         return Ok(false);
     };
+
 
     match (a, b) {
         (DoubleLike::Double(a), DoubleLike::Double(b)) => Ok(a == b),
