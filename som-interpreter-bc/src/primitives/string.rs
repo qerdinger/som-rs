@@ -39,6 +39,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     // i apologize to everyone for that. i will strive to be better
     match receiver {
         StringLike::TinyStr(data) => {
+            // println!("length : [{:?}] length={}", data, data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32);
             Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
         }
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
@@ -63,6 +64,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
 fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    println!("hashcode [{}]", string);
     let mut hasher = DefaultHasher::new();
     hasher.write(string.as_bytes());
     let hash = (hasher.finish() as i32).abs();
@@ -99,11 +101,11 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     let final_str = format!("{s1}{s2}");
     let final_str_len = final_str.len();
 
-    if final_str_len < 8 {
-        let mut final_data_buf = [0u8; 8];
-        final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
-        return Ok(Value::TinyStr(final_data_buf));
-    }
+    // if final_str_len < 8 {
+    //     let mut final_data_buf = [0u8; 8];
+    //     final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
+    //     return Ok(Value::TinyStr(final_data_buf));
+    // }
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 
@@ -180,10 +182,12 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
 
 /// Search for an instance primitive matching the given signature.
 pub fn get_instance_primitive(signature: &str) -> Option<&'static PrimitiveFn> {
+    println!("signature : {}", signature);
     INSTANCE_PRIMITIVES.iter().find(|it| it.0 == signature).map(|it| it.1)
 }
 
 /// Search for a class primitive matching the given signature.
 pub fn get_class_primitive(signature: &str) -> Option<&'static PrimitiveFn> {
+    println!("signature2 : {}", signature);
     CLASS_PRIMITIVES.iter().find(|it| it.0 == signature).map(|it| it.1)
 }

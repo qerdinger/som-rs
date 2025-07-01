@@ -106,13 +106,13 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = receiver.to_string();
     let val_len = val.len();
 
-    if val_len < 8 {
-        let mut data_buf = [0u8; 8];
-        data_buf[..val_len].copy_from_slice((*val).as_bytes());
-        // println!("buf : {:?}", data_buf);
-        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
-    }
+    // if val_len < 8 {
+    //     let mut data_buf = [0u8; 8];
+    //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
+    //     // println!("buf : {:?}", data_buf);
+    //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+    //     return Ok(Value::TinyStr(data_buf));
+    // }
 
     Ok(Value::String(universe.gc_interface.alloc(receiver)))
 }

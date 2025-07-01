@@ -26,16 +26,16 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = universe.lookup_symbol(symbol).to_owned();
     let val_len = val.len();
 
-    println!("SYMBOL_AS_STRING: {}", val_len);
-    println!("SYMBOL : {}", val);
+    // println!("SYMBOL_AS_STRING: {}", val_len);
+    // println!("SYMBOL : {}", val);
 
-    if val_len < 8 {
-        let mut data_buf = [0u8; 8];
-        data_buf[..val_len].copy_from_slice((*val).as_bytes());
-        // println!("buf : {:?}", data_buf);
-        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
-    }
+    // if val_len < 8 {
+    //     let mut data_buf = [0u8; 8];
+    //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
+    //     // println!("buf : {:?}", data_buf);
+    //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+    //     return Ok(Value::TinyStr(data_buf));
+    // }
 
     Ok(Value::String(universe.gc_interface.alloc(val)))
 }

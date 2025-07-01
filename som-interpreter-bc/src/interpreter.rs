@@ -653,12 +653,12 @@ impl Interpreter {
 
             match &*method {
                 Method::Defined(_) => {
-                    //let name = &method.holder().name.clone();
-                    //eprintln!("Invoking {:?} (in {:?})", &method.signature(), &name);
+                    let name = &method.holder().name.clone();
+                    eprintln!("Invoking {:?} (in {:?})", &method.signature(), &name);
                     interpreter.push_method_frame(method, nb_params + 1, universe.gc_interface);
                 }
                 Method::Primitive(func, _met_info) => {
-                    //eprintln!("Invoking prim {:?} (in {:?})", &_met_info.signature, &_met_info.holder.name);
+                    // eprintln!("Invoking prim {:?} (in {:?})", &_met_info.signature, &_met_info.holder.name);
 
                     // dbg!(interpreter.current_frame);
                     func(interpreter, universe, nb_params + 1)
