@@ -75,7 +75,7 @@ fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
 fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
 
-    pop_args_from_stack!(interp, string => StringLike);
+    pop_args_from_stack!(interp, _a => Value, string => StringLike);
 
     let string = match string {
         StringLike::TinyStr(value) => &*String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
@@ -638,8 +638,10 @@ fn modulo(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
 
 
 #[cfg(feature = "lbits")]
-fn positive_infinity(_: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+fn positive_infinity(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Double>>#positiveInfinity";
+
+    pop_args_from_stack!(interp, _a => Value);
 
     let heap = &mut universe.gc_interface;
     Ok(Value::AllocatedDouble(heap.alloc(f64::INFINITY)))

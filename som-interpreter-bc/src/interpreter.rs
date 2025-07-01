@@ -283,6 +283,8 @@ impl Interpreter {
                         *last = Value::new_integer(int + 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double + 1.0);
+                    } else if let Some(double) = last.as_allocated_double::<Gc<f64>>() {
+                        *last = Value::new_allocated_double(universe.gc_interface.alloc(*double + 1.0));
                     } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
                         *big_int += 1;
                     } else {
@@ -299,6 +301,8 @@ impl Interpreter {
                         *last = Value::new_integer(int - 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double - 1.0);
+                    } else if let Some(double) = last.as_allocated_double::<Gc<f64>>() {
+                        *last = Value::new_allocated_double(universe.gc_interface.alloc(*double - 1.0));
                     } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
                         *big_int -= 1;
                     } else {
@@ -653,8 +657,8 @@ impl Interpreter {
 
             match &*method {
                 Method::Defined(_) => {
-                    let name = &method.holder().name.clone();
-                    eprintln!("Invoking {:?} (in {:?})", &method.signature(), &name);
+                    // let name = &method.holder().name.clone();
+                    // eprintln!("Invoking {:?} (in {:?})", &method.signature(), &name);
                     interpreter.push_method_frame(method, nb_params + 1, universe.gc_interface);
                 }
                 Method::Primitive(func, _met_info) => {
