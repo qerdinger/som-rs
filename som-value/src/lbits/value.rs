@@ -143,25 +143,41 @@ impl BaseValue {
         self.payload()
     }
 
+    // #[inline(always)]
+    // pub fn new_tiny_str(value: Vec<u8>) -> Self {
+    //     //println!("new tiny str !");
+    //     let mut ptr: u64 = 0;
+    //     ptr |= (value[0] as u64) << 0;
+    //     ptr |= (value[1] as u64) << 8;
+    //     ptr |= (value[2] as u64) << 16;
+    //     ptr |= (value[3] as u64) << 24;
+    //     ptr |= (value[4] as u64) << 32;
+    //     ptr |= (value[5] as u64) << 40;
+    //     ptr |= (value[6] as u64) << 48;
+    //     //ptr |= (value[7] as u64) << 56;
+    //     //println!("encoding with value : {:?}", value);
+    //     //println!("encoded ptr : {:#64b}", ptr);
+    //     let finalptr = Self::new(TINY_STRING_TAG, ptr);
+    //     //println!("encode + tag : {:#64b}", finalptr.encoded as u64);
+    //     finalptr
+    // }
     #[inline(always)]
-    pub fn new_tiny_str(value: [u8; 8]) -> Self {
-        //println!("new tiny str !");
-        let mut ptr: u64 = 0;
-        ptr |= (value[0] as u64) << 0;
-        ptr |= (value[1] as u64) << 8;
-        ptr |= (value[2] as u64) << 16;
-        ptr |= (value[3] as u64) << 24;
-        ptr |= (value[4] as u64) << 32;
-        ptr |= (value[5] as u64) << 40;
-        ptr |= (value[6] as u64) << 48;
-        //ptr |= (value[7] as u64) << 56;
-        //println!("encoding with value : {:?}", value);
-        //println!("encoded ptr : {:#64b}", ptr);
-        let finalptr = Self::new(TINY_STRING_TAG, ptr);
-        //println!("encode + tag : {:#64b}", finalptr.encoded as u64);
-        finalptr
+    pub fn new_tiny_str(value: Vec<u8>) -> Self {
+        debug_assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
+
+        let mut ptr = 0u64;
+        for (i, &b) in value.iter().take(7).enumerate() {
+            ptr |= (b as u64) << (i * 8);
+        }
+        if value.len() < 7 {
+            let shift = (value.len() * 8) as u32;
+            ptr |= u64::MAX << shift;
+        }
+
+        Self::new(TINY_STRING_TAG, ptr)
     }
-    
+
+
     #[inline(always)]
     pub fn new_integer(value: i32) -> Self {
         Self::new(INTEGER_TAG, value as u64)
@@ -319,23 +335,59 @@ impl BaseValue {
         self.is_string().then(|| self.extract_gc_cell())
     }
 
+    // #[inline(always)]
+    // pub fn as_tiny_str(self) -> Option<Vec<u8>> {
+    //     if !self.is_tiny_str() {
+    //         return None;
+    //     }
+    //     let mut bytes = [0u8];
+    //     let payload: u64 = self.payload();
+    //     //println!("payload : {:#64b}", payload);
+    //     bytes[0] = ((payload >>  0) & 0xFF) as u8;
+    //     bytes[1] = ((payload >>  8) & 0xFF) as u8;
+    //     bytes[2] = ((payload >> 16) & 0xFF) as u8;
+    //     bytes[3] = ((payload >> 24) & 0xFF) as u8;
+    //     bytes[4] = ((payload >> 32) & 0xFF) as u8;
+    //     bytes[5] = ((payload >> 40) & 0xFF) as u8;
+    //     bytes[6] = ((payload >> 48) & 0xFF) as u8;
+    //     //bytes[7] = ((payload >> 56) & 0xFF) as u8;
+    //     //println!("tmp : {:?}", bytes);
+    //     Some(bytes)
+    // }
+
+    // #[inline(always)]
+    // pub fn as_tiny_str(self) -> Option<Vec<u8>> {
+    //     if !self.is_tiny_str() {
+    //         return None;
+    //     }
+
+    //     let mut bytes = Vec::new();
+    //     let mut value = self.payload();
+
+    //     while value != 0 {
+    //         bytes.push((value & 0xFF) as u8);
+    //         value >>= 8;
+    //     }
+
+    //     Some(bytes)
+    // }
     #[inline(always)]
-    pub fn as_tiny_str(self) -> Option<[u8; 8]> {
+    pub fn as_tiny_str(self) -> Option<Vec<u8>> {
         if !self.is_tiny_str() {
             return None;
         }
-        let mut bytes = [0u8; 8];
-        let payload: u64 = self.payload();
-        //println!("payload : {:#64b}", payload);
-        bytes[0] = ((payload >>  0) & 0xFF) as u8;
-        bytes[1] = ((payload >>  8) & 0xFF) as u8;
-        bytes[2] = ((payload >> 16) & 0xFF) as u8;
-        bytes[3] = ((payload >> 24) & 0xFF) as u8;
-        bytes[4] = ((payload >> 32) & 0xFF) as u8;
-        bytes[5] = ((payload >> 40) & 0xFF) as u8;
-        bytes[6] = ((payload >> 48) & 0xFF) as u8;
-        //bytes[7] = ((payload >> 56) & 0xFF) as u8;
-        //println!("tmp : {:?}", bytes);
+        let mut bytes = Vec::new();
+        let mut v = self.payload();
+
+        for _ in 0..7 {
+            let b = (v & 0xFF) as u8;
+            if b == 0xFF {
+                break;
+            }
+            bytes.push(b);
+            v >>= 8;
+        }
+
         Some(bytes)
     }
     
@@ -479,7 +531,7 @@ impl BaseValue {
 
     #[allow(non_snake_case)]
     #[inline(always)]
-    pub fn TinyStr(value: [u8; 8]) -> Self {
+    pub fn TinyStr(value: Vec<u8>) -> Self {
         Self::new_tiny_str(value)
     }
 

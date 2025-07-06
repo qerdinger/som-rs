@@ -3,13 +3,26 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::convert::{DoubleLike, StringLike, IntoValue, Primitive};
 use crate::value::Value;
-use anyhow::{Context, Error};
+
+use anyhow::Error;
+
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
+
+#[cfg(feature = "nan")]
+use crate::value::convert::{DoubleLike, IntoValue, Primitive};
+
+#[cfg(feature = "nan")]
 use som_gc::gcref::Gc;
+
+
+#[cfg(feature = "nan")]
+use anyhow::Context;
+
+#[cfg(feature = "lbits")]
+use crate::value::convert::{DoubleLike, StringLike, IntoValue, Primitive};
 
 #[cfg(feature = "lbits")]
 use num_bigint::BigInt;
@@ -78,13 +91,15 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     pop_args_from_stack!(interp, _a => Value, string => StringLike);
 
     let string = match string {
-        StringLike::TinyStr(value) => &*String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+        StringLike::TinyStr(ref value) => {
+            std::str::from_utf8(value).unwrap()
+        },
         StringLike::String(ref value) => value.as_str(),
         StringLike::Char(char) => &*String::from(char),
         StringLike::Symbol(sym) => universe.lookup_symbol(sym),
     };
 
-    match string.parse() {
+    match string.parse::<f64>() {
         Ok(parsed) => {
             let bits = (parsed as f64).to_bits();
             let exponent  = (bits >> 52) & 0x7FF;
@@ -118,13 +133,12 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = receiver.to_string();
     let val_len = val.len();
 
-    // if val_len < 8 {
-    //     let mut data_buf = [0u8; 8];
-    //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
-    //     // println!("buf : {:?}", data_buf);
-    //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-    //     return Ok(Value::TinyStr(data_buf));
-    // }
+    if val_len < 8 {
+        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
 
     Ok(Value::String(universe.gc_interface.alloc(val)))
 }

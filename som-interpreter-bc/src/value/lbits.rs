@@ -53,7 +53,7 @@ impl Value {
         new_symbol(value: Interned) -> Self,
         new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
-        new_tiny_str(value: [u8; 8]) -> Self,
+        new_tiny_str(value: Vec<u8>) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Char(value: char) -> Self,
@@ -62,7 +62,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
-        TinyStr(value: [u8; 8]) -> Self,
+        TinyStr(value: Vec<u8>) -> Self,
         String(value: Gc<String>) -> Self,
     );
 
@@ -211,6 +211,8 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
+        println!("CHECK-G-2 [{:?}]==[{:?}]", self, other);
+        println!("CHECK-G-2 [{:#64b}]==[{:#64b}]", self.as_u64(), self.as_u64());
         if self.as_u64() == other.as_u64() {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
@@ -237,7 +239,26 @@ impl PartialEq for Value {
             BigInt::from(a).eq(&*b)
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_string::<Gc<String>>()) {
             a == b
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
+            println!("CHECK-C");
+            a == b
+        } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
+            println!("CHECK-D");
+
+            *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
+            println!("CHECK-E");
+            String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
+        } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
+            a.eq(&b)
         } else {
+            println!("CHECK-G-2 FALSE FOR [{:?}]==[{:?}]", self, other);
+            if let Some(a) = self.as_symbol() {
+                println!("SYMBOL : {:?}", a);
+            }
+            if let Some(b) = other.as_symbol() {
+                println!("SYMBOL : {:?}", b);
+            }
             false
         }
     }

@@ -62,7 +62,7 @@ pub fn bench_nan_boxing(c: &mut Criterion) {
         )
     });
 
-    let strbuf: [u8; 8] = ['S' as u8, 'O' as u8, 'M' as u8, '-' as u8, '-' as u8, '-' as u8, 'R' as u8, 'S' as u8];
+    let strbuf: Vec<u8> = ['S' as u8, 'O' as u8, 'M' as u8, '-' as u8, '-' as u8, '-' as u8, 'R' as u8, 'S' as u8];
     //strbuf[..8].copy_from_slice(b"HelloWor");
     println!("Strbuf : {:?}", strbuf);
 

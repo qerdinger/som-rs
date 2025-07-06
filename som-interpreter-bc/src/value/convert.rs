@@ -165,9 +165,9 @@ impl IntoValue for Gc<f64> {
 }
 
 #[cfg(feature = "lbits")]
-impl IntoValue for [u8; 8] {
+impl IntoValue for Vec<u8> {
     fn into_value(&self) -> Value {
-        Value::TinyStr(*self)
+        Value::TinyStr(self.clone())
     }
 }
 

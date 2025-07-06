@@ -191,7 +191,7 @@ where
 #[cfg(feature = "lbits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
-    TinyStr([u8; 8]),
+    TinyStr(Vec<u8>),
     String(SPTR),
     Symbol(Interned),
     Char(char),
@@ -246,6 +246,13 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         F: Fn(Interned) -> &'a str,
     {
         match self {
+            // StringLike::TinyStr(tiny_str) => {
+            //     let full = std::str::from_utf8(&tiny_str[..])
+            //         .expect("TinyStr buffer was not valid UTF-8");
+
+            //     let trimmed = full.trim_end_matches('\0');
+            //     Cow::from(trimmed)
+            // },
             StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
@@ -267,6 +274,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
 
     /// I wish this were in an Eq trait, but it needs to lookup symbols.
     /// Is there a way to make this more idiomatic, at least? A better name?
+    #[cfg(feature = "nan")]
     pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
     where
         F: Copy + Fn(Interned) -> &'a str,
@@ -278,10 +286,72 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => (*sym1 == *sym2) || (lookup_symbol_fn(*sym1).eq(lookup_symbol_fn(*sym2))),
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             _ => {
-                // println!("Comparaison beween : {:?} & {:?}", self, other);
                 let a = self.as_str(lookup_symbol_fn);
                 let b = other.as_str(lookup_symbol_fn);
-                // println!("readable values : [{}]==[{}] ret={}", a, b, *a == *b);
+                *a == *b
+            }
+        }
+    }
+    
+    #[cfg(feature = "lbits")]
+    pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
+    where
+        F: Copy + Fn(Interned) -> &'a str,
+    {
+        println!("eq : [{:?}]==[{:?}]", self, other);
+        match (&self, &other) {
+            (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
+            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
+            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
+            (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
+                println!("SYMSYM : [{:?}, {:?}]", lookup_symbol_fn(*sym1), lookup_symbol_fn(*sym2));
+                println!("SYMSYM : [{:?}, {:?}]", lookup_symbol_fn(*sym1), lookup_symbol_fn(*sym2));
+                println!("RET : [{}]", (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2)));
+                (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
+            },
+            (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                println!("CHECK-A");
+                std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap()
+            },
+            (StringLike::TinyStr(tstr1), StringLike::Char(c2)) => {
+                println!("CHECK-B");
+                let s1 = std::str::from_utf8(tstr1).unwrap();
+                s1.len() == 1 &&  s1.chars().next().unwrap() == *c2
+            },
+            (StringLike::Char(c1), StringLike::TinyStr(tstr2)) => {
+                let s2 = std::str::from_utf8(tstr2).unwrap();
+                s2.len() == 1 &&  s2.chars().next().unwrap() == *c1
+            },
+            (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
+                let str2_bytes = str2.as_str().as_bytes();
+                tstr1.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
+                let str1_bytes = str1.as_str().as_bytes();
+                tstr2.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
+                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s2 = lookup_symbol_fn(*sym2);
+                println!("TS : [{}]==[{}]", s1, s2);
+                s1 == s2
+            },
+            (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
+                let s1 = lookup_symbol_fn(*sym1);
+                let s2 = std::str::from_utf8(tstr2).unwrap();
+                println!("TS : [{}]==[{}]", s1, s2);
+
+                s1 == s2
+            },
+            _ => {
+                let a = self.as_str(lookup_symbol_fn);
+                let b = other.as_str(lookup_symbol_fn);
+                println!("HERE");
                 *a == *b
             }
         }

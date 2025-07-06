@@ -1,6 +1,8 @@
 use anyhow::Error;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
+
+#[cfg(feature = "nan")]
 use som_gc::gcref::Gc;
 
 use crate::cur_frame;
@@ -9,6 +11,8 @@ use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
 use crate::value::convert::Primitive;
+
+#[cfg(feature = "lbits")]
 use crate::value::Value;
 
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([("asString", self::as_string.into_func(), true)]));
@@ -26,16 +30,13 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = universe.lookup_symbol(symbol).to_owned();
     let val_len = val.len();
 
-    // println!("SYMBOL_AS_STRING: {}", val_len);
-    // println!("SYMBOL : {}", val);
+    println!("SYMBOL : [{:?}]", val);
+    println!("SYMBOL_AS_STRING: {}", val_len);
 
-    // if val_len < 8 {
-    //     let mut data_buf = [0u8; 8];
-    //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
-    //     // println!("buf : {:?}", data_buf);
-    //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-    //     return Ok(Value::TinyStr(data_buf));
-    // }
+    if val_len < 8 {
+        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+        return Ok(Value::TinyStr(data_buf));
+    }
 
     Ok(Value::String(universe.gc_interface.alloc(val)))
 }

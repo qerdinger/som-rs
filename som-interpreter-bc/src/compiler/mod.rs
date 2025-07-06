@@ -33,8 +33,12 @@ pub enum Literal {
 
 impl PartialEq for Literal {
     fn eq(&self, other: &Self) -> bool {
+        println!("Comparaison btw : [{:?}]==[{:?}]", self, other);
         match (self, other) {
-            (Literal::Symbol(val1), Literal::Symbol(val2)) => val1.eq(val2),
+            (Literal::Symbol(val1), Literal::Symbol(val2)) => {
+                println!("SYMSYM2 btw : [{}]==[{}] ret={}", val1, val2, val1.eq(val2));
+                val1.eq(val2)
+            },
             (Literal::String(val1), Literal::String(val2)) => val1.eq(val2),
             (Literal::Double(val1), Literal::Double(val2)) => val1.eq(val2),
             (Literal::Integer(val1), Literal::Integer(val2)) => val1.eq(val2),
@@ -92,14 +96,13 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
         Literal::String(val) => {
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
-            // let val_len = (*val).len();
-            // if val_len < 8 {
-            //     let mut data_buf = [0u8; 8];
-            //     data_buf[..val_len].copy_from_slice((*val).as_bytes());
-            //     // println!("buf : {:?}", data_buf);
-            //     // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-            //     return Value::TinyStr(data_buf);
-            // }
+            let val_len = (*val).len();
+            if val_len < 8 {
+                let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+                // println!("buf : {:?}", data_buf);
+                // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+                return Value::TinyStr(data_buf);
+            }
 
             Value::String(val.clone())
         },

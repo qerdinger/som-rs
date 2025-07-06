@@ -28,7 +28,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr([u8; 8]),
+    TinyStr(Vec<u8>),
     String(Gc<String>),
     /// An array of values.
     Array(Gc<Vec<ValueEnum>>),
@@ -329,6 +329,7 @@ impl ValueEnum {
     }
 }
 
+#[cfg(feature = "nan")]
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -344,6 +345,34 @@ impl PartialEq for ValueEnum {
             }
             (Self::Symbol(a), Self::Symbol(b)) => a.eq(b),
             (Self::String(a), Self::String(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Instance(a), Self::Instance(b)) => a == b,
+            (Self::Class(a), Self::Class(b)) => a == b,
+            (Self::Block(a), Self::Block(b)) => a == b,
+            (Self::Invokable(a), Self::Invokable(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(feature = "lbits")]
+impl PartialEq for ValueEnum {
+    fn eq(&self, other: &Self) -> bool {
+        println!("CHECK-1.");
+        match (self, other) {
+            (Self::Nil, Self::Nil) => true,
+            (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
+            (Self::Integer(a), Self::Integer(b)) => a.eq(b),
+            (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
+            (Self::Double(a), Self::Double(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::BigInteger(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::Integer(b)) | (Self::Integer(b), Self::BigInteger(a)) => {
+                // a.eq(&BigInt::from(*b))
+                (**a).eq(&BigInt::from(*b))
+            }
+            (Self::Symbol(a), Self::Symbol(b)) => a.eq(b),
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::TinyStr(a), Self::TinyStr(b)) => a == b,
             (Self::Array(a), Self::Array(b)) => a == b,
             (Self::Instance(a), Self::Instance(b)) => a == b,
             (Self::Class(a), Self::Class(b)) => a == b,
@@ -613,9 +642,9 @@ impl ValueEnum {
 
     #[cfg(feature = "lbits")]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<[u8; 8]> {
+    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
         if let ValueEnum::TinyStr(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
