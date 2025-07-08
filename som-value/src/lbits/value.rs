@@ -163,12 +163,13 @@ impl BaseValue {
     // }
     #[inline(always)]
     pub fn new_tiny_str(value: Vec<u8>) -> Self {
-        debug_assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
+        assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
 
         let mut ptr = 0u64;
         for (i, &b) in value.iter().take(7).enumerate() {
             ptr |= (b as u64) << (i * 8);
         }
+
         if value.len() < 7 {
             let shift = (value.len() * 8) as u32;
             ptr |= u64::MAX << shift;
@@ -200,13 +201,7 @@ impl BaseValue {
         let in_range  = (exponent >= IM_DOUBLE_RANGE_MIN && exponent <= IM_DOUBLE_RANGE_MAX)
                  || bits == 0 || bits == 1;
         
-        if !in_range {
-            // let boxed_double: Box<f64> = Box::new(value);
-            // // println!("Initialized Boxed {:#64b}", boxed_double.to_bits());
-            // let tbr = Self::new(DOUBLE_BOXED_TAG, boxed_double.to_bits());
-            // // println!("Initialized PTR {:#64b}", tbr.encoded);
-            // return tbr;
-        }
+        assert!(in_range, "Error: Exponent not in the expected range for Immediate Double, use AllocatedDouble");
 
         // Handling +/- 0
         let payload = if rolled <= 1 { rolled } else { rolled.wrapping_sub(IMMEDIATE_OFFSET) };
