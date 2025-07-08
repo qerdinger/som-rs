@@ -33,12 +33,8 @@ pub enum Literal {
 
 impl PartialEq for Literal {
     fn eq(&self, other: &Self) -> bool {
-        println!("Comparaison btw : [{:?}]==[{:?}]", self, other);
         match (self, other) {
-            (Literal::Symbol(val1), Literal::Symbol(val2)) => {
-                println!("SYMSYM2 btw : [{}]==[{}] ret={}", val1, val2, val1.eq(val2));
-                val1.eq(val2)
-            },
+            (Literal::Symbol(val1), Literal::Symbol(val2)) => val1.eq(val2),
             (Literal::String(val1), Literal::String(val2)) => val1.eq(val2),
             (Literal::Double(val1), Literal::Double(val2)) => val1.eq(val2),
             (Literal::Integer(val1), Literal::Integer(val2)) => val1.eq(val2),

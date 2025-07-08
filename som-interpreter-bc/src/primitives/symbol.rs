@@ -30,9 +30,6 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = universe.lookup_symbol(symbol).to_owned();
     let val_len = val.len();
 
-    println!("SYMBOL : [{:?}]", val);
-    println!("SYMBOL_AS_STRING: {}", val_len);
-
     if val_len < 8 {
         let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
         return Ok(Value::TinyStr(data_buf));

@@ -68,7 +68,6 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
 fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
-    println!("hashcode [{}]", string);
     let mut hasher = DefaultHasher::new();
     hasher.write(string.as_bytes());
     let hash = (hasher.finish() as i32).abs();
@@ -108,7 +107,6 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     if final_str_len < 8 {
         let data_buf: Vec<u8> = (*final_str).as_bytes().to_vec();
         // final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
-        println!("concat tstr : [{:?}]", data_buf);
         return Ok(Value::TinyStr(data_buf));
     }
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
@@ -162,8 +160,6 @@ fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> 
     let Ok(b) = StringLike::try_from(b.0) else {
         return Ok(false);
     };
-
-    println!("cmp : [{:?}]==[{:?}]", a, b);
     Ok(a.eq_stringlike(&b, |sym| universe.lookup_symbol(sym)))
 }
 

@@ -211,8 +211,6 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        println!("CHECK-G-2 [{:?}]==[{:?}]", self, other);
-        println!("CHECK-G-2 [{:#64b}]==[{:#64b}]", self.as_u64(), self.as_u64());
         if self.as_u64() == other.as_u64() {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
@@ -240,25 +238,14 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_string::<Gc<String>>()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
-            println!("CHECK-C");
             a == b
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
-            println!("CHECK-D");
-
             *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
-            println!("CHECK-E");
             String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a.eq(&b)
         } else {
-            println!("CHECK-G-2 FALSE FOR [{:?}]==[{:?}]", self, other);
-            if let Some(a) = self.as_symbol() {
-                println!("SYMBOL : {:?}", a);
-            }
-            if let Some(b) = other.as_symbol() {
-                println!("SYMBOL : {:?}", b);
-            }
             false
         }
     }
