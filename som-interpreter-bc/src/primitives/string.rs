@@ -31,6 +31,28 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
 });
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
+#[cfg(feature = "lbits")]
+fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    // tragically, we do not allow strings to have over 2 billion characters and just cast as i32
+    // i apologize to everyone for that. i will strive to be better
+    match receiver {
+        StringLike::TinyStr(data) => {
+            // let mut size = data.iter().rev().take_while(|&&x| x == 0).count() as i32;
+            // size = 8 - size;
+            // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
+            // Ok(Value::Integer(if size == 0 {1} else {size}))
+            // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
+            Ok(Value::Integer(data.len() as i32))
+        }
+        StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
+        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
+        StringLike::Char(_) => Ok(Value::Integer(1)),
+    }
+}
+
+#[cfg(feature = "nan")]
 fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
@@ -72,16 +94,50 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
     Ok(!string.is_empty() && string.chars().all(char::is_whitespace))
 }
 
-fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+#[cfg(feature = "lbits")]
+fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
 
     let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
 
     let final_str = format!("{s1}{s2}");
-    Ok(universe.gc_interface.alloc(final_str))
+    let final_str_len = final_str.len();
+
+    if final_str_len < 8 {
+        let data_buf: Vec<u8> = (*final_str).as_bytes().to_vec();
+        // final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
+        return Ok(Value::TinyStr(data_buf));
+    }
+    Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 
+#[cfg(feature = "nan")]
+fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
+
+    let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
+
+    let final_str = format!("{s1}{s2}");
+    Ok(Value::String(universe.gc_interface.alloc(final_str)))
+}
+
+#[cfg(feature = "lbits")]
+fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    let symbol = match receiver {
+        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
+        StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
+        StringLike::Char(char) => universe.intern_symbol(&String::from(char)),
+        StringLike::Symbol(symbol) => symbol,
+    };
+
+    Ok(symbol)
+}
+
+#[cfg(feature = "nan")]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
@@ -104,7 +160,6 @@ fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> 
     let Ok(b) = StringLike::try_from(b.0) else {
         return Ok(false);
     };
-
     Ok(a.eq_stringlike(&b, |sym| universe.lookup_symbol(sym)))
 }
 

@@ -53,6 +53,7 @@ impl Value {
         new_symbol(value: Interned) -> Self,
         new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
+        new_tiny_str(value: Vec<u8>) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Char(value: char) -> Self,
@@ -61,6 +62,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
+        TinyStr(value: Vec<u8>) -> Self,
         String(value: Gc<String>) -> Self,
     );
 
@@ -113,6 +115,7 @@ impl Value {
             }
             INTEGER_TAG | BIG_INTEGER_TAG => universe.core.integer_class(),
             SYMBOL_TAG => universe.core.symbol_class(),
+            TINY_STRING_TAG => universe.core.string_class(),
             STRING_TAG => universe.core.string_class(),
             CHAR_TAG => universe.core.string_class(),
             ARRAY_TAG => universe.core.array_class(),
@@ -151,6 +154,7 @@ impl Value {
                     format!("#{}", symbol)
                 }
             }
+            TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
             STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             ARRAY_TAG => {
                 let strings: Vec<String> = self
@@ -211,10 +215,20 @@ impl PartialEq for Value {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
             a == b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_allocated_double::<Gc<f64>>()) {
+            *a == *b
+        } else if let (Some(a), Some(b)) = (self.as_double(), other.as_allocated_double::<Gc<f64>>()) {
+            a == *b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_double()) {
+            *a == b
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_double()) {
             (a as f64) == b
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_integer()) {
             (b as f64) == a
+        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_allocated_double::<Gc<f64>>()) {
+            (a as f64) == *b
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), self.as_integer()) {
+            *a == (b as f64)
         } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_big_integer()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_integer()) {
@@ -223,6 +237,14 @@ impl PartialEq for Value {
             BigInt::from(a).eq(&*b)
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_string::<Gc<String>>()) {
             a == b
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
+            a == b
+        } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
+            *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
+            String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
+        } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
+            a.eq(&b)
         } else {
             false
         }

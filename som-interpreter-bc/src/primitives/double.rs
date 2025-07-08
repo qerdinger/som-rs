@@ -3,14 +3,29 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 use crate::value::Value;
-use anyhow::{Context, Error};
-use num_bigint::BigInt;
+
+use anyhow::Error;
+
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
+
+#[cfg(feature = "nan")]
+use crate::value::convert::{DoubleLike, IntoValue, Primitive};
+
+#[cfg(feature = "nan")]
 use som_gc::gcref::Gc;
+
+
+#[cfg(feature = "nan")]
+use anyhow::Context;
+
+#[cfg(feature = "lbits")]
+use crate::value::convert::{DoubleLike, StringLike, IntoValue, Primitive};
+
+#[cfg(feature = "lbits")]
+use num_bigint::BigInt;
 
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     Box::new([
@@ -62,12 +77,42 @@ macro_rules! promote {
     };
 }
 
+#[cfg(feature = "nan")]
 fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
 
     string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
 }
 
+#[cfg(feature = "lbits")]
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#fromString:";
+
+    pop_args_from_stack!(interp, _a => Value, string => StringLike);
+
+    let string = match string {
+        StringLike::TinyStr(ref value) => {
+            std::str::from_utf8(value).unwrap()
+        },
+        StringLike::String(ref value) => value.as_str(),
+        StringLike::Char(char) => &*String::from(char),
+        StringLike::Symbol(sym) => universe.lookup_symbol(sym),
+    };
+
+    match string.parse::<f64>() {
+        Ok(parsed) => {
+            let bits = (parsed as f64).to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            let heap = &mut universe.gc_interface;
+            if in_range { Ok(Value::Double(parsed)) } else { Ok(Value::AllocatedDouble(heap.alloc(parsed))) }
+        },
+        Err(err) => panic!("'{}': {}", SIGNATURE, err),
+    }
+    // string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
+}
+
+#[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     const SIGNATURE: &str = "Double>>#asString";
 
@@ -78,12 +123,33 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     Ok(universe.gc_interface.alloc(receiver.to_string()))
 }
 
+#[cfg(feature = "lbits")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#asString";
+
+    pop_args_from_stack!(interp, receiver => DoubleLike);
+
+    let receiver = promote!(SIGNATURE, receiver);
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len < 8 {
+        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(val)))
+}
+
 fn as_integer(receiver: f64) -> Result<i32, Error> {
     const _: &str = "Double>>#asInteger";
 
     Ok(receiver.trunc() as i32)
 }
 
+#[cfg(feature = "lbits")]
 fn sqrt(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#sqrt";
 
@@ -98,6 +164,15 @@ fn sqrt(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
     let heap = &mut universe.gc_interface;
     //println!("In Range : {}", in_range);
     if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
+}
+
+#[cfg(feature = "nan")]
+fn sqrt(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#sqrt";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.sqrt())
 }
 
 fn max(receiver: f64, other: DoubleLike) -> Result<Value, Error> {
@@ -120,6 +195,7 @@ fn min(receiver: f64, other: DoubleLike) -> Result<Value, Error> {
     }
 }
 
+#[cfg(feature = "lbits")]
 fn round(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#round";
 
@@ -135,6 +211,33 @@ fn round(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
     if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
 }
 
+#[cfg(feature = "nan")]
+fn round(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#round";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.round())
+}
+
+#[cfg(feature = "lbits")]
+fn cos(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#cos";
+
+    pop_args_from_stack!(interp, receiver => DoubleLike);
+    let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.cos();
+    let bits = ops.to_bits();
+
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    //println!("In Range : {}", in_range);
+
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
+}
+
+#[cfg(feature = "nan")]
 fn cos(receiver: DoubleLike) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#cos";
 
@@ -143,6 +246,22 @@ fn cos(receiver: DoubleLike) -> Result<f64, Error> {
     Ok(receiver.cos())
 }
 
+#[cfg(feature = "lbits")]
+fn sin(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#sin";
+
+    pop_args_from_stack!(interp, receiver => DoubleLike);
+    let receiver = promote!(SIGNATURE, receiver);
+    let ops = receiver.sin();
+    let bits = ops.to_bits();
+
+    let exponent  = (bits >> 52) & 0x7FF;
+    let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+    let heap = &mut universe.gc_interface;
+    if in_range { Ok(Value::Double(ops)) } else { Ok(Value::AllocatedDouble(heap.alloc(ops))) }
+}
+
+#[cfg(feature = "nan")]
 fn sin(receiver: DoubleLike) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#sin";
 
@@ -171,6 +290,7 @@ fn eq_eq(a: Value, b: Value) -> Result<bool, Error> {
     let Ok(b) = DoubleLike::try_from(b.0) else {
         return Ok(false);
     };
+
 
     match (a, b) {
         (DoubleLike::Double(a), DoubleLike::Double(b)) => Ok(a == b),
@@ -210,6 +330,7 @@ fn gt_or_eq(a: f64, b: DoubleLike) -> Result<bool, Error> {
     Ok(a >= promote!(SIGNATURE, b))
 }
 
+#[cfg(feature = "lbits")]
 macro_rules! demote {
     ($heap:expr, $expr:expr) => {{
         let value = $expr;
@@ -220,6 +341,7 @@ macro_rules! demote {
     }};
 }
 
+#[cfg(feature = "lbits")]
 fn plus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#+";
 
@@ -271,6 +393,17 @@ fn plus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
     Ok(value)
 }
 
+#[cfg(feature = "nan")]
+fn plus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#+";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a + b)
+}
+
+#[cfg(feature = "lbits")]
 fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#-";
 
@@ -322,6 +455,17 @@ fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
     Ok(value)
 }
 
+#[cfg(feature = "nan")]
+fn minus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#-";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a - b)
+}
+
+#[cfg(feature = "lbits")]
 fn times(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#*";
 
@@ -373,6 +517,17 @@ fn times(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
     Ok(value)
 }
 
+#[cfg(feature = "nan")]
+fn times(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#*";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a * b)
+}
+
+#[cfg(feature = "lbits")]
 fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#//";
 
@@ -424,6 +579,17 @@ fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     Ok(value)
 }
 
+#[cfg(feature = "nan")]
+fn divide(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#//";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a / b)
+}
+
+#[cfg(feature = "lbits")]
 fn modulo(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#%";
 
@@ -475,11 +641,32 @@ fn modulo(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     Ok(value)
 }
 
-fn positive_infinity(_: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+#[cfg(feature = "nan")]
+fn modulo(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#%";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a % b)
+}
+
+
+#[cfg(feature = "lbits")]
+fn positive_infinity(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Double>>#positiveInfinity";
+
+    pop_args_from_stack!(interp, _a => Value);
 
     let heap = &mut universe.gc_interface;
     Ok(Value::AllocatedDouble(heap.alloc(f64::INFINITY)))
+}
+
+#[cfg(feature = "nan")]
+fn positive_infinity(_: Value) -> Result<f64, Error> {
+    const _: &str = "Double>>#positiveInfinity";
+
+    Ok(f64::INFINITY)
 }
 
 /// Search for an instance primitive matching the given signature.

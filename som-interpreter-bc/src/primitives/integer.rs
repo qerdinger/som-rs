@@ -76,12 +76,15 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     match string.parse::<i32>() {
         Ok(a) => Ok(Value::Integer(a)),
         Err(_) => match string.parse::<BigInt>() {
-            Ok(b) => Ok(Value::BigInteger(universe.gc_interface.alloc(b))),
+            Ok(b) => {
+                Ok(Value::BigInteger(universe.gc_interface.alloc(b)))
+            },
             _ => panic!("couldn't turn an int/bigint into a string"),
         },
     }
 }
 
+#[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
 
@@ -91,6 +94,28 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     };
 
     Ok(universe.gc_interface.alloc(receiver))
+}
+
+#[cfg(feature = "lbits")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => IntegerLike);
+
+    let receiver = match receiver {
+        IntegerLike::Integer(value) => value.to_string(),
+        IntegerLike::BigInteger(value) => value.to_string(),
+    };
+    
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len < 8 {
+        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(receiver)))
 }
 
 fn as_double(receiver: IntegerLike) -> Result<f64, Error> {

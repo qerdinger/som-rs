@@ -11,6 +11,7 @@ use som_value::value_ptr::TypedPtrValue;
 use std::fmt;
 
 /// Represents an SOM value as an enum.
+#[cfg(feature = "lbits")]
 #[derive(Clone)]
 pub enum ValueEnum {
     /// The **nil** value.
@@ -27,6 +28,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
+    TinyStr(Vec<u8>),
     String(Gc<String>),
     /// An array of values.
     Array(Gc<Vec<ValueEnum>>),
@@ -40,6 +42,36 @@ pub enum ValueEnum {
     Invokable(Gc<Method>),
 }
 
+#[cfg(feature = "nan")]
+#[derive(Clone)]
+pub enum ValueEnum {
+    /// The **nil** value.
+    Nil,
+    /// A boolean value (**true** or **false**).
+    Boolean(bool),
+    /// An integer value.
+    Integer(i32),
+    /// A big integer value (arbitrarily big).
+    BigInteger(Gc<BigInt>),
+    /// An floating-point value.
+    Double(f64),
+    /// An interned symbol value.
+    Symbol(Interned),
+    /// A string value.
+    String(Gc<String>),
+    /// An array of values.
+    Array(Gc<Vec<ValueEnum>>),
+    /// A block value, ready to be evaluated.
+    Block(Gc<Block>),
+    /// A generic (non-primitive) class instance.
+    Instance(Gc<Instance>),
+    /// A bare class object.
+    Class(Gc<Class>),
+    /// A bare invokable.
+    Invokable(Gc<Method>),
+}
+
+#[cfg(feature = "lbits")]
 impl From<Value> for ValueEnum {
     fn from(value: Value) -> Self {
         if let Some(value) = value.as_double() {
@@ -50,6 +82,43 @@ impl From<Value> for ValueEnum {
             Self::Integer(value)
         } else if let Some(value) = value.as_allocated_double() {
             Self::AllocatedDouble(value)
+        } else if let Some(value) = value.as_big_integer() {
+            Self::BigInteger(value)
+        } else if let Some(value) = value.as_boolean() {
+            Self::Boolean(value)
+        } else if let Some(value) = value.as_symbol() {
+            Self::Symbol(value)
+        } else if let Some(value) = value.as_tiny_str() {
+            Self::TinyStr(value)
+        } else if let Some(value) = value.as_string() {
+            Self::String(value)
+        } else if let Some(_value) = value.as_array() {
+            // to work, would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait
+            eprintln!("no From<NanBoxedVal> impl for arr. returning Nil.");
+            Self::NIL
+        } else if let Some(value) = value.as_block() {
+            Self::Block(value)
+        } else if let Some(value) = value.as_instance() {
+            Self::Instance(value)
+        } else if let Some(value) = value.as_class() {
+            Self::Class(value)
+        } else if let Some(value) = value.as_invokable() {
+            Self::Invokable(value)
+        } else {
+            todo!()
+        }
+    }
+}
+
+#[cfg(feature = "nan")]
+impl From<Value> for ValueEnum {
+    fn from(value: Value) -> Self {
+        if let Some(value) = value.as_double() {
+            Self::Double(value)
+        } else if value.is_nil() {
+            Self::Nil
+        } else if let Some(value) = value.as_integer() {
+            Self::Integer(value)
         } else if let Some(value) = value.as_big_integer() {
             Self::BigInteger(value)
         } else if let Some(value) = value.as_boolean() {
@@ -76,6 +145,7 @@ impl From<Value> for ValueEnum {
     }
 }
 
+#[cfg(feature = "lbits")]
 impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
         match value {
@@ -85,6 +155,29 @@ impl From<ValueEnum> for Value {
             ValueEnum::BigInteger(value) => Self::new_big_integer(value),
             ValueEnum::Double(value) => Self::new_double(value),
             ValueEnum::AllocatedDouble(value) => Self::new_allocated_double(value),
+            ValueEnum::Symbol(value) => Self::new_symbol(value),
+            ValueEnum::TinyStr(value) => Self::new_tiny_str(value),
+            ValueEnum::String(value) => Self::new_string(value),
+            ValueEnum::Array(_value) => unimplemented!(
+                "no impl for arr. would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait"
+            ),
+            ValueEnum::Block(value) => TypedPtrValue::new(value).into(),
+            ValueEnum::Instance(value) => TypedPtrValue::new(value).into(),
+            ValueEnum::Class(value) => TypedPtrValue::new(value).into(),
+            ValueEnum::Invokable(value) => TypedPtrValue::new(value).into(),
+        }
+    }
+}
+
+#[cfg(feature = "nan")]
+impl From<ValueEnum> for Value {
+    fn from(value: ValueEnum) -> Self {
+        match value {
+            ValueEnum::Nil => Self::NIL,
+            ValueEnum::Boolean(value) => Self::new_boolean(value),
+            ValueEnum::Integer(value) => Self::new_integer(value),
+            ValueEnum::BigInteger(value) => Self::new_big_integer(value),
+            ValueEnum::Double(value) => Self::new_double(value),
             ValueEnum::Symbol(value) => Self::new_symbol(value),
             ValueEnum::String(value) => Self::new_string(value),
             ValueEnum::Array(_value) => unimplemented!(
@@ -100,6 +193,7 @@ impl From<ValueEnum> for Value {
 
 impl ValueEnum {
     /// Get the class of the current value.
+    #[cfg(feature = "lbits")]
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         match self {
             Self::Nil => universe.core.nil_class(),
@@ -109,6 +203,26 @@ impl ValueEnum {
             Self::BigInteger(_) => universe.core.integer_class(),
             Self::Double(_) => universe.core.double_class(),
             Self::AllocatedDouble(_) => universe.core.double_class(),
+            Self::Symbol(_) => universe.core.symbol_class(),
+            Self::TinyStr(_) => universe.core.string_class(),
+            Self::String(_) => universe.core.string_class(),
+            Self::Array(_) => universe.core.array_class(),
+            Self::Block(block) => block.class(universe),
+            Self::Instance(instance_ptr) => instance_ptr.class(),
+            Self::Class(class) => class.class(),
+            Self::Invokable(invokable) => invokable.class(universe),
+        }
+    }
+
+    #[cfg(feature = "nan")]
+    pub fn class(&self, universe: &Universe) -> Gc<Class> {
+        match self {
+            Self::Nil => universe.core.nil_class(),
+            Self::Boolean(true) => universe.core.true_class(),
+            Self::Boolean(false) => universe.core.false_class(),
+            Self::Integer(_) => universe.core.integer_class(),
+            Self::BigInteger(_) => universe.core.integer_class(),
+            Self::Double(_) => universe.core.double_class(),
             Self::Symbol(_) => universe.core.symbol_class(),
             Self::String(_) => universe.core.string_class(),
             Self::Array(_) => universe.core.array_class(),
@@ -144,6 +258,7 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "lbits")]
     /// Get the string representation of this value.
     pub fn to_string(&self, universe: &Universe) -> String {
         match self {
@@ -153,6 +268,41 @@ impl ValueEnum {
             Self::BigInteger(value) => value.to_string(),
             Self::Double(value) => value.to_string(),
             Self::AllocatedDouble(value) => value.to_string(),
+            Self::Symbol(value) => {
+                let symbol = universe.lookup_symbol(*value);
+                if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
+                    format!("#'{}'", symbol.replace("'", "\\'"))
+                } else {
+                    format!("#{}", symbol)
+                }
+            },
+            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::String(value) => value.as_str().to_string(),
+            Self::Array(values) => {
+                // TODO (from nicolas): I think we can do better here (less allocations).
+                let strings: Vec<String> = values.iter().map(|value| value.to_string(universe)).collect();
+                format!("#({})", strings.join(" "))
+            }
+            Self::Block(block) => format!("instance of Block{}", block.nb_parameters() + 1),
+            Self::Instance(instance_ptr) => {
+                format!("instance of {} class", instance_ptr.class().name(),)
+            }
+            Self::Class(class) => class.name().to_string(),
+            Self::Invokable(invokable) => {
+                format!("{}>>#{}", invokable.holder().name(), invokable.signature())
+            }
+        }
+    }
+
+    #[cfg(feature = "nan")]
+    /// Get the string representation of this value.
+    pub fn to_string(&self, universe: &Universe) -> String {
+        match self {
+            Self::Nil => "nil".to_string(),
+            Self::Boolean(value) => value.to_string(),
+            Self::Integer(value) => value.to_string(),
+            Self::BigInteger(value) => value.to_string(),
+            Self::Double(value) => value.to_string(),
             Self::Symbol(value) => {
                 let symbol = universe.lookup_symbol(*value);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
@@ -179,6 +329,7 @@ impl ValueEnum {
     }
 }
 
+#[cfg(feature = "nan")]
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -204,6 +355,35 @@ impl PartialEq for ValueEnum {
     }
 }
 
+#[cfg(feature = "lbits")]
+impl PartialEq for ValueEnum {
+    fn eq(&self, other: &Self) -> bool {
+        println!("CHECK-1.");
+        match (self, other) {
+            (Self::Nil, Self::Nil) => true,
+            (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
+            (Self::Integer(a), Self::Integer(b)) => a.eq(b),
+            (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
+            (Self::Double(a), Self::Double(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::BigInteger(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::Integer(b)) | (Self::Integer(b), Self::BigInteger(a)) => {
+                // a.eq(&BigInt::from(*b))
+                (**a).eq(&BigInt::from(*b))
+            }
+            (Self::Symbol(a), Self::Symbol(b)) => a.eq(b),
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::TinyStr(a), Self::TinyStr(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Instance(a), Self::Instance(b)) => a == b,
+            (Self::Class(a), Self::Class(b)) => a == b,
+            (Self::Block(a), Self::Block(b)) => a == b,
+            (Self::Invokable(a), Self::Invokable(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(feature = "lbits")]
 impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -213,6 +393,30 @@ impl fmt::Debug for ValueEnum {
             Self::BigInteger(val) => f.debug_tuple("BigInteger").field(val).finish(),
             Self::Double(val) => f.debug_tuple("Double").field(val).finish(),
             Self::AllocatedDouble(val) => f.debug_tuple("AllocatedDouble").field(val).finish(),
+            Self::Symbol(val) => f.debug_tuple("Symbol").field(val).finish(),
+            Self::TinyStr(val) => f.debug_tuple("TinyStr").field(val).finish(),
+            Self::String(val) => f.debug_tuple("String").field(val).finish(),
+            Self::Array(val) => f.debug_tuple("Array").field(&val).finish(),
+            Self::Block(val) => f.debug_tuple("Block").field(val).finish(),
+            Self::Instance(val) => f.debug_tuple("Instance").field(&val).finish(),
+            Self::Class(val) => f.debug_tuple("Class").field(&val).finish(),
+            Self::Invokable(val) => {
+                let signature = format!("{}>>#{}", val.holder().name(), val.signature());
+                f.debug_tuple("Invokable").field(&signature).finish()
+            }
+        }
+    }
+}
+
+#[cfg(feature = "nan")]
+impl fmt::Debug for ValueEnum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Nil => f.debug_tuple("Nil").finish(),
+            Self::Boolean(val) => f.debug_tuple("Boolean").field(val).finish(),
+            Self::Integer(val) => f.debug_tuple("Integer").field(val).finish(),
+            Self::BigInteger(val) => f.debug_tuple("BigInteger").field(val).finish(),
+            Self::Double(val) => f.debug_tuple("Double").field(val).finish(),
             Self::Symbol(val) => f.debug_tuple("Symbol").field(val).finish(),
             Self::String(val) => f.debug_tuple("String").field(val).finish(),
             Self::Array(val) => f.debug_tuple("Array").field(&val).finish(),
@@ -301,9 +505,16 @@ impl ValueEnum {
         matches!(self, ValueEnum::Symbol(_))
     }
 
+    #[cfg(feature = "lbits")]
     #[inline(always)]
     pub fn is_allocated_double(&self) -> bool {
         matches!(self, ValueEnum::AllocatedDouble(_))
+    }
+
+    #[cfg(feature = "lbits")]
+    #[inline(always)]
+    pub fn is_tiny_str(&self) -> bool {
+        matches!(self, ValueEnum::TinyStr(_))
     }
 
     /// Returns whether this value is a double.
@@ -419,9 +630,20 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "lbits")]
     #[inline(always)]
     pub fn as_allocated_double(&self) -> Option<Gc<f64>> {
         if let ValueEnum::AllocatedDouble(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "lbits")]
+    #[inline(always)]
+    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+        if let ValueEnum::TinyStr(v) = self {
             Some(v.clone())
         } else {
             None
@@ -468,6 +690,7 @@ impl ValueEnum {
         ValueEnum::Symbol(value)
     }
 
+    #[cfg(feature = "lbits")]
     #[inline(always)]
     pub fn new_allocated_double(value: Gc<f64>) -> Self {
         ValueEnum::AllocatedDouble(value)
