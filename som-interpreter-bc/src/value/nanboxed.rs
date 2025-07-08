@@ -214,7 +214,6 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        println!("CHECK-G-1");
         if self.as_u64() == other.as_u64() {
             // this encapsulates every comparison between values of the same primitive type, e.g. comparing two i32s or two booleans, and pointer comparisons
             true
