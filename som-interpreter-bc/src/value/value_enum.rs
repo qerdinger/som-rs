@@ -358,7 +358,6 @@ impl PartialEq for ValueEnum {
 #[cfg(feature = "lbits")]
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
-        println!("CHECK-1.");
         match (self, other) {
             (Self::Nil, Self::Nil) => true,
             (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
