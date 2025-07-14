@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 nan = []
 lbits = []
+idiomatic = []
 
 [dependencies]
 static_assertions = "1.1.0"

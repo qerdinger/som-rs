@@ -1,3 +1,4 @@
+#[cfg(any(feature = "nan", feature = "lbits"))]
 use som_value::value::BaseValue;
 
 /// Value type(s!), and value-related code.
@@ -11,13 +12,21 @@ pub mod nanboxed;
 #[cfg(feature = "lbits")]
 pub mod lbits;
 
+#[cfg(feature = "idiomatic")]
+pub mod idiomatic;
+
 /// Our enum based type
 pub mod value_enum;
 mod value_ptr;
 
 /// Represents an SOM value.
-#[derive(Clone, Copy)]
+//#[cfg(any(feature = "nan", feature = "lbits"))]
+//#[derive(Clone, Copy)]
+//#[repr(transparent)]
+//pub struct Value(pub BaseValue);
+
+#[derive(Debug, Clone)]
 #[repr(transparent)]
-pub struct Value(pub BaseValue);
+pub struct Value(pub value_enum::ValueEnum);
 
 // TODO: we should be able to switch between Value (nanboxed) and ValueEnum at will. That used to be the case, but I broke those changes. TODO restore

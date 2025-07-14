@@ -18,7 +18,7 @@ impl Hash for Value {
         } else if let Some(value) = self.as_integer() {
             hasher.write(b"#int#");
             value.hash(hasher);
-        } else if let Some(value) = self.as_big_integer::<Gc<BigInt>>() {
+        } else if let Some(value) = self.as_big_integer() {
             hasher.write(b"#bigint#");
             value.hash(hasher);
         } else if let Some(value) = self.as_double() {
@@ -28,7 +28,7 @@ impl Hash for Value {
         } else if let Some(value) = self.as_symbol() {
             hasher.write(b"#sym#");
             value.hash(hasher);
-        } else if let Some(value) = self.as_string::<Gc<String>>() {
+        } else if let Some(value) = self.as_string() {
             hasher.write(b"#string#");
             value.hash(hasher);
         } else if let Some(value) = self.as_array() {

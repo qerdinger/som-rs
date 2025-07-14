@@ -2,7 +2,7 @@ use anyhow::Error;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
 
-#[cfg(feature = "nan")]
+#[cfg(any(feature = "nan", feature = "idiomatic"))]
 use som_gc::gcref::Gc;
 
 use crate::cur_frame;
@@ -19,6 +19,12 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([(
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
 #[cfg(feature = "nan")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+    let symbol = cur_frame!(interp).stack_pop().as_symbol().unwrap();
+    Ok(universe.gc_interface.alloc(universe.lookup_symbol(symbol).to_owned()))
+}
+
+#[cfg(feature = "idiomatic")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     let symbol = cur_frame!(interp).stack_pop().as_symbol().unwrap();
     Ok(universe.gc_interface.alloc(universe.lookup_symbol(symbol).to_owned()))

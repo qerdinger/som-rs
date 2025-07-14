@@ -284,7 +284,7 @@ impl Interpreter {
                         *last = Value::new_integer(int + 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double + 1.0);
-                    } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
+                    } else if let Some(mut big_int) = last.as_big_integer() {
                         *big_int += 1;
                     } else {
                         panic!("Invalid type in Inc")
@@ -300,7 +300,7 @@ impl Interpreter {
                         *last = Value::new_integer(int - 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double - 1.0);
-                    } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
+                    } else if let Some(mut big_int) = last.as_big_integer() {
                         *big_int -= 1;
                     } else {
                         panic!("Invalid type in DEC")
@@ -531,7 +531,7 @@ impl Interpreter {
                         self.bytecode_idx += offset - 1;
                         *condition_result = Value::NIL;
                     } else {
-                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:#b} {:?})", condition_result.as_u64(), condition_result)
+                        panic!("JumpOnFalseTopNil condition did not evaluate to boolean (was {:?} {:?})", condition_result, condition_result)
                     };
                     profiler_maybe_stop!(_timing);
                 }

@@ -4,7 +4,7 @@ use crate::universe::Universe;
 use crate::value::Value;
 use crate::vm_objects::instance::Instance;
 use som_value::interned::Interned;
-use std::cell::Cell;
+use std::cell::RefCell;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrivialLiteralMethod {
@@ -23,14 +23,14 @@ impl TrivialLiteralMethod {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrivialGlobalMethod {
     pub(crate) global_name: Interned,
-    pub(crate) cached_entry: Cell<Option<Value>>,
+    pub(crate) cached_entry: RefCell<Option<Value>>,
 }
 
 impl TrivialGlobalMethod {
     pub fn invoke(&self, universe: &mut Universe, interpreter: &mut Interpreter) {
         interpreter.get_current_frame().stack_pop(); // receiver off the stack.
 
-        if let Some(cached_entry) = self.cached_entry.get() {
+        if let Some(cached_entry) = *self.cached_entry.borrow() {
             interpreter.get_current_frame().stack_push(cached_entry);
             return;
         }
@@ -39,7 +39,7 @@ impl TrivialGlobalMethod {
             .lookup_global(self.global_name)
             .map(|v| {
                 interpreter.get_current_frame().stack_push(v);
-                self.cached_entry.replace(Some(v));
+                *self.cached_entry.borrow_mut() = Some(v);
             })
             .or_else(|| {
                 let frame = interpreter.get_current_frame();

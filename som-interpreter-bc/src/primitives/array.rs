@@ -75,7 +75,7 @@ fn copy(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, E
     pop_args_from_stack!(interp, arr2 => VecValue);
     std::hint::black_box(&arr2);
 
-    let copied_arr: Vec<Value> = arr2.iter().copied().collect();
+    let copied_arr: Vec<Value> = arr2.iter().cloned().collect();
     let allocated: GcSlice<Value> = universe.gc_interface.write_slice_to_addr(slice_addr, &copied_arr);
 
     Ok(VecValue(allocated))

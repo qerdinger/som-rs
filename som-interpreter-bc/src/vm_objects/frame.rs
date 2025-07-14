@@ -1,5 +1,5 @@
 use crate::compiler::Literal;
-use crate::value::Value;
+use crate::value::{value_enum, Value};
 use crate::vm_objects::block::{Block, CacheEntry};
 use crate::vm_objects::class::Class;
 use crate::vm_objects::method::Method;
@@ -10,6 +10,7 @@ use som_gc::gcref::Gc;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::DerefMut;
+use crate::value::value_enum::ValueEnum;
 
 pub(crate) const OFFSET_TO_STACK: usize = size_of::<Frame>();
 
@@ -55,7 +56,7 @@ impl Frame {
 
         let (max_stack_size, nbr_locals) = {
             let block_value = prev_frame.stack_nth_back(nbr_args - 1);
-            let block = block_value.as_block().unwrap();
+            let block = block_value.0.as_block().unwrap();
             {
                 let block_env = block.blk_info.get_env();
                 (block_env.max_stack_size as usize, block_env.nbr_locals)
@@ -66,7 +67,7 @@ impl Frame {
         let mut frame_ptr: Gc<Frame> = gc_interface.request_memory_for_type(size, Some(AllocSiteMarker::BlockFrame));
 
         let block_value = prev_frame.stack_nth_back(nbr_args - 1);
-        *frame_ptr = Frame::from_block(block_value.as_block().unwrap());
+        *frame_ptr = Frame::from_block(block_value.0.as_block().unwrap());
 
         let args = prev_frame.stack_n_last_elements(nbr_args);
         Frame::init_frame_post_alloc(frame_ptr.clone(), args, max_stack_size, prev_frame.clone());
@@ -110,7 +111,7 @@ impl Frame {
 
             // initializing arguments from the args slice
             let args_ptr = frame.as_ptr().byte_add(OFFSET_TO_STACK + stack_size * size_of::<Value>()) as *mut Value;
-            std::slice::from_raw_parts_mut(args_ptr, args.len()).copy_from_slice(args);
+            std::slice::from_raw_parts_mut(args_ptr, args.len()).clone_from_slice(args);
 
             // setting all locals to NIL.
             let locals_ptr = frame.as_ptr().byte_add(OFFSET_TO_STACK + (stack_size + args.len()) * size_of::<Value>()) as *mut Value;

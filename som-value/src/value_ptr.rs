@@ -8,7 +8,10 @@ use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 #[cfg(feature = "lbits")]
 use crate::lbits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_TAG};
 
+
+
 /// Bundles a value to a pointer with the type to its pointer.
+#[cfg(any(feature = "nan", feature = "lbits"))]
 #[repr(transparent)]
 pub struct TypedPtrValue<T, PTR> {
     value: BaseValue,
@@ -16,10 +19,12 @@ pub struct TypedPtrValue<T, PTR> {
     _phantom2: PhantomData<PTR>,
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 pub trait HasPointerTag {
     fn get_tag() -> u64;
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl<T, PTR> TypedPtrValue<T, PTR>
 where
     T: HasPointerTag,
@@ -57,6 +62,7 @@ where
     }
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl<T, PTR> From<BaseValue> for TypedPtrValue<T, PTR> {
     fn from(value: BaseValue) -> Self {
         Self {
@@ -67,18 +73,21 @@ impl<T, PTR> From<BaseValue> for TypedPtrValue<T, PTR> {
     }
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl<T, PTR> From<TypedPtrValue<T, PTR>> for BaseValue {
     fn from(val: TypedPtrValue<T, PTR>) -> Self {
         val.value
     }
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl HasPointerTag for String {
     fn get_tag() -> u64 {
         STRING_TAG
     }
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl HasPointerTag for BigInt {
     fn get_tag() -> u64 {
         BIG_INTEGER_TAG

@@ -205,6 +205,14 @@ pub enum StringLike<SPTR> {
     Char(char),
 }
 
+#[cfg(feature = "idiomatic")]
+#[derive(Debug, Clone)]
+pub enum StringLike<SPTR> {
+    String(SPTR),
+    Symbol(Interned),
+    Char(char),
+}
+
 #[cfg(feature = "lbits")]
 impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
 where

@@ -65,6 +65,19 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     }
 }
 
+#[cfg(feature = "idiomatic")]
+fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    // tragically, we do not allow strings to have over 2 billion characters and just cast as i32
+    // i apologize to everyone for that. i will strive to be better
+    match receiver {
+        StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
+        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
+        StringLike::Char(_) => Ok(Value::Integer(1)),
+    }
+}
+
 fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
@@ -123,6 +136,17 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 
+#[cfg(feature = "idiomatic")]
+fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
+
+    let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
+
+    let final_str = format!("{s1}{s2}");
+    Ok(Value::String(universe.gc_interface.alloc(final_str)))
+}
+
 #[cfg(feature = "lbits")]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
@@ -138,6 +162,19 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 }
 
 #[cfg(feature = "nan")]
+fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    let symbol = match receiver {
+        StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
+        StringLike::Char(char) => universe.intern_symbol(&String::from(char)),
+        StringLike::Symbol(symbol) => symbol,
+    };
+
+    Ok(symbol)
+}
+
+#[cfg(feature = "idiomatic")]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 

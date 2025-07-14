@@ -40,7 +40,7 @@ fn invoke_on_with(interpreter: &mut Interpreter, universe: &mut Universe) -> Res
         interpreter,
         universe,
         receiver,
-        arguments.iter().copied().collect(), // todo lame to clone tbh
+        arguments.iter().cloned().collect(), // todo lame to clone tbh
     );
     Ok(())
 }

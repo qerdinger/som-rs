@@ -8,7 +8,7 @@ use som_core::interner::Interner;
 use som_gc::gcref::Gc;
 use som_gc::gcslice::GcSlice;
 use som_value::interned::Interned;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::str::FromStr;
 
 #[cfg(not(feature = "inlining-disabled"))]
@@ -651,7 +651,7 @@ fn compile_method(outer: &mut dyn GenCtxt, defn: &ast::MethodDef, gc_interface: 
                 Literal::Symbol(interned) => Some(Method::TrivialGlobal(
                     TrivialGlobalMethod {
                         global_name: *interned,
-                        cached_entry: Cell::new(None),
+                        cached_entry: RefCell::new(None),
                     },
                     BasicMethodInfo::new(String::from(signature), Gc::default()),
                 )),

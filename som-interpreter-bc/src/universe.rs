@@ -1,6 +1,7 @@
 use crate::compiler::compile::compile_class;
 use crate::gc::{get_callbacks_for_gc, VecValue};
 use crate::interpreter::Interpreter;
+use crate::value::value_enum::ValueEnum;
 use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;
@@ -130,7 +131,10 @@ impl Universe {
             let super_class = if let Some(ref super_class) = defn.super_class {
                 let symbol = self.intern_symbol(super_class.as_str());
                 match self.lookup_global(symbol) {
-                    v if v.is_some() && v.unwrap().is_value_ptr::<Class>() => v.unwrap().as_class().unwrap(),
+                    Some(val) => match val.0 {
+                        ValueEnum::Class(class) => class,
+                        _ => self.load_class(super_class)?,
+                    }
                     _ => self.load_class(super_class)?,
                 }
             } else {

@@ -5,7 +5,7 @@ use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
 use crate::value::Value;
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
@@ -14,11 +14,12 @@ use som_gc::gc_interface::SOMAllocator;
 #[cfg(feature = "nan")]
 use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 
-#[cfg(feature = "nan")]
+#[cfg(feature = "idiomatic")]
+use crate::value::convert::{DoubleLike, IntoValue, Primitive};
+
+#[cfg(any(feature = "nan", feature = "idiomatic"))]
 use som_gc::gcref::Gc;
 
-
-#[cfg(feature = "nan")]
 use anyhow::Context;
 
 #[cfg(feature = "lbits")]
@@ -84,6 +85,14 @@ fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
     string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
 }
 
+#[cfg(feature = "idiomatic")]
+fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#fromString:";
+
+    string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
+}
+
+
 #[cfg(feature = "lbits")]
 fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
@@ -113,6 +122,17 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 }
 
 #[cfg(feature = "nan")]
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+    const SIGNATURE: &str = "Double>>#asString";
+
+    pop_args_from_stack!(interp, receiver => DoubleLike);
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(universe.gc_interface.alloc(receiver.to_string()))
+}
+
+#[cfg(feature = "idiomatic")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     const SIGNATURE: &str = "Double>>#asString";
 
@@ -175,6 +195,15 @@ fn sqrt(receiver: DoubleLike) -> Result<f64, Error> {
     Ok(receiver.sqrt())
 }
 
+#[cfg(feature = "idiomatic")]
+fn sqrt(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#sqrt";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.sqrt())
+}
+
 fn max(receiver: f64, other: DoubleLike) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#max";
 
@@ -220,6 +249,15 @@ fn round(receiver: DoubleLike) -> Result<f64, Error> {
     Ok(receiver.round())
 }
 
+#[cfg(feature = "idiomatic")]
+fn round(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#round";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.round())
+}
+
 #[cfg(feature = "lbits")]
 fn cos(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#cos";
@@ -246,6 +284,15 @@ fn cos(receiver: DoubleLike) -> Result<f64, Error> {
     Ok(receiver.cos())
 }
 
+#[cfg(feature = "idiomatic")]
+fn cos(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#cos";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.cos())
+}
+
 #[cfg(feature = "lbits")]
 fn sin(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#sin";
@@ -262,6 +309,15 @@ fn sin(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error
 }
 
 #[cfg(feature = "nan")]
+fn sin(receiver: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#sin";
+
+    let receiver = promote!(SIGNATURE, receiver);
+
+    Ok(receiver.sin())
+}
+
+#[cfg(feature = "idiomatic")]
 fn sin(receiver: DoubleLike) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#sin";
 
@@ -403,6 +459,16 @@ fn plus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     Ok(a + b)
 }
 
+#[cfg(feature = "idiomatic")]
+fn plus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#+";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a + b)
+}
+
 #[cfg(feature = "lbits")]
 fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#-";
@@ -456,6 +522,16 @@ fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
 }
 
 #[cfg(feature = "nan")]
+fn minus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#-";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a - b)
+}
+
+#[cfg(feature = "idiomatic")]
 fn minus(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#-";
 
@@ -527,6 +603,16 @@ fn times(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     Ok(a * b)
 }
 
+#[cfg(feature = "idiomatic")]
+fn times(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#*";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a * b)
+}
+
 #[cfg(feature = "lbits")]
 fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#//";
@@ -580,6 +666,16 @@ fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
 }
 
 #[cfg(feature = "nan")]
+fn divide(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#//";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a / b)
+}
+
+#[cfg(feature = "idiomatic")]
 fn divide(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     const SIGNATURE: &str = "Double>>#//";
 
@@ -651,6 +747,15 @@ fn modulo(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
     Ok(a % b)
 }
 
+#[cfg(feature = "idiomatic")]
+fn modulo(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
+    const SIGNATURE: &str = "Double>>#%";
+
+    let a = promote!(SIGNATURE, a);
+    let b = promote!(SIGNATURE, b);
+
+    Ok(a % b)
+}
 
 #[cfg(feature = "lbits")]
 fn positive_infinity(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
@@ -663,6 +768,13 @@ fn positive_infinity(interp: &mut Interpreter, universe: &mut Universe) -> Resul
 }
 
 #[cfg(feature = "nan")]
+fn positive_infinity(_: Value) -> Result<f64, Error> {
+    const _: &str = "Double>>#positiveInfinity";
+
+    Ok(f64::INFINITY)
+}
+
+#[cfg(feature = "idiomatic")]
 fn positive_infinity(_: Value) -> Result<f64, Error> {
     const _: &str = "Double>>#positiveInfinity";
 

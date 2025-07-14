@@ -7,7 +7,7 @@ use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
-use som_value::value_ptr::TypedPtrValue;
+//use som_value::value_ptr::TypedPtrValue;
 use std::fmt;
 
 /// Represents an SOM value as an enum.
@@ -30,6 +30,35 @@ pub enum ValueEnum {
     /// A string value.
     TinyStr(Vec<u8>),
     String(Gc<String>),
+    /// An array of values.
+    Array(Gc<Vec<ValueEnum>>),
+    /// A block value, ready to be evaluated.
+    Block(Gc<Block>),
+    /// A generic (non-primitive) class instance.
+    Instance(Gc<Instance>),
+    /// A bare class object.
+    Class(Gc<Class>),
+    /// A bare invokable.
+    Invokable(Gc<Method>),
+}
+
+#[derive(Clone)]
+pub enum ValueEnum {
+    /// The **nil** value.
+    Nil,
+    /// A boolean value (**true** or **false**).
+    Boolean(bool),
+    /// An integer value.
+    Integer(i32),
+    /// A big integer value (arbitrarily big).
+    BigInteger(Gc<BigInt>),
+    /// An floating-point value.
+    Double(f64),
+    /// An interned symbol value.
+    Symbol(Interned),
+    /// A string value.
+    String(Gc<String>),
+    Char(char),
     /// An array of values.
     Array(Gc<Vec<ValueEnum>>),
     /// A block value, ready to be evaluated.
@@ -233,6 +262,25 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "idiomatic")]
+    pub fn class(&self, universe: &Universe) -> Gc<Class> {
+        match self {
+            Self::Nil => universe.core.nil_class(),
+            Self::Boolean(true) => universe.core.true_class(),
+            Self::Boolean(false) => universe.core.false_class(),
+            Self::Integer(_) => universe.core.integer_class(),
+            Self::BigInteger(_) => universe.core.integer_class(),
+            Self::Double(_) => universe.core.double_class(),
+            Self::Symbol(_) => universe.core.symbol_class(),
+            Self::String(_) => universe.core.string_class(),
+            Self::Array(_) => universe.core.array_class(),
+            Self::Block(block) => block.class(universe),
+            Self::Instance(instance_ptr) => instance_ptr.class(),
+            Self::Class(class) => class.class(),
+            Self::Invokable(invokable) => invokable.class(universe),
+        }
+    }
+
     /// Search for a given method for this value.
     #[inline(always)]
     pub fn lookup_method(&self, universe: &Universe, signature: Interned) -> Option<Gc<Method>> {
@@ -254,7 +302,18 @@ impl ValueEnum {
         match self {
             Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
             Self::Class(class) => class.assign_field(idx, value.into()),
-            v => unreachable!("Attempting to assign a local in {:?}", v),
+            Self::Nil
+            | Self::Boolean(_)
+            | Self::Integer(_)
+            | Self::Double(_)
+            | Self::Symbol(_)
+            | Self::String(_)
+            | Self::Char(_)
+            | Self::BigInteger(_)
+            | Self::Array(_)
+            | Self::Block(_)
+            | Self::Invokable(_)
+            => unreachable!("Attempting to assign a local in Nil/Bool/Int/Double/Symbol/String/Char/BigInt/Array/Block/Invokable"),
         }
     }
 
@@ -670,6 +729,11 @@ impl ValueEnum {
         } else {
             Self::FALSE
         }
+    }
+
+    #[inline(always)]
+    pub fn new_char(value: char) -> Self {
+        ValueEnum::Char(value)
     }
 
     /// Returns a new integer value.

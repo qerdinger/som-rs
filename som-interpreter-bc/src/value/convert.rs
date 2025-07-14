@@ -1,6 +1,9 @@
 use anyhow::{bail, Context, Error};
 use som_gc::gcslice::GcSlice;
+
+#[cfg(any(feature = "nan", feature = "lbits"))]
 use som_value::value_ptr::HasPointerTag;
+
 use std::convert::TryFrom;
 
 use crate::cur_frame;
@@ -8,6 +11,7 @@ use crate::gc::VecValue;
 use crate::interpreter::Interpreter;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
+use crate::value::value_enum::ValueEnum;
 use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;
@@ -17,9 +21,175 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
-pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
-pub type StringLike = som_value::convert::StringLike<Gc<String>>;
+// With NAN & LBITS
+//pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
+//pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
+//pub type StringLike = som_value::convert::StringLike<Gc<String>>;
+
+// With idiomatic
+#[derive(Debug, Clone)]
+pub enum IntegerLike {
+    Integer(i32),
+    BigInteger(Gc<BigInt>),
+}
+
+#[derive(Debug, Clone)]
+pub enum DoubleLike {
+    Double(f64),
+    Integer(i32),
+    BigInteger(Gc<BigInt>),
+}
+
+#[derive(Debug, Clone)]
+pub enum StringLike {
+    String(Gc<String>),
+    Symbol(Interned),
+    Char(char),
+}
+
+impl TryFrom<ValueEnum> for IntegerLike {
+    type Error = Error;
+
+    fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
+        match value {
+            ValueEnum::Integer(i) => Ok(IntegerLike::Integer(i)),
+            ValueEnum::BigInteger(i) => Ok(IntegerLike::BigInteger(i)),
+            _ => bail!("could not resolve `Value` as `Integer` or `BigInteger`"),
+        }
+    }
+}
+
+impl TryFrom<ValueEnum> for DoubleLike {
+    type Error = Error;
+
+    fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
+        match value {
+            ValueEnum::Double(d) => Ok(DoubleLike::Double(d)),
+            ValueEnum::Integer(i) => Ok(DoubleLike::Integer(i)),
+            ValueEnum::BigInteger(i) => Ok(DoubleLike::BigInteger(i)),
+            _ => bail!("could not resolve `Value` as `Double`"),
+        }
+    }
+}
+
+impl TryFrom<ValueEnum> for f64 {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
+        match value { 
+            ValueEnum::Double(d) => Ok(d),
+            _ => bail!("could not resolve `Value` as `f64`"),
+        }
+    }
+}
+
+impl TryFrom<ValueEnum> for StringLike {
+    type Error = Error;
+
+    fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
+        /*
+        value
+            .as_string()
+            .map(Self::String)
+            .or_else(|| value.as_symbol().map(Self::Symbol))
+            .or_else(|| value.as_char().map(Self::Char))
+            .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
+         TODO
+         */
+        match value {
+            ValueEnum::String(s) => Ok(StringLike::String(s)),
+            ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
+            _ => bail!("could not resolve `Value` as `String`"),
+        }
+    }
+}
+
+// Implement comparison operations for DoubleLike
+impl DoubleLike {
+    pub fn lt(&self, other: &DoubleLike) -> bool {
+        match (self, other) {
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a < b,
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a < **b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => a < b,
+            (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) < *b,
+            (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a < (*b as f64),
+            (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) => **a < BigInt::from(*b),
+            (DoubleLike::Integer(a), DoubleLike::BigInteger(b)) => BigInt::from(*a) < **b,
+            _ => false,
+        }
+    }
+
+    #[inline(always)]
+    pub fn gt(&self, other: &DoubleLike) -> bool {
+        !self.lt(other) && !self.eq(other)
+    }
+
+    #[inline(always)]
+    pub fn lt_or_eq(&self, other: &DoubleLike) -> bool {
+        Self::lt(self, other) || Self::eq(self, other)
+    }
+
+    #[inline(always)]
+    pub fn gt_or_eq(&self, other: &DoubleLike) -> bool {
+        Self::gt(self, other) || Self::eq(self, other)
+    }
+}
+
+impl PartialEq for DoubleLike {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a == b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => a == b,
+            (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) == *b,
+            (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a == (*b as f64),
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+// StringLike methods
+impl StringLike {
+    pub fn as_str<'a>(&'a self, lookup_symbol: impl Fn(Interned) -> &'a str) -> std::borrow::Cow<'a, str> {
+        match self {
+            StringLike::String(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            StringLike::Symbol(sym) => std::borrow::Cow::Borrowed(lookup_symbol(*sym)),
+            StringLike::Char(c) => std::borrow::Cow::Owned(c.to_string()),
+        }
+    }
+
+    pub fn eq_with_lookup(&self, other: &Self, lookup_symbol: impl Fn(Interned) -> &'static str) -> bool {
+        match (self, other) {
+            (StringLike::Char(c1), StringLike::Char(c2)) => c1 == c2,
+            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
+            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
+            (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => sym1 == sym2 || lookup_symbol(*sym1) == lookup_symbol(*sym2),
+            (StringLike::String(s1), StringLike::String(s2)) => s1 == s2,
+            _ => false,
+        }
+    }
+
+    pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
+    where
+        F: Copy + Fn(Interned) -> &'a str,
+    {
+        match (&self, &other) {
+            (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
+            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
+            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
+            (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
+                (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
+            },
+            (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
+            _ => {
+                let a = self.as_str(lookup_symbol_fn);
+                let b = other.as_str(lookup_symbol_fn);
+                *a == *b
+            }
+        }
+    }
+}
+//
 
 pub trait IntoValue {
     #[allow(clippy::wrong_self_convention)] // though i guess we could/should rename it
@@ -109,18 +279,65 @@ impl FromArgs for f64 {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl FromArgs for f64 {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        arg
+            .as_double()
+            .context("could not resolve `Value` as `Double`")
+    }
+}
+
 impl FromArgs for Interned {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_symbol().context("could not resolve `Value` as `Symbol`")
     }
 }
 
+//impl FromArgs for VecValue {
+//    fn from_args(arg: Value) -> Result<Self, Error> {
+//        Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
+//    }
+//}
+
 impl FromArgs for VecValue {
     fn from_args(arg: Value) -> Result<Self, Error> {
-        Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
+        match arg.0 {
+            ValueEnum::Array(arr) => Ok(VecValue(GcSlice::from(arr))),
+            _ => bail!("could not resolve `Value` as `Array`"),
+        }
     }
 }
 
+impl FromArgs for Gc<Class> {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        arg.as_class().context("could not resolve `Value` as `Class`")
+    }
+}
+
+impl FromArgs for Gc<String> {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        arg.as_string().context("could not resolve `Value` as `String`")
+    }
+}
+
+// impl FromArgs for Gc<Method> {
+//     fn from_args(arg: Value) -> Result<Self, Error> {
+//         arg.as_method().context("could not resolve `Value` as `Method`")
+//     }
+// }
+
+impl FromArgs for Gc<Method> {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        match arg.0 {
+            ValueEnum::Invokable(method) => Ok(method),
+            _ => Err(anyhow::anyhow!("could not resolve `Value` as `Method`")),
+        }
+    }
+}
+
+
+#[cfg(any(feature = "nan", feature = "lbits"))]
 impl<T: HasPointerTag> FromArgs for Gc<T> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         Ok(arg.as_value_ptr().unwrap())
