@@ -302,10 +302,7 @@ impl FromArgs for Interned {
 
 impl FromArgs for VecValue {
     fn from_args(arg: Value) -> Result<Self, Error> {
-        match arg.0 {
-            ValueEnum::Array(arr) => Ok(VecValue(GcSlice::from(arr))),
-            _ => bail!("could not resolve `Value` as `Array`"),
-        }
+        arg.as_array().context("could not resolve `Value` as `Array`")
     }
 }
 
@@ -454,7 +451,7 @@ impl<T: IntoValue> IntoReturn for T {
 
 impl IntoValue for Value {
     fn into_value(&self) -> Value {
-        *self
+        self.clone()
     }
 }
 
@@ -515,7 +512,7 @@ impl IntoValue for DoubleLike {
             // DoubleLike::AllocatedDouble(value) => value.into_value(),
             DoubleLike::Integer(value) => value.into_value(),
             DoubleLike::BigInteger(value) => value.into_value(),
-            _ => panic!("Undefined DoubleLike : {:?}", self)
+            //_ => panic!("Undefined DoubleLike : {:?}", self)
         }
     }
 }
@@ -537,7 +534,7 @@ macro_rules! derive_prims {
                     let mut args_iter = args.iter();
                     $(
                         #[allow(non_snake_case)]
-                        let $ty = $ty::from_args(*args_iter.next().unwrap()).unwrap();
+                        let $ty = $ty::from_args(args_iter.next().unwrap().clone()).unwrap();
                     )*
 
                    (self)($($ty),*,)?.into_value()

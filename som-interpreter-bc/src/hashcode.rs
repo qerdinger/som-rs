@@ -31,22 +31,22 @@ impl Hash for Value {
         } else if let Some(value) = self.as_string() {
             hasher.write(b"#string#");
             value.hash(hasher);
-        } else if let Some(value) = self.as_array() {
+        } else if let Some(value) = self.clone().as_array() {
             hasher.write(b"#arr#");
             value.0.iter().for_each(|elem| elem.hash(hasher));
-        } else if let Some(value) = self.as_block() {
+        } else if let Some(value) = self.clone().as_block() {
             hasher.write(b"#blk#");
             value.hash(hasher);
-        } else if let Some(value) = self.as_class() {
+        } else if let Some(value) = self.clone().as_class() {
             hasher.write(b"#cls#");
             value.deref().hash(hasher);
-        } else if let Some(instance) = self.as_instance() {
+        } else if let Some(instance) = self.clone().as_instance() {
             hasher.write(b"#inst#");
             instance.class.hash(hasher);
             for i in 0..instance.class.fields.len() {
                 Instance::lookup_field(&instance, i).hash(hasher)
             }
-        } else if let Some(value) = self.as_invokable() {
+        } else if let Some(value) = self.clone().as_invokable() {
             hasher.write(b"#mthd#");
             value.hash(hasher);
         } else {

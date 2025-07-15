@@ -30,7 +30,7 @@ impl TrivialGlobalMethod {
     pub fn invoke(&self, universe: &mut Universe, interpreter: &mut Interpreter) {
         interpreter.get_current_frame().stack_pop(); // receiver off the stack.
 
-        if let Some(cached_entry) = *self.cached_entry.borrow() {
+        if let Some(cached_entry) = self.cached_entry.borrow().clone() {
             interpreter.get_current_frame().stack_push(cached_entry);
             return;
         }
@@ -38,7 +38,7 @@ impl TrivialGlobalMethod {
         universe
             .lookup_global(self.global_name)
             .map(|v| {
-                interpreter.get_current_frame().stack_push(v);
+                interpreter.get_current_frame().stack_push(v.clone());
                 *self.cached_entry.borrow_mut() = Some(v);
             })
             .or_else(|| {
@@ -59,10 +59,10 @@ impl TrivialGetterMethod {
     pub fn invoke(&self, _universe: &mut Universe, interpreter: &mut Interpreter) {
         let arg = interpreter.get_current_frame().stack_pop();
 
-        if let Some(cls) = arg.as_class() {
+        if let Some(cls) = arg.clone().as_class() {
             interpreter.get_current_frame().stack_push(cls.class().lookup_field(self.field_idx as usize))
         } else if let Some(instance) = arg.as_instance() {
-            interpreter.get_current_frame().stack_push(*Instance::lookup_field(&instance, self.field_idx as usize))
+            interpreter.get_current_frame().stack_push(Instance::lookup_field(&instance, self.field_idx as usize).clone())
         } else {
             panic!("trivial getter not called on a class/instance?")
         }
@@ -80,9 +80,9 @@ impl TrivialSetterMethod {
         let current_frame = interpreter.get_current_frame();
         let rcvr = current_frame.stack_last();
 
-        if let Some(cls) = rcvr.as_class() {
+        if let Some(cls) = rcvr.clone().as_class() {
             cls.class().assign_field(self.field_idx as usize, val);
-        } else if let Some(instance) = rcvr.as_instance() {
+        } else if let Some(instance) = rcvr.clone().as_instance() {
             Instance::assign_field(&instance, self.field_idx as usize, val)
         } else {
             panic!("trivial getter not called on a class/instance?")

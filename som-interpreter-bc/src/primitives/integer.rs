@@ -232,7 +232,7 @@ fn plus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
         //     Some(a) => Value::AllocatedDouble(heap.alloc((a) + (*b))),
         //     None => panic!("'{}': `Integer` too big to be converted to `Double`", SIGNATURE),
         // },
-        (_, _) => panic!("Undefined!")
+        //(_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -289,7 +289,7 @@ fn minus(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
         //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
         //     }
         // },
-        (_, _) => panic!("Undefined!")
+        //(_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -338,7 +338,7 @@ fn times(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Err
         //         bail!("'{SIGNATURE}': `Integer` too big to be converted to `AllocatedDouble`");
         //     }
         // }
-        (_, _) => panic!("Undefined!")
+        //(_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -396,7 +396,7 @@ fn divide(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
         //         bail!("'{SIGNATURE}': `BigInteger` too big to be converted to `Double`");
         //     }
         // },
-        (_, _) => panic!("Undefined!")
+        //(_, _) => panic!("Undefined!")
     };
 
     Ok(value)
@@ -420,7 +420,7 @@ fn divide_float(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
-        _ => panic!("Undefined!")
+        //_ => panic!("Undefined!")
     };
 
     let b = match b {
@@ -438,7 +438,7 @@ fn divide_float(a: DoubleLike, b: DoubleLike) -> Result<f64, Error> {
                 bail!("'{SIGNATURE}': `Integer` too big to be converted to `Double`");
             }
         },
-        _ => panic!("Undefined!")
+        //_ => panic!("Undefined!")
     };
 
     Ok(a / b)
@@ -496,7 +496,7 @@ fn sqrt(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Erro
         }
         // DoubleLike::AllocatedDouble(a) => Value::AllocatedDouble(universe.gc_interface.alloc(a.sqrt())),
         DoubleLike::BigInteger(a) => demote!(&mut universe.gc_interface, a.sqrt()),
-        _ => panic!("Undefined!")
+        //_ => panic!("Undefined!")
     };
 
     Ok(value)
@@ -534,9 +534,9 @@ fn abs(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error
             let bigint: Gc<BigInt> = universe.gc_interface.alloc(v.abs());
             Ok(bigint.into_value())
         }
-        _ => {
-            panic!("Undefined!")
-        }
+        //_ => {
+        //    panic!("Undefined!")
+        //}
     }
 }
 

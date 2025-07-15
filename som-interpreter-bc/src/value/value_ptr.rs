@@ -52,11 +52,11 @@ impl<T> TypedPtrValue<T> {
     #[inline(always)]
     pub fn get(&self) -> Option<Gc<T>> {
         match &self.value.0 {
-            ValueEnum::Array(ptr) => ptr.clone().into_any::<T>(),
-            ValueEnum::Block(ptr) => ptr.clone().into_any::<T>(),
-            ValueEnum::Class(ptr) => ptr.clone().into_any::<T>(),
-            ValueEnum::Instance(ptr) => ptr.clone().into_any::<T>(),
-            ValueEnum::Invokable(ptr) => ptr.clone().into_any::<T>(),
+            ValueEnum::Array(ptr) => ptr,
+            ValueEnum::Block(ptr) => ptr,
+            ValueEnum::Class(ptr) => ptr,
+            ValueEnum::Instance(ptr) => ptr,
+            ValueEnum::Invokable(ptr) => ptr,
             _ => None,
         }
     }

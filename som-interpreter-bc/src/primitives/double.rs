@@ -73,7 +73,7 @@ macro_rules! promote {
                     panic!("'{}': `Integer` too big to be converted to `Double`", $signature)
                 }
             },
-            _ => panic!("Undefined!")
+            //_ => panic!("Undefined!")
         }
     };
 }

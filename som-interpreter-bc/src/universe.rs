@@ -209,7 +209,7 @@ impl Universe {
 
     /// Search for a global binding.
     pub fn lookup_global(&self, idx: Interned) -> Option<Value> {
-        self.globals.iter().find(|(interned, _)| *interned == idx).map(|(_, value)| *value)
+        self.globals.iter().find(|(interned, _)| *interned == idx).map(|(_, value)| value.clone())
     }
 
     /// Assign a value to a global binding.

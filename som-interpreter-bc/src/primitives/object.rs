@@ -79,9 +79,9 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
 
     let Some(invokable) = receiver.lookup_method(universe, signature) else {
         let signature_str = universe.lookup_symbol(signature).to_owned();
-        let args = vec![receiver];
+        let args = vec![receiver.clone()];
         return universe
-            .does_not_understand(interpreter, receiver, signature, args)
+            .does_not_understand(interpreter, receiver.clone(), signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe),));
     };
 
@@ -103,9 +103,9 @@ fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe
 
     let Some(invokable) = receiver.lookup_method(universe, signature) else {
         let signature_str = universe.lookup_symbol(signature).to_owned();
-        let args = std::iter::once(receiver).chain(arguments.iter().cloned()).collect(); // lame clone
+        let args = std::iter::once(receiver.clone()).chain(arguments.iter().cloned()).collect(); // lame clone
         return universe
-            .does_not_understand(interpreter, receiver, signature, args)
+            .does_not_understand(interpreter, receiver.clone(), signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
     };
 
@@ -120,7 +120,7 @@ fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe
 
     let Some(invokable) = class.lookup_method(signature) else {
         let signature_str = universe.lookup_symbol(signature).to_owned();
-        let args = vec![receiver];
+        let args = vec![receiver.clone()];
         return universe
             .does_not_understand(interpreter, Value::Class(class), signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
@@ -139,7 +139,7 @@ fn perform_with_arguments_in_super_class(interpreter: &mut Interpreter, universe
 
     let Some(invokable) = method else {
         let signature_str = universe.lookup_symbol(signature).to_owned();
-        let args = std::iter::once(receiver).chain(arguments.iter().cloned()).collect(); // lame to clone args, right?
+        let args = std::iter::once(receiver.clone()).chain(arguments.iter().cloned()).collect(); // lame to clone args, right?
         return universe
             .does_not_understand(interpreter, Value::Class(class), signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
@@ -168,12 +168,12 @@ fn inst_var_at(receiver: Value, index: i32) -> Result<Option<Value>, Error> {
     // interpreter.stack.push(local);
     let idx = usize::try_from(index.saturating_sub(1))?;
 
-    if let Some(instance) = receiver.as_instance() {
+    if let Some(instance) = receiver.clone().as_instance() {
         match idx < instance.get_nbr_fields() {
-            true => Ok(Some(*Instance::lookup_field(&instance, idx))),
+            true => Ok(Some(Instance::lookup_field(&instance, idx).clone())),
             false => Ok(None),
         }
-    } else if let Some(class) = receiver.as_class() {
+    } else if let Some(class) = receiver.clone().as_class() {
         match idx < class.get_nbr_fields() {
             true => Ok(Some(class.lookup_field(idx))),
             false => Ok(None),
@@ -185,10 +185,10 @@ fn inst_var_at(receiver: Value, index: i32) -> Result<Option<Value>, Error> {
 
 fn inst_var_at_put(receiver: Value, index: i32, value: Value) -> Result<Option<Value>, Error> {
     let index = usize::try_from(index.saturating_sub(1))?;
-    if let Some(instance) = receiver.as_instance() {
-        Instance::assign_field(&instance, index, value)
-    } else if let Some(mut class) = receiver.as_class() {
-        class.assign_field(index, value);
+    if let Some(instance) = receiver.clone().as_instance() {
+        Instance::assign_field(&instance, index, value.clone())
+    } else if let Some(mut class) = receiver.clone().as_class() {
+        class.assign_field(index, value.clone());
     } else {
         panic!("Assigning a field not to an instance/class, but to a {:?}", value)
     }

@@ -6,8 +6,11 @@ use crate::vm_objects::instance::Instance;
 use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
 use som_gc::gcref::Gc;
+use som_gc::gcslice::GcSlice;
 use som_value::interned::Interned;
 //use som_value::value_ptr::TypedPtrValue;
+use crate::value::value_ptr::TypedPtrValue;
+
 use std::fmt;
 
 /// Represents an SOM value as an enum.
@@ -42,7 +45,7 @@ pub enum ValueEnum {
     Invokable(Gc<Method>),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum ValueEnum {
     /// The **nil** value.
     Nil,
@@ -60,7 +63,7 @@ pub enum ValueEnum {
     String(Gc<String>),
     Char(char),
     /// An array of values.
-    Array(Gc<Vec<ValueEnum>>),
+    Array(GcSlice<ValueEnum>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -174,6 +177,41 @@ impl From<Value> for ValueEnum {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl From<Value> for ValueEnum {
+    fn from(value: Value) -> Self {
+        if let Some(value) = value.as_double() {
+            Self::Double(value)
+        } else if value.is_nil() {
+            Self::Nil
+        } else if let Some(value) = value.as_integer() {
+            Self::Integer(value)
+        } else if let Some(value) = value.as_big_integer() {
+            Self::BigInteger(value)
+        } else if let Some(value) = value.as_boolean() {
+            Self::Boolean(value)
+        } else if let Some(value) = value.as_symbol() {
+            Self::Symbol(value)
+        } else if let Some(value) = value.as_string() {
+            Self::String(value)
+        } else if let Some(_value) = value.clone().as_array() {
+            // to work, would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait
+            eprintln!("no From<NanBoxedVal> impl for arr. returning Nil.");
+            Self::NIL
+        } else if let Some(value) = value.clone().as_block() {
+            Self::Block(value)
+        } else if let Some(value) = value.clone().as_instance() {
+            Self::Instance(value)
+        } else if let Some(value) = value.clone().as_class() {
+            Self::Class(value)
+        } else if let Some(value) = value.clone().as_invokable() {
+            Self::Invokable(value)
+        } else {
+            todo!()
+        }
+    }
+}
+
 #[cfg(feature = "lbits")]
 impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
@@ -216,6 +254,29 @@ impl From<ValueEnum> for Value {
             ValueEnum::Instance(value) => TypedPtrValue::new(value).into(),
             ValueEnum::Class(value) => TypedPtrValue::new(value).into(),
             ValueEnum::Invokable(value) => TypedPtrValue::new(value).into(),
+        }
+    }
+}
+
+#[cfg(feature = "idiomatic")]
+impl From<ValueEnum> for Value {
+    fn from(value: ValueEnum) -> Self {
+        match value {
+            ValueEnum::Nil => Self::NIL,
+            ValueEnum::Boolean(value) => Self::new_boolean(value),
+            ValueEnum::Integer(value) => Self::new_integer(value),
+            ValueEnum::BigInteger(value) => Self::new_big_integer(value),
+            ValueEnum::Double(value) => Self::new_double(value),
+            ValueEnum::Symbol(value) => Self::new_symbol(value),
+            ValueEnum::String(value) => Self::new_string(value),
+            ValueEnum::Char(value) => Self::new_char(value),
+            ValueEnum::Array(_value) => unimplemented!(
+                "no impl for arr. would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait"
+            ),
+            ValueEnum::Block(value) => TypedPtrValue::<Block>::new(Value(ValueEnum::Block(value))).into(),
+            ValueEnum::Instance(value) => TypedPtrValue::<Instance>::new(Value(ValueEnum::Instance(value))).into(),
+            ValueEnum::Class(value) => TypedPtrValue::<Class>::new(Value(ValueEnum::Class(value))).into(),
+            ValueEnum::Invokable(value) => TypedPtrValue::<Method>::new(Value(ValueEnum::Invokable(value))).into(),
         }
     }
 }
@@ -273,6 +334,7 @@ impl ValueEnum {
             Self::Double(_) => universe.core.double_class(),
             Self::Symbol(_) => universe.core.symbol_class(),
             Self::String(_) => universe.core.string_class(),
+            Self::Char(_) => universe.core.string_class(),
             Self::Array(_) => universe.core.array_class(),
             Self::Block(block) => block.class(universe),
             Self::Instance(instance_ptr) => instance_ptr.class(),
@@ -291,7 +353,7 @@ impl ValueEnum {
     #[inline(always)]
     pub fn lookup_local(&self, idx: usize) -> Self {
         match self {
-            Self::Instance(instance_ptr) => (*Instance::lookup_field(instance_ptr, idx)).into(),
+            Self::Instance(instance_ptr) => (*Instance::lookup_field(instance_ptr, idx)).clone().into(),
             Self::Class(class) => class.lookup_field(idx).into(),
             v => unreachable!("Attempting to look up a local in {:?}", v),
         }
@@ -604,7 +666,7 @@ impl ValueEnum {
     }
     /// Returns this value as an array, if such is its type.
     #[inline(always)]
-    pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
+    pub fn as_array(&self) -> Option<GcSlice<ValueEnum>> {
         if let ValueEnum::Array(v) = self {
             Some(v.clone())
         } else {
@@ -774,7 +836,7 @@ impl ValueEnum {
     }
     /// Returns a new array value.
     #[inline(always)]
-    pub fn new_array(value: Gc<Vec<ValueEnum>>) -> Self {
+    pub fn new_array(value: GcSlice<ValueEnum>) -> Self {
         ValueEnum::Array(value)
     }
     /// Returns a new block value.

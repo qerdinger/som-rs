@@ -191,24 +191,23 @@ impl Frame {
     /// Get the self value for this frame.
     pub(crate) fn get_self(&self) -> Value {
         let self_arg = self.lookup_argument(0);
-        match self_arg.as_block() {
-            Some(b) => {
-                let block_frame = b.frame.as_ref().unwrap();
-                block_frame.get_self()
-            }
-            None => *self_arg,
+        if let Some(block) = self_arg.clone().as_block() {
+            let block_frame = block.frame.as_ref().unwrap();
+            block_frame.get_self()
+        } else {
+            self_arg.clone()
         }
     }
 
     /// Get the holder for this current method.
     pub(crate) fn get_method_holder(&self) -> Gc<Class> {
         // TODO: just self.current_context.holder instead? most likely.
-        match self.lookup_argument(0).as_block() {
-            Some(b) => {
-                let block_frame = b.frame.as_ref().unwrap();
-                block_frame.get_method_holder()
-            }
-            None => self.current_context.holder().clone(),
+        let self_arg = self.lookup_argument(0);
+        if let Some(block) = self_arg.clone().as_block() {
+            let block_frame = block.frame.as_ref().expect("Block should have a frame");
+            block_frame.get_method_holder()
+        } else {
+            self.current_context.holder().clone()
         }
     }
 
@@ -263,7 +262,8 @@ impl Frame {
             return current_frame.clone();
         }
 
-        let mut target_frame: Gc<Frame> = match current_frame.lookup_argument(0).as_block() {
+        let self_arg = current_frame.lookup_argument(0);
+        let mut target_frame: Gc<Frame> = match self_arg.clone().as_block() {
             Some(block) => block.frame.as_ref().unwrap().clone(),
             None => panic!(
                 "attempting to access a non local var/arg from a method instead of a block: self wasn't blockself but {:?}.",
@@ -271,7 +271,7 @@ impl Frame {
             ),
         };
         for _ in 1..n {
-            target_frame = match &target_frame.lookup_argument(0).as_block() {
+            target_frame = match &target_frame.lookup_argument(0).clone().as_block() {
                 Some(block) => {
                     block.frame.as_ref().unwrap().clone()
                 }
@@ -336,7 +336,7 @@ impl Frame {
         debug_assert!(self.stack_ptr > 0);
         unsafe {
             self.stack_ptr -= 1;
-            *self.nth_stack_mut(self.stack_ptr)
+            self.nth_stack_mut(self.stack_ptr).clone()
         }
     }
 

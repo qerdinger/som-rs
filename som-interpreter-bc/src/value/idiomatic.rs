@@ -96,17 +96,18 @@ impl Value {
     #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
         match self.0 {
-            //true => Some(VecValue(GcSlice::from(self.extract_pointer_bits()))),
-            ValueEnum::Array(arr) => Some(VecValue(GcSlice::from(arr))),
+            ValueEnum::Array(arr) => Some(VecValue(arr)),
             _ => None,
         }
     }
+
     /// Returns this value as a block, if such is its type.
     #[inline(always)]
     pub fn as_block(self) -> Option<Gc<Block>> {
         //self.as_value_ptr::<Block>()
         match self.0 {
             ValueEnum::Block(block) => Some(block),
+            _ => None,
         }
     }
 
@@ -154,12 +155,13 @@ impl Value {
             ValueEnum::Integer(_) | ValueEnum::BigInteger(_) => universe.core.integer_class(),
             ValueEnum::Symbol(_) => universe.core.symbol_class(),
             ValueEnum::String(_) => universe.core.string_class(),
+            ValueEnum::Char(_) => universe.core.string_class(),
             //CHAR_TAG => universe.core.string_class(),
             ValueEnum::Array(_) => universe.core.array_class(),
-            ValueEnum::Block(_) => self.as_block().unwrap().class(universe),
-            ValueEnum::Instance(_) => self.as_instance().unwrap().class(),
-            ValueEnum::Class(_) => self.as_class().unwrap().class(),
-            ValueEnum::Invokable(_) => self.as_invokable().unwrap().class(universe),
+            ValueEnum::Block(_) => self.clone().as_block().unwrap().class(universe),
+            ValueEnum::Instance(_) => self.clone().as_instance().unwrap().class(),
+            ValueEnum::Class(_) => self.clone().as_class().unwrap().class(),
+            ValueEnum::Invokable(_) => self.clone().as_invokable().unwrap().class(universe),
             _ => {
                 if self.is_double() {
                     universe.core.double_class()
@@ -177,14 +179,14 @@ impl Value {
 
     /// Get the string representation of this value.
     pub fn to_string(&self, universe: &Universe) -> String {
-        match self.0 {
-            ValueEnum::NIL => "nil".to_string(),
+        match &self.0 {
+            ValueEnum::Nil => "nil".to_string(),
             ValueEnum::Boolean(boolean) => boolean.to_string(),
             ValueEnum::Integer(integer) => integer.to_string(),
             ValueEnum::BigInteger(big_int) => big_int.to_string(),
             ValueEnum::Double(double) => double.to_string(),
             ValueEnum::Symbol(sym) => {
-                let symbol = universe.lookup_symbol(sym);
+                let symbol = universe.lookup_symbol(*sym);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                     format!("#'{}'", symbol.replace("'", "\\'"))
                 } else {
@@ -194,7 +196,7 @@ impl Value {
             ValueEnum::String(s) => s.to_string(),
             ValueEnum::Array(_) => {
                 // TODO: I think we can do better here (less allocations).
-                let strings: Vec<String> = self.as_array().unwrap().0.iter().map(|value| value.to_string(universe)).collect();
+                let strings: Vec<String> = self.clone().as_array().unwrap().0.iter().map(|value| value.to_string(universe)).collect();
                 format!("#({})", strings.join(" "))
             }
             ValueEnum::Block(block) => {
