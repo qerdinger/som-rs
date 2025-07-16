@@ -644,6 +644,21 @@ impl ValueEnum {
         matches!(self, ValueEnum::Double(_))
     }
 
+    /// Returns whether this value is a pointer.
+    #[inline(always)]
+    pub fn is_ptr_type(&self) -> bool {
+        matches!(
+            self,
+            ValueEnum::String(_) |
+            ValueEnum::BigInteger(_) |
+            ValueEnum::Array(_) |
+            ValueEnum::Block(_) |
+            ValueEnum::Class(_) |
+            ValueEnum::Instance(_) |
+            ValueEnum::Invokable(_)
+        )
+    }
+
     // `as_*` for pointer types
 
     /// Returns this value as a big integer, if such is its type.
