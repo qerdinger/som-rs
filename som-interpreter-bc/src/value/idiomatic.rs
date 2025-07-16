@@ -96,7 +96,11 @@ impl Value {
     #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
         match self.0 {
-            ValueEnum::Array(arr) => Some(VecValue(arr)),
+            ValueEnum::Array(arr) => Some(VecValue(arr.clone().into())),
+            //ValueEnum::Array(arr) => {
+            //    let ptr: u64 = arr.into();
+            //    Some(VecValue(GcSlice::from(ptr)))
+            //},
             _ => None,
         }
     }

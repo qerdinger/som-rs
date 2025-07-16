@@ -63,7 +63,7 @@ pub enum ValueEnum {
     String(Gc<String>),
     Char(char),
     /// An array of values.
-    Array(GcSlice<ValueEnum>),
+    Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -666,7 +666,7 @@ impl ValueEnum {
     }
     /// Returns this value as an array, if such is its type.
     #[inline(always)]
-    pub fn as_array(&self) -> Option<GcSlice<ValueEnum>> {
+    pub fn as_array(&self) -> Option<GcSlice<Value>> {
         if let ValueEnum::Array(v) = self {
             Some(v.clone())
         } else {
@@ -836,7 +836,7 @@ impl ValueEnum {
     }
     /// Returns a new array value.
     #[inline(always)]
-    pub fn new_array(value: GcSlice<ValueEnum>) -> Self {
+    pub fn new_array(value: GcSlice<Value>) -> Self {
         ValueEnum::Array(value)
     }
     /// Returns a new block value.

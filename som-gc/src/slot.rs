@@ -74,7 +74,7 @@ unsafe impl Send for RefValueSlot {}
 
 impl Slot for RefValueSlot {
     fn load(&self) -> Option<ObjectReference> {
-        //unsafe {
+        //unsafe { TODO
             //#[cfg(debug_assertions)] // a bit silly, but otherwise rust complains release versions don't have expected_tag
             /*debug_assert!(
                 (*self.value).is_ptr_type(),
@@ -90,7 +90,7 @@ impl Slot for RefValueSlot {
     }
 
     fn store(&self, object: ObjectReference) {
-        //unsafe {
+        //unsafe { TODO
             //debug_assert!((*self.value).is_ptr_type());
             //*self.value = BaseValue::new((*self.value).tag(), object.to_raw_address().as_usize() as u64);
             //debug_assert!((*self.value).is_ptr_type());

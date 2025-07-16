@@ -12,12 +12,11 @@ use crate::vm_objects::class::Class;
 use crate::vm_objects::instance::Instance;
 use crate::vm_objects::method::Method;
 use som_gc::gcref::Gc;
-use std::ops::Deref;
-
+use std::marker::PhantomData;
+use som_gc::gcslice::GcSlice;
 #[cfg(any(feature = "nan", feature = "lbits"))]
 use som_value::value_ptr::{HasPointerTag, TypedPtrValue};
 
-use std::marker::PhantomData;
 use crate::value::value_enum::ValueEnum;
 
 #[repr(transparent)]
@@ -29,6 +28,11 @@ pub struct TypedPtrValue<T> {
 pub trait HasPointerTag {
     fn get_tag() -> ValueEnum;
 }
+
+pub trait GetPtr<T> {
+    fn get(&self) -> Option<Gc<T>>;
+}
+
 impl<T> TypedPtrValue<T> {
     pub fn new(value: Value) -> Self {
         Self {
@@ -48,19 +52,12 @@ impl<T> TypedPtrValue<T> {
                 | ValueEnum::Invokable(_)
         )
     }
+}
 
-    #[inline(always)]
-    pub fn get(&self) -> Option<Gc<T>> {
-        match &self.value.0 {
-            ValueEnum::Array(ptr) => ptr,
-            ValueEnum::Block(ptr) => ptr,
-            ValueEnum::Class(ptr) => ptr,
-            ValueEnum::Instance(ptr) => ptr,
-            ValueEnum::Invokable(ptr) => ptr,
-            _ => None,
-        }
-    }
-
+impl<T> TypedPtrValue<T>
+where
+    TypedPtrValue<T>: GetPtr<T>,
+{
     #[inline(always)]
     pub unsafe fn get_unchecked(&self) -> Gc<T> {
         debug_assert!(self.get().is_some());
@@ -79,33 +76,57 @@ impl<T> From<TypedPtrValue<T>> for Value {
         val.value
     }
 }
+
 /*
-impl<T, PTR> From<Value> for TypedPtrValue<T, PTR> {
-    fn from(value: Value) -> Self {
-        Self {
-            value,
-            _phantom: PhantomData,
-            _phantom2: PhantomData,
+impl GetPtr<VecValue> for TypedPtrValue<VecValue> {
+    fn get(&self) -> Option<Gc<VecValue>> {
+        match &self.value.0 {
+            ValueEnum::Array(ptr) => {
+                //Gc::fro
+                //Some(ptr.clone())
+                let arrptr: u64 = *ptr;
+                let ptr: u64 = arrptr.into();
+                Some(VecValue(GcSlice::from(ptr)))
+            },
+            _ => None,
         }
     }
 }
-*/
-/*
-impl<T, PTR> From<TypedPtrValue<T, PTR>> for Value {
-    fn from(val: TypedPtrValue<T, PTR>) -> Self {
-        val.value
-    }
-}
-
-impl<T> From<Value> for TypedPtrValue<T, Gc<T>> {
-    fn from(value: Value) -> Self {
-        value.0.into()
-    }
-}
-
-impl<T> From<TypedPtrValue<T, Gc<T>>> for Value {
-    fn from(val: TypedPtrValue<T, Gc<T>>) -> Self {
-        Value(val.into())
-    }
-}
+TODO
  */
+
+impl GetPtr<Class> for TypedPtrValue<Class> {
+    fn get(&self) -> Option<Gc<Class>> {
+        match &self.value.0 {
+            ValueEnum::Class(ptr) => Some(ptr.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl GetPtr<Block> for TypedPtrValue<Block> {
+    fn get(&self) -> Option<Gc<Block>> {
+        match &self.value.0 {
+            ValueEnum::Block(ptr) => Some(ptr.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl GetPtr<Instance> for TypedPtrValue<Instance> {
+    fn get(&self) -> Option<Gc<Instance>> {
+        match &self.value.0 {
+            ValueEnum::Instance(ptr) => Some(ptr.clone()),
+            _ => None,
+        }
+    }
+}
+
+impl GetPtr<Method> for TypedPtrValue<Method> {
+    fn get(&self) -> Option<Gc<Method>> {
+        match &self.value.0 {
+            ValueEnum::Invokable(ptr) => Some(ptr.clone()),
+            _ => None,
+        }
+    }
+}
