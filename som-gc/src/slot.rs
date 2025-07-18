@@ -29,6 +29,11 @@ impl<T> From<&GcSlice<T>> for SOMSlot {
     }
 }
 
+
+pub trait ToSlot {
+    fn to_slot(&self) -> Option<SOMSlot>;
+}
+
 /*
 impl From<*mut BaseValue> for SOMSlot {
     // we allow unsafe derefs since it's just for debugging
@@ -86,6 +91,7 @@ impl Slot for RefValueSlot {
             );*/
             //ObjectReference::from_raw_address(Address::from_usize((*self.value).extract_pointer_bits() as usize))
             //}
+        todo!("To be implemented");
         None
     }
 
@@ -95,5 +101,6 @@ impl Slot for RefValueSlot {
             //*self.value = BaseValue::new((*self.value).tag(), object.to_raw_address().as_usize() as u64);
             //debug_assert!((*self.value).is_ptr_type());
         //}
+        todo!("To be implemented");
     }
 }

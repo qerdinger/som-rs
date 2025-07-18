@@ -31,6 +31,9 @@ use som_value::interned::Interned;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
+use mmtk::util::Address;
+use mmtk::vm::slot::SimpleSlot;
+use som_gc::slot::SOMSlot;
 
 impl Deref for Value {
     type Target = ValueEnum;
@@ -54,6 +57,19 @@ impl From<u64> for Value {
     }
 }
 */
+
+impl som_gc::slot::ToSlot for Value {
+    fn to_slot(&self) -> Option<SOMSlot> {
+        match &self.0 {
+            ValueEnum::Class(gc) => Some(SOMSlot::Simple(SimpleSlot::from_address(Address::from_ref(gc)))),
+            ValueEnum::Instance(gc) => Some(SOMSlot::Simple(SimpleSlot::from_address(Address::from_ref(gc)))),
+            ValueEnum::Block(gc) => Some(SOMSlot::Simple(SimpleSlot::from_address(Address::from_ref(gc)))),
+            ValueEnum::Invokable(gc) => Some(SOMSlot::Simple(SimpleSlot::from_address(Address::from_ref(gc)))),
+            ValueEnum::Array(gc) => Some(SOMSlot::Simple(SimpleSlot::from_address(Address::from_ref(gc)))),
+            _ => None,
+        }
+    }
+}
 
 #[allow(non_snake_case)]
 impl Value {
@@ -146,7 +162,7 @@ impl Value {
     /// Get the class of the current value.
     #[inline(always)]
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
-        debug_assert_valid_semispace_ptr_value!(self);
+        //debug_assert_valid_semispace_ptr_value!(self);
         match self.0 {
             ValueEnum::Nil => universe.core.nil_class(),
             ValueEnum::Boolean(_) => {
