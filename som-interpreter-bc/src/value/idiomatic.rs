@@ -275,9 +275,11 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        if self == other {
-            // this encapsulates every comparison between values of the same primitive type, e.g. comparing two i32s or two booleans, and pointer comparisons
+        println!("{:?} == {:?}", self, other);
+        if self.is_nil() == other.is_nil() {
             true
+        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_integer()) {
+            a == b
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_double()) {
