@@ -275,7 +275,6 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        println!("{:?} == {:?}", self, other);
         if self.is_nil() == other.is_nil() {
             true
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_integer()) {

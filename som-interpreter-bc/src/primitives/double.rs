@@ -334,7 +334,6 @@ fn eq(a: Value, b: Value) -> Result<bool, Error> {
     let Ok(b) = DoubleLike::try_from(b.0) else {
         return Ok(false);
     };
-
     Ok(DoubleLike::eq(&a, &b))
 }
 
@@ -347,11 +346,13 @@ fn eq_eq(a: Value, b: Value) -> Result<bool, Error> {
         return Ok(false);
     };
 
-
+    Ok(DoubleLike::eq(&a, &b))
+    /*
     match (a, b) {
         (DoubleLike::Double(a), DoubleLike::Double(b)) => Ok(a == b),
         _ => Ok(false),
     }
+     */
 }
 
 fn uneq(a: Value, b: Value) -> Result<bool, Error> {

@@ -504,6 +504,32 @@ impl PartialEq for ValueEnum {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl PartialEq for ValueEnum {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Nil, Self::Nil) => true,
+            (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
+            (Self::Integer(a), Self::Integer(b)) => a.eq(b),
+            (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
+            (Self::Double(a), Self::Double(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::BigInteger(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::Integer(b)) | (Self::Integer(b), Self::BigInteger(a)) => {
+                // a.eq(&BigInt::from(*b))
+                (**a).eq(&BigInt::from(*b))
+            }
+            (Self::Symbol(a), Self::Symbol(b)) => a.eq(b),
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Instance(a), Self::Instance(b)) => a == b,
+            (Self::Class(a), Self::Class(b)) => a == b,
+            (Self::Block(a), Self::Block(b)) => a == b,
+            (Self::Invokable(a), Self::Invokable(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(feature = "lbits")]
 impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

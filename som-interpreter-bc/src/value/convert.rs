@@ -138,11 +138,11 @@ impl DoubleLike {
 impl PartialEq for DoubleLike {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a == b,
-            (DoubleLike::Double(a), DoubleLike::Double(b)) => a == b,
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => *a == *b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => *a == *b,
             (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) == *b,
             (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a == (*b as f64),
-            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => a == b,
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a == **b,
             _ => false,
         }
     }
