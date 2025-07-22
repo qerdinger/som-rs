@@ -142,14 +142,7 @@ unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SO
         ValueEnum::Invokable(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
         ValueEnum::BigInteger(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
         ValueEnum::String(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
-        ValueEnum::Nil
-        | ValueEnum::Boolean(_)
-        | ValueEnum::Integer(_)
-        | ValueEnum::Double(_)
-        | ValueEnum::Char(_)
-        | ValueEnum::Symbol(_) => {
-            panic!("Error: Not allocated primitives cannot be scanned")
-        }
+        _ => {}
     }
 }
 
@@ -190,14 +183,7 @@ unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) 
         ValueEnum::Invokable(gc) => to_process.push(SOMSlot::from(gc)),
         ValueEnum::BigInteger(gc) => to_process.push(SOMSlot::from(gc)),
         ValueEnum::String(gc) => to_process.push(SOMSlot::from(gc)),
-        ValueEnum::Nil
-        | ValueEnum::Boolean(_)
-        | ValueEnum::Integer(_)
-        | ValueEnum::Double(_)
-        | ValueEnum::Char(_)
-        | ValueEnum::Symbol(_) => {
-            panic!("Error: Not allocated primitives cannot be pushed")
-        }
+        _ => {}
     }
 }
 
