@@ -39,7 +39,7 @@ impl TrivialGlobalMethod {
             .lookup_global(self.global_name)
             .map(|v| {
                 interpreter.get_current_frame().stack_push(v.clone());
-                *self.cached_entry.borrow_mut() = Some(v);
+                self.cached_entry.replace(Some(v));
             })
             .or_else(|| {
                 let frame = interpreter.get_current_frame();

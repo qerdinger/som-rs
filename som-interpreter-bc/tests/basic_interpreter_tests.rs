@@ -150,7 +150,7 @@ fn basic_interpreter_tests(universe: &mut Universe) {
 
         let method = class.lookup_method(method_name).expect("method not found ??");
 
-        let frame = Frame::alloc_initial_method(method, &[system_value], universe.gc_interface);
+        let frame = Frame::alloc_initial_method(method, &[system_value.clone()], universe.gc_interface);
         let mut interpreter = Interpreter::new(frame);
         if let Some(output) = interpreter.run(universe) {
             assert_eq!(&output, expected, "unexpected test output value");
@@ -202,6 +202,6 @@ fn basic_benchmark_runner(universe: &mut Universe, #[case] benchmark_name: &str)
     assert!(universe.has_global(intern_id.unwrap()));
     let benchmark_harness_class = universe.lookup_global(intern_id.unwrap()).unwrap().as_class().unwrap();
 
-    assert!(output.unwrap().is_value_ptr::<Instance>());
+    assert!(output.clone().unwrap().is_instance());
     assert_eq!(output.unwrap().as_instance().unwrap().class, benchmark_harness_class)
 }
