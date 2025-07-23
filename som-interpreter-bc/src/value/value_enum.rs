@@ -589,6 +589,11 @@ impl ValueEnum {
     pub fn is_string(&self) -> bool {
         matches!(self, ValueEnum::String(_))
     }
+    /// Returns whether this value is a char.
+    #[inline(always)]
+    pub fn is_char(&self) -> bool {
+        matches!(self, ValueEnum::Char(_))
+    }
     /// Returns whether this value is an array.
     #[inline(always)]
     pub fn is_array(&self) -> bool {
@@ -628,6 +633,7 @@ impl ValueEnum {
     pub fn is_integer(&self) -> bool {
         matches!(self, ValueEnum::Integer(_))
     }
+
     /// Returns whether this value is a boolean.
     #[inline(always)]
     pub fn is_boolean(&self) -> bool {
@@ -700,6 +706,16 @@ impl ValueEnum {
     #[inline(always)]
     pub fn as_string(&self) -> Option<Gc<String>> {
         if let ValueEnum::String(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Returns this value as a char, if such is its type.
+    #[inline(always)]
+    pub fn as_char(&self) -> Option<char> {
+        if let ValueEnum::Char(v) = self {
             Some(v.clone())
         } else {
             None

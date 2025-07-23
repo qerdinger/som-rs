@@ -87,20 +87,17 @@ impl TryFrom<ValueEnum> for StringLike {
     type Error = Error;
 
     fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
-        /*
         value
             .as_string()
             .map(Self::String)
             .or_else(|| value.as_symbol().map(Self::Symbol))
             .or_else(|| value.as_char().map(Self::Char))
             .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
-         TODO
-         */
-        match value {
-            ValueEnum::String(s) => Ok(StringLike::String(s)),
-            ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
-            _ => bail!("could not resolve `Value` as `String`"),
-        }
+        // match value {
+        //     ValueEnum::String(s) => Ok(StringLike::String(s)),
+        //     ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
+        //     _ => bail!("could not resolve `Value` as `String`"),
+        // }
     }
 }
 
@@ -159,6 +156,7 @@ impl StringLike {
     }
 
     pub fn eq_with_lookup(&self, other: &Self, lookup_symbol: impl Fn(Interned) -> &'static str) -> bool {
+        println!("EQWITHLOOKUP");
         match (self, other) {
             (StringLike::Char(c1), StringLike::Char(c2)) => c1 == c2,
             (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
@@ -173,6 +171,7 @@ impl StringLike {
     where
         F: Copy + Fn(Interned) -> &'a str,
     {
+        // println!("EQSTRINGLIKE [{:?}]==[{:?}]", self, other);
         match (&self, &other) {
             (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
             (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),

@@ -275,7 +275,8 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        if self.is_nil() == other.is_nil() {
+        // println!("PE2 [{:?}]==[{:?}]", self, other);
+        if self.is_nil() && other.is_nil() {
             true
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_integer()) {
             a == b
@@ -292,7 +293,19 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer()) {
             BigInt::from(a).eq(&*b)
         } else if let (Some(a), Some(b)) = (self.as_string(), other.as_string()) {
+            *a == *b
+        } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a == b
+        } else if let (Some(a), Some(b)) = (self.clone().as_block(), other.clone().as_block()) {
+            a == b
+        } else if let (Some(a), Some(b)) = (self.clone().as_class(), other.clone().as_class()) {
+            a == b
+        } else if let (Some(a), Some(b)) = (self.clone().as_instance(), other.clone().as_instance()) {
+            a == b
+        } else if let (Some(a), Some(b)) = (self.clone().as_invokable(), other.clone().as_invokable()) {
+            a == b
+        } else if let (Some(a), Some(b)) = (self.clone().as_array(), other.clone().as_array()) {
+            a.eq(&b)
         } else {
             false
         }

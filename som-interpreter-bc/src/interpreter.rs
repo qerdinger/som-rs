@@ -1297,7 +1297,7 @@ impl Interpreter {
                         if let Some(instance) = self_val.clone().as_instance() {
                             Instance::lookup_field(&instance, idx as usize).clone()
                         } else if let Some(cls) = self_val.clone().as_class() {
-                            cls.class().lookup_field(idx as usize).clone()
+                            cls.class().lookup_field(idx as usize)
                         } else {
                             panic!("trying to read a field from a {:?}?", &self_val)
                         }
@@ -1313,7 +1313,7 @@ impl Interpreter {
                 }
                 Bytecode::Inc => {
                     let _timing = profiler_maybe_start!("INC");
-                    let mut current_frame = self.get_current_frame();
+                    let mut current_frame = self.get_current_frame().clone();
                     let last = current_frame.stack_last_mut();
 
                     if let Some(int) = last.as_integer() {

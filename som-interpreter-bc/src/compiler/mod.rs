@@ -33,6 +33,7 @@ pub enum Literal {
 
 impl PartialEq for Literal {
     fn eq(&self, other: &Self) -> bool {
+        // println!("PE [{:?}]==[{:?}]", self, other);
         match (self, other) {
             (Literal::Symbol(val1), Literal::Symbol(val2)) => val1.eq(val2),
             (Literal::String(val1), Literal::String(val2)) => val1.eq(val2),
