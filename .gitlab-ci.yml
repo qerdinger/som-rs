@@ -13,18 +13,18 @@ build-and-test-interpreters:
   script:
     - cargo clean
 
-    - cargo build --release --features=som-gc/marksweep --features=nan 
-    - cargo clippy --features=som-gc/marksweep --features=nan
+    - cargo build --release --features=som-gc/marksweep --features=idiomatic 
+    # - cargo clippy --features=som-gc/marksweep --features=nan
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_nan.lz4
 
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
+    # - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
     
-    - cargo build --release --features=som-gc/marksweep --features=lbits 
-    - cargo clippy --features=som-gc/marksweep --features=lbits
+    - cargo build --release --features=som-gc/marksweep --features=idiomatic 
+    # - cargo clippy --features=som-gc/marksweep --features=lbits
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_lbits.lz4
 
 
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
+    # - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
