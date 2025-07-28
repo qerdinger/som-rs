@@ -22,10 +22,16 @@ build-and-test-interpreters:
     - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_nan.lz4
 
-    - cargo build --release --features=som-gc/marksweep --features=lbits
-    - cargo clippy --features=som-gc/marksweep --features=lbits
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_lbits.lz4
+    - cargo build --release --features=som-gc/marksweep --features=l3bits
+    - cargo clippy --features=som-gc/marksweep --features=l3bits
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l3bits
+    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_l3bits.lz4
+    
+    - cargo build --release --features=som-gc/marksweep --features=l4bits
+    - cargo clippy --features=som-gc/marksweep --features=l4bits
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l4bits
+    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_l4bits.lz4
+
 
     # Package and Upload
     - |
@@ -33,7 +39,8 @@ build-and-test-interpreters:
         -mkdir incoming/${CI_PIPELINE_ID}/
         put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
         put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_lbits.lz4 incoming/${CI_PIPELINE_ID}/
+        put som-interpreter-bc_l3bits.lz4 incoming/${CI_PIPELINE_ID}/
+        put som-interpreter-bc_l4bits.lz4 incoming/${CI_PIPELINE_ID}/
       EOF
 
 benchmark:
@@ -47,13 +54,15 @@ benchmark:
   tags: [$MACHINE]
   script:
     - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_idiomatic.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_lbits.lz4
+    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l3bits.lz4
+    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l4bits.lz4
     - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_nan.lz4
 
     - mkdir -p ./target/release
 #    - lz4 -d som-interpreter-ast.lz4 ./target/release/som-interpreter-ast
     - lz4 -d som-interpreter-bc_nan.lz4 ./target/release/som-interpreter-bc_nan
-    - lz4 -d som-interpreter-bc_lbits.lz4 ./target/release/som-interpreter-bc_lbits
+    - lz4 -d som-interpreter-bc_l3bits.lz4 ./target/release/som-interpreter-bc_l3bits
+    - lz4 -d som-interpreter-bc_l4bits.lz4 ./target/release/som-interpreter-bc_l4bits
     - lz4 -d som-interpreter-bc_idiomatic.lz4 ./target/release/som-interpreter-bc_idiomatic
 
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf #t:$MACHINE

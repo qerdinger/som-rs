@@ -15,6 +15,9 @@ pub mod l3bits;
 #[cfg(feature = "l4bits")]
 pub mod l4bits;
 
+#[cfg(feature = "idiomatic")]
+pub mod idiomatic;
+
 /// Our enum based type
 pub mod value_enum;
 mod value_ptr;
