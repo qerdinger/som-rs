@@ -31,6 +31,22 @@ fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
     Ok(universe.intern_symbol(invokable.signature()))
 }
 
+#[cfg(feature = "idiomatic")]
+fn invoke_on_with(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    pop_args_from_stack!(interpreter, invokable => Gc<Method>, receiver => Value, arguments => VecValue);
+
+    // TODO: this should NOT pop. a frame allocation causes a GC bug here, as far as I know.
+
+    invokable.invoke(
+        interpreter,
+        universe,
+        receiver,
+        arguments.iter().cloned().collect(), // todo lame to clone tbh
+    );
+    Ok(())
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn invoke_on_with(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     pop_args_from_stack!(interpreter, invokable => Gc<Method>, receiver => Value, arguments => VecValue);
 

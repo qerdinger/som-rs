@@ -7,7 +7,17 @@ use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
+
+#[cfg(any(feature = "nan", feature = "lbits"))]
 use som_value::value_ptr::TypedPtrValue;
+
+#[cfg(feature = "idiomatic")]
+use crate::value::value_ptr::TypedPtrValue;
+
+#[cfg(feature = "idiomatic")]
+use som_gc::gcslice::GcSlice;
+
+#[cfg(not(feature = "idiomatic"))]
 use std::fmt;
 
 /// Represents an SOM value as an enum.
@@ -32,6 +42,36 @@ pub enum ValueEnum {
     String(Gc<String>),
     /// An array of values.
     Array(Gc<Vec<ValueEnum>>),
+    /// A block value, ready to be evaluated.
+    Block(Gc<Block>),
+    /// A generic (non-primitive) class instance.
+    Instance(Gc<Instance>),
+    /// A bare class object.
+    Class(Gc<Class>),
+    /// A bare invokable.
+    Invokable(Gc<Method>),
+}
+
+#[cfg(feature = "idiomatic")]
+#[derive(Debug, Clone)]
+pub enum ValueEnum {
+    /// The **nil** value.
+    Nil,
+    /// A boolean value (**true** or **false**).
+    Boolean(bool),
+    /// An integer value.
+    Integer(i32),
+    /// A big integer value (arbitrarily big).
+    BigInteger(Gc<BigInt>),
+    /// An floating-point value.
+    Double(f64),
+    /// An interned symbol value.
+    Symbol(Interned),
+    /// A string value.
+    String(Gc<String>),
+    Char(char),
+    /// An array of values.
+    Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -145,6 +185,41 @@ impl From<Value> for ValueEnum {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl From<Value> for ValueEnum {
+    fn from(value: Value) -> Self {
+        if let Some(value) = value.as_double() {
+            Self::Double(value)
+        } else if value.is_nil() {
+            Self::Nil
+        } else if let Some(value) = value.as_integer() {
+            Self::Integer(value)
+        } else if let Some(value) = value.as_big_integer() {
+            Self::BigInteger(value)
+        } else if let Some(value) = value.as_boolean() {
+            Self::Boolean(value)
+        } else if let Some(value) = value.as_symbol() {
+            Self::Symbol(value)
+        } else if let Some(value) = value.as_string() {
+            Self::String(value)
+        } else if let Some(_value) = value.clone().as_array() {
+            // to work, would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait
+            eprintln!("no From<NanBoxedVal> impl for arr. returning Nil.");
+            Self::NIL
+        } else if let Some(value) = value.clone().as_block() {
+            Self::Block(value)
+        } else if let Some(value) = value.clone().as_instance() {
+            Self::Instance(value)
+        } else if let Some(value) = value.clone().as_class() {
+            Self::Class(value)
+        } else if let Some(value) = value.clone().as_invokable() {
+            Self::Invokable(value)
+        } else {
+            todo!()
+        }
+    }
+}
+
 #[cfg(feature = "lbits")]
 impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
@@ -191,6 +266,29 @@ impl From<ValueEnum> for Value {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl From<ValueEnum> for Value {
+    fn from(value: ValueEnum) -> Self {
+        match value {
+            ValueEnum::Nil => Self::NIL,
+            ValueEnum::Boolean(value) => Self::new_boolean(value),
+            ValueEnum::Integer(value) => Self::new_integer(value),
+            ValueEnum::BigInteger(value) => Self::new_big_integer(value),
+            ValueEnum::Double(value) => Self::new_double(value),
+            ValueEnum::Symbol(value) => Self::new_symbol(value),
+            ValueEnum::String(value) => Self::new_string(value),
+            ValueEnum::Char(value) => Self::new_char(value),
+            ValueEnum::Array(_value) => unimplemented!(
+                "no impl for arr. would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait"
+            ),
+            ValueEnum::Block(value) => TypedPtrValue::<Block>::new(Value(ValueEnum::Block(value))).into(),
+            ValueEnum::Instance(value) => TypedPtrValue::<Instance>::new(Value(ValueEnum::Instance(value))).into(),
+            ValueEnum::Class(value) => TypedPtrValue::<Class>::new(Value(ValueEnum::Class(value))).into(),
+            ValueEnum::Invokable(value) => TypedPtrValue::<Method>::new(Value(ValueEnum::Invokable(value))).into(),
+        }
+    }
+}
+
 impl ValueEnum {
     /// Get the class of the current value.
     #[cfg(feature = "lbits")]
@@ -233,6 +331,26 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "idiomatic")]
+    pub fn class(&self, universe: &Universe) -> Gc<Class> {
+        match self {
+            Self::Nil => universe.core.nil_class(),
+            Self::Boolean(true) => universe.core.true_class(),
+            Self::Boolean(false) => universe.core.false_class(),
+            Self::Integer(_) => universe.core.integer_class(),
+            Self::BigInteger(_) => universe.core.integer_class(),
+            Self::Double(_) => universe.core.double_class(),
+            Self::Symbol(_) => universe.core.symbol_class(),
+            Self::String(_) => universe.core.string_class(),
+            Self::Char(_) => universe.core.string_class(),
+            Self::Array(_) => universe.core.array_class(),
+            Self::Block(block) => block.class(universe),
+            Self::Instance(instance_ptr) => instance_ptr.class(),
+            Self::Class(class) => class.class(),
+            Self::Invokable(invokable) => invokable.class(universe),
+        }
+    }
+
     /// Search for a given method for this value.
     #[inline(always)]
     pub fn lookup_method(&self, universe: &Universe, signature: Interned) -> Option<Gc<Method>> {
@@ -243,18 +361,39 @@ impl ValueEnum {
     #[inline(always)]
     pub fn lookup_local(&self, idx: usize) -> Self {
         match self {
-            Self::Instance(instance_ptr) => (*Instance::lookup_field(instance_ptr, idx)).into(),
+            Self::Instance(instance_ptr) => (*Instance::lookup_field(instance_ptr, idx)).clone().into(),
             Self::Class(class) => class.lookup_field(idx).into(),
             v => unreachable!("Attempting to look up a local in {:?}", v),
         }
     }
 
     /// Assign a value to a local binding within this value.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
     pub fn assign_local(&mut self, idx: usize, value: Self) {
         match self {
             Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
             Self::Class(class) => class.assign_field(idx, value.into()),
             v => unreachable!("Attempting to assign a local in {:?}", v),
+        }
+    }
+
+    #[cfg(feature = "idiomatic")]
+    pub fn assign_local(&mut self, idx: usize, value: Self) {
+        match self {
+            Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
+            Self::Class(class) => class.assign_field(idx, value.into()),
+            Self::Nil
+            | Self::Boolean(_)
+            | Self::Integer(_)
+            | Self::Double(_)
+            | Self::Symbol(_)
+            | Self::String(_)
+            | Self::Char(_)
+            | Self::BigInteger(_)
+            | Self::Array(_)
+            | Self::Block(_)
+            | Self::Invokable(_)
+            => unreachable!("Attempting to assign a local in Nil/Bool/Int/Double/Symbol/String/Char/BigInt/Array/Block/Invokable"),
         }
     }
 
@@ -383,6 +522,32 @@ impl PartialEq for ValueEnum {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl PartialEq for ValueEnum {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Nil, Self::Nil) => true,
+            (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
+            (Self::Integer(a), Self::Integer(b)) => a.eq(b),
+            (Self::Integer(a), Self::Double(b)) | (Self::Double(b), Self::Integer(a)) => (*a as f64).eq(b),
+            (Self::Double(a), Self::Double(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::BigInteger(b)) => a.eq(b),
+            (Self::BigInteger(a), Self::Integer(b)) | (Self::Integer(b), Self::BigInteger(a)) => {
+                // a.eq(&BigInt::from(*b))
+                (**a).eq(&BigInt::from(*b))
+            }
+            (Self::Symbol(a), Self::Symbol(b)) => a.eq(b),
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Instance(a), Self::Instance(b)) => a == b,
+            (Self::Class(a), Self::Class(b)) => a == b,
+            (Self::Block(a), Self::Block(b)) => a == b,
+            (Self::Invokable(a), Self::Invokable(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(feature = "lbits")]
 impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -442,6 +607,12 @@ impl ValueEnum {
     pub fn is_string(&self) -> bool {
         matches!(self, ValueEnum::String(_))
     }
+    /// Returns whether this value is a char.
+    #[cfg(feature = "idiomatic")]
+    #[inline(always)]
+    pub fn is_char(&self) -> bool {
+        matches!(self, ValueEnum::Char(_))
+    }
     /// Returns whether this value is an array.
     #[inline(always)]
     pub fn is_array(&self) -> bool {
@@ -481,6 +652,7 @@ impl ValueEnum {
     pub fn is_integer(&self) -> bool {
         matches!(self, ValueEnum::Integer(_))
     }
+
     /// Returns whether this value is a boolean.
     #[inline(always)]
     pub fn is_boolean(&self) -> bool {
@@ -523,6 +695,21 @@ impl ValueEnum {
         matches!(self, ValueEnum::Double(_))
     }
 
+    /// Returns whether this value is a pointer.
+    #[inline(always)]
+    pub fn is_ptr_type(&self) -> bool {
+        matches!(
+            self,
+            ValueEnum::String(_) |
+            ValueEnum::BigInteger(_) |
+            ValueEnum::Array(_) |
+            ValueEnum::Block(_) |
+            ValueEnum::Class(_) |
+            ValueEnum::Instance(_) |
+            ValueEnum::Invokable(_)
+        )
+    }
+
     // `as_*` for pointer types
 
     /// Returns this value as a big integer, if such is its type.
@@ -543,9 +730,31 @@ impl ValueEnum {
             None
         }
     }
+
+    /// Returns this value as a char, if such is its type.
+    #[cfg(feature = "idiomatic")]
+    #[inline(always)]
+    pub fn as_char(&self) -> Option<char> {
+        if let ValueEnum::Char(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
     /// Returns this value as an array, if such is its type.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
     #[inline(always)]
     pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
+        if let ValueEnum::Array(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "idiomatic")]
+    #[inline(always)]
+    pub fn as_array(&self) -> Option<GcSlice<Value>> {
         if let ValueEnum::Array(v) = self {
             Some(v.clone())
         } else {
@@ -672,6 +881,12 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "idiomatic")]
+    #[inline(always)]
+    pub fn new_char(value: char) -> Self {
+        ValueEnum::Char(value)
+    }
+
     /// Returns a new integer value.
     #[inline(always)]
     pub fn new_integer(value: i32) -> Self {
@@ -709,8 +924,15 @@ impl ValueEnum {
         ValueEnum::String(value)
     }
     /// Returns a new array value.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
     #[inline(always)]
     pub fn new_array(value: Gc<Vec<ValueEnum>>) -> Self {
+        ValueEnum::Array(value)
+    }
+
+    #[cfg(feature = "idiomatic")]
+    #[inline(always)]
+    pub fn new_array(value: GcSlice<Value>) -> Self {
         ValueEnum::Array(value)
     }
     /// Returns a new block value.

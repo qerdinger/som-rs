@@ -66,6 +66,23 @@ fn new(interp: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(feature = "idiomatic")]
+fn copy(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, Error> {
+    let arr: VecValue = interp.get_current_frame().stack_last().clone().as_array().unwrap();
+    std::hint::black_box(&arr); // paranoia, in case the compiler gets ideas about reusing that variable
+    let slice_size = arr.0.get_true_size();
+    let slice_addr = universe.gc_interface.request_bytes_for_slice(slice_size, None);
+
+    pop_args_from_stack!(interp, arr2 => VecValue);
+    std::hint::black_box(&arr2);
+
+    let copied_arr: Vec<Value> = arr2.iter().cloned().collect();
+    let allocated: GcSlice<Value> = universe.gc_interface.write_slice_to_addr(slice_addr, &copied_arr);
+
+    Ok(VecValue(allocated))
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn copy(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, Error> {
     let arr: VecValue = interp.get_current_frame().stack_last().as_array().unwrap();
     std::hint::black_box(&arr); // paranoia, in case the compiler gets ideas about reusing that variable

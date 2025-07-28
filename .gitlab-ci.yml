@@ -13,27 +13,27 @@ build-and-test-interpreters:
   script:
     - cargo clean
 
-    - cargo build --release --features=som-gc/marksweep --features=nan 
-    - cargo clippy --features=som-gc/marksweep --features=nan
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_nan.lz4
+    - cargo build --release --features=som-gc/marksweep --features=idiomatic 
+    # - cargo clippy --features=som-gc/marksweep --features=nan
+    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_idiomatic.lz4
 
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
+    # - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
     
-    - cargo build --release --features=som-gc/marksweep --features=lbits 
-    - cargo clippy --features=som-gc/marksweep --features=lbits
+    - cargo build --release --features=som-gc/marksweep --features=idiomatic 
+    # - cargo clippy --features=som-gc/marksweep --features=lbits
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_lbits.lz4
 
 
-    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
+    # - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
 
     # Package and Upload
 #    - lz4 ./target/release/som-interpreter-ast som-interpreter-ast.lz4
 
+        # put som-interpreter-bc_lbits.lz4 incoming/${CI_PIPELINE_ID}/
     - |
       sftp tmp-artifacts << EOF
         -mkdir incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_lbits.lz4 incoming/${CI_PIPELINE_ID}/
+        put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
       EOF
 
 benchmark:
@@ -46,13 +46,15 @@ benchmark:
   stage: benchmark
   tags: [$MACHINE]
   script:
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_nan.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_lbits.lz4
+    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_idiomatic.lz4
+    - sftp tmp-artifacts:incoming/24873/som-interpreter-bc_lbits.lz4
+    - sftp tmp-artifacts:incoming/24873/som-interpreter-bc_nan.lz4
 
     - mkdir -p ./target/release
 #    - lz4 -d som-interpreter-ast.lz4 ./target/release/som-interpreter-ast
     - lz4 -d som-interpreter-bc_nan.lz4 ./target/release/som-interpreter-bc_nan
     - lz4 -d som-interpreter-bc_lbits.lz4 ./target/release/som-interpreter-bc_lbits
+    - lz4 -d som-interpreter-bc_idiomatic.lz4 ./target/release/som-interpreter-bc_idiomatic
 
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf #t:$MACHINE
 

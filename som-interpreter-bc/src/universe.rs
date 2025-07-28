@@ -17,6 +17,9 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
 /// GC default heap size
 pub const DEFAULT_HEAP_SIZE: usize = 1024 * 1024 * 256;
 
@@ -101,6 +104,7 @@ impl Universe {
     }
 
     /// Load a class from its name into this universe.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
     pub fn load_class(&mut self, class_name: impl Into<String>) -> Result<Gc<Class>, Error> {
         let class_name = class_name.into();
 
@@ -131,6 +135,59 @@ impl Universe {
                 let symbol = self.intern_symbol(super_class.as_str());
                 match self.lookup_global(symbol) {
                     v if v.is_some() && v.unwrap().is_value_ptr::<Class>() => v.unwrap().as_class().unwrap(),
+                    _ => self.load_class(super_class)?,
+                }
+            } else {
+                self.core.object_class.clone()
+            };
+
+            let mut class =
+                compile_class(&mut self.interner, &defn, Some(&super_class), self.gc_interface).ok_or_else(|| Error::msg(String::new()))?;
+            set_super_class(&mut class, &super_class, &self.core.metaclass_class);
+
+            let symbol = self.intern_symbol(class.name());
+            self.globals.push((symbol, Value::Class(class.clone())));
+
+            return Ok(class);
+        }
+
+        Err(anyhow!("could not find the '{}' class", class_name))
+    }
+
+    #[cfg(feature = "idiomatic")]
+    pub fn load_class(&mut self, class_name: impl Into<String>) -> Result<Gc<Class>, Error> {
+        let class_name = class_name.into();
+
+        for path in self.classpath.iter() {
+            let mut path = path.join(class_name.as_str());
+            path.set_extension("som");
+
+            // Read file contents.
+            let contents = match fs::read_to_string(path.as_path()) {
+                Ok(contents) => contents,
+                Err(_) => continue,
+            };
+
+            // Collect all tokens from the file.
+            let tokens: Vec<_> = som_lexer::Lexer::new(contents.as_str()).skip_comments(true).skip_whitespace(true).collect();
+
+            // Parse class definition from the tokens.
+            let defn = match som_parser::parse_file(tokens.as_slice()) {
+                Some(defn) => defn,
+                None => continue,
+            };
+
+            if defn.name != class_name {
+                return Err(anyhow!("{}: class name is different from file name.", path.display(),));
+            }
+
+            let super_class = if let Some(ref super_class) = defn.super_class {
+                let symbol = self.intern_symbol(super_class.as_str());
+                match self.lookup_global(symbol) {
+                    Some(val) => match val.0 {
+                        ValueEnum::Class(class) => class,
+                        _ => self.load_class(super_class)?,
+                    }
                     _ => self.load_class(super_class)?,
                 }
             } else {
@@ -205,7 +262,7 @@ impl Universe {
 
     /// Search for a global binding.
     pub fn lookup_global(&self, idx: Interned) -> Option<Value> {
-        self.globals.iter().find(|(interned, _)| *interned == idx).map(|(_, value)| *value)
+        self.globals.iter().find(|(interned, _)| *interned == idx).map(|(_, value)| value.clone())
     }
 
     /// Assign a value to a global binding.

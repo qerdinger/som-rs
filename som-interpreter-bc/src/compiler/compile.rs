@@ -8,8 +8,13 @@ use som_core::interner::Interner;
 use som_gc::gcref::Gc;
 use som_gc::gcslice::GcSlice;
 use som_value::interned::Interned;
-use std::cell::Cell;
 use std::str::FromStr;
+
+#[cfg(not(feature = "idiomatic"))]
+use std::cell::Cell;
+
+#[cfg(feature = "idiomatic")]
+use std::cell::RefCell;
 
 #[cfg(not(feature = "inlining-disabled"))]
 use crate::compiler::inliner::PrimMessageInliner;
@@ -645,6 +650,7 @@ fn compile_method(outer: &mut dyn GenCtxt, defn: &ast::MethodDef, gc_interface: 
         }
     }
 
+    #[cfg(not(feature = "idiomatic"))]
     fn make_trivial_method_if_possible(body: &Vec<Bytecode>, literals: &[Literal], signature: &str, nbr_params: usize) -> Option<Method> {
         match (body.as_slice(), nbr_params) {
             ([Bytecode::PushGlobal(x), Bytecode::ReturnLocal], 0) => match literals.get(*x as usize)? {
@@ -652,6 +658,48 @@ fn compile_method(outer: &mut dyn GenCtxt, defn: &ast::MethodDef, gc_interface: 
                     TrivialGlobalMethod {
                         global_name: *interned,
                         cached_entry: Cell::new(None),
+                    },
+                    BasicMethodInfo::new(String::from(signature), Gc::default()),
+                )),
+                _ => None,
+            },
+            ([Bytecode::PushField(x), Bytecode::ReturnLocal], 0) => Some(Method::TrivialGetter(
+                TrivialGetterMethod { field_idx: *x },
+                BasicMethodInfo::new(String::from(signature), Gc::default()),
+            )),
+            ([Bytecode::PushArg(1), Bytecode::PopField(x), Bytecode::ReturnSelf], 1) => Some(Method::TrivialSetter(
+                TrivialSetterMethod { field_idx: *x },
+                BasicMethodInfo::new(String::from(signature), Gc::default()),
+            )),
+            ([literal_bc, Bytecode::ReturnLocal], 0) => {
+                let maybe_literal = match literal_bc {
+                    Bytecode::PushConstant(x) => literals.get(*x as usize),
+                    Bytecode::Push0 => Some(&Literal::Integer(0)),
+                    Bytecode::Push1 => Some(&Literal::Integer(1)),
+                    // this case breaks, which i'm not sure makes sense. it's pretty much unused in our benchmarks anyway + AST doesn't have an equivalent optim like that, so it's OK.
+                    // Bytecode::PushBlock(x) => literals.get(*x as usize),
+                    _ => None,
+                };
+
+                maybe_literal.map(|lit| {
+                    Method::TrivialLiteral(
+                        TrivialLiteralMethod { literal: lit.clone() },
+                        BasicMethodInfo::new(String::from(signature), Gc::default()),
+                    )
+                })
+            }
+            _ => None,
+        }
+    }
+
+    #[cfg(feature = "idiomatic")]
+    fn make_trivial_method_if_possible(body: &Vec<Bytecode>, literals: &[Literal], signature: &str, nbr_params: usize) -> Option<Method> {
+        match (body.as_slice(), nbr_params) {
+            ([Bytecode::PushGlobal(x), Bytecode::ReturnLocal], 0) => match literals.get(*x as usize)? {
+                Literal::Symbol(interned) => Some(Method::TrivialGlobal(
+                    TrivialGlobalMethod {
+                        global_name: *interned,
+                        cached_entry: RefCell::new(None),
                     },
                     BasicMethodInfo::new(String::from(signature), Gc::default()),
                 )),

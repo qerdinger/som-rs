@@ -20,6 +20,9 @@ use som_gc::slot::SOMSlot;
 use som_gc::SOMVM;
 use std::ops::{Deref, DerefMut};
 
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
 // Mine. to put in GC headers
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum BCObjMagicId {
@@ -106,9 +109,10 @@ impl HasTypeInfoForGC for Frame {
 /// Visits a value, via a specialized `SOMSlot` for value types.
 /// # Safety
 /// Values passed to this function MUST live on the GC heap, or the pointer generated from the reference will be invalid.
+#[cfg(not(feature = "idiomatic"))]
 unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SOMSlot> + 'a)) {
     if val.is_ptr_type() {
-        if let Some(slice) = val.as_array() {
+        if let Some(slice) = val.clone().as_array() {
             // large object storage means no copying needed, but we still check the values stored
             if slice.get_true_size() >= 65535 {
                 for val in slice.iter() {
@@ -121,9 +125,34 @@ unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SO
     }
 }
 
+#[cfg(feature = "idiomatic")]
+unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SOMSlot> + 'a)) {
+    match &val.0 {
+        ValueEnum::Array(slice) => {
+            // large object storage: no copying, just recurse
+            if slice.get_true_size() >= 65535 {
+                for inner in slice.iter() {
+                    visit_value(inner, slot_visitor);
+                }
+                return;
+            }
+            slot_visitor.visit_slot(SOMSlot::from(slice));
+        }
+        ValueEnum::Block(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        ValueEnum::Class(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        ValueEnum::Instance(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        ValueEnum::Invokable(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        ValueEnum::BigInteger(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        ValueEnum::String(gc) => slot_visitor.visit_slot(SOMSlot::from(gc)),
+        _ => {}
+    }
+}
+
+
 /// Visits a value and potentially adds a slot made out of it to an array.
 /// # Safety
 /// Same as `visit_value`.
+#[cfg(not(feature = "idiomatic"))]
 unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) {
     if val.is_ptr_type() {
         if let Some(slice) = val.as_array() {
@@ -138,6 +167,30 @@ unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) 
         to_process.push(SOMSlot::from(val.as_mut_ptr()))
     }
 }
+
+#[cfg(feature = "idiomatic")]
+unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) {
+    match &val.0 {
+        ValueEnum::Array(slice) => {
+            if slice.get_true_size() >= 65535 {
+                for inner in slice.iter() {
+                    visit_value_maybe_process(inner, to_process);
+                }
+                return;
+            }
+            to_process.push(SOMSlot::from(slice));
+        }
+        ValueEnum::Block(gc) => to_process.push(SOMSlot::from(gc)),
+        ValueEnum::Class(gc) => to_process.push(SOMSlot::from(gc)),
+        ValueEnum::Instance(gc) => to_process.push(SOMSlot::from(gc)),
+        ValueEnum::Invokable(gc) => to_process.push(SOMSlot::from(gc)),
+        ValueEnum::BigInteger(gc) => to_process.push(SOMSlot::from(gc)),
+        ValueEnum::String(gc) => to_process.push(SOMSlot::from(gc)),
+        _ => {}
+    }
+}
+
+
 
 pub fn visit_literal<'a>(lit: &Literal, slot_visitor: &'a mut (dyn SlotVisitor<SOMSlot> + 'a)) {
     match lit {

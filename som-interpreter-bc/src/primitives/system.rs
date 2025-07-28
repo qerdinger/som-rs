@@ -104,7 +104,7 @@ fn global(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Va
 
 fn global_put(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
     pop_args_from_stack!(interp, _a => Value, name => Interned, value => Value);
-    universe.assign_global(name, value);
+    universe.assign_global(name, value.clone());
     Ok(Some(value))
 }
 
