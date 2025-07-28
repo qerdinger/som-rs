@@ -13,7 +13,7 @@ pub mod nanboxed;
 pub mod l3bits;
 
 #[cfg(feature = "l4bits")]
-pub mod lbits;
+pub mod l4bits;
 
 /// Our enum based type
 pub mod value_enum;
