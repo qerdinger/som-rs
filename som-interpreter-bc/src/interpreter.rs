@@ -704,7 +704,7 @@ impl Interpreter {
         }
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     pub fn run(&mut self, universe: &mut Universe) -> Option<Value> {
         loop {
             // Actually safe, there's always a reference to the current bytecodes. Need unsafe because we want to store a ref for quick access in perf-critical code

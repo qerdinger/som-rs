@@ -31,7 +31,7 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
 });
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
@@ -107,7 +107,7 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
     Ok(!string.is_empty() && string.chars().all(char::is_whitespace))
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
 
@@ -147,7 +147,7 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 

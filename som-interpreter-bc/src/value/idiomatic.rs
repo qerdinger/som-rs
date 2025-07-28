@@ -104,13 +104,13 @@ impl Value {
         String(value: Gc<String>),
     );
 
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn is_value_ptr<T: HasPointerTag>(&self) -> bool {
         self.0.is_ptr::<T, Gc<T>>()
     }
 
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_value_ptr<T: HasPointerTag>(&self) -> Option<Gc<T>> {
         self.0.as_ptr::<T, Gc<T>>()

@@ -1,4 +1,4 @@
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 use som_value::value::BaseValue;
 
 /// Value type(s!), and value-related code.
@@ -9,18 +9,18 @@ pub mod convert;
 #[cfg(feature = "nan")]
 pub mod nanboxed;
 
-#[cfg(feature = "lbits")]
-pub mod lbits;
+#[cfg(feature = "l3bits")]
+pub mod l3bits;
 
-#[cfg(feature = "idiomatic")]
-pub mod idiomatic;
+#[cfg(feature = "l4bits")]
+pub mod lbits;
 
 /// Our enum based type
 pub mod value_enum;
 mod value_ptr;
 
 /// Represents an SOM value.
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Value(pub BaseValue);

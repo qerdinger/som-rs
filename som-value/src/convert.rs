@@ -8,8 +8,11 @@ use crate::interned::Interned;
 #[cfg(feature = "nan")]
 use crate::nan::value::BaseValue;
 
-#[cfg(feature = "lbits")]
-use crate::lbits::value::BaseValue;
+#[cfg(any(feature = "l4bits"))]
+use crate::l4bits::value::BaseValue;
+
+#[cfg(any(feature = "l3bits"))]
+use crate::l3bits::value::BaseValue;
 
 // Unfinished: using TryFrom to replace the convert.rs types FromArgs
 
@@ -60,7 +63,7 @@ pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     __Phantom(std::marker::PhantomData<DOUBLEPTR>),
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -188,7 +191,7 @@ where
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
     TinyStr(Vec<u8>),
@@ -213,7 +216,7 @@ pub enum StringLike<SPTR> {
     Char(char),
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
 where
     SPTR: Deref<Target = String> + From<u64> + Into<u64>,
@@ -248,7 +251,7 @@ where
 
 impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     pub fn as_str<'a, F>(&'a self, lookup_symbol_fn: F) -> Cow<'a, str>
     where
         F: Fn(Interned) -> &'a str,
@@ -301,7 +304,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         }
     }
     
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
     where
         F: Copy + Fn(Interned) -> &'a str,

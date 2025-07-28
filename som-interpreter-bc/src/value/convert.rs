@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Error};
 #[cfg(not(feature = "idiomatic"))]
 use som_gc::gcslice::GcSlice;
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 use som_value::value_ptr::HasPointerTag;
 
 use std::convert::TryFrom;
@@ -22,11 +22,11 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 pub type StringLike = som_value::convert::StringLike<Gc<String>>;
 
 #[cfg(feature = "idiomatic")]
@@ -266,7 +266,7 @@ impl FromArgs for i32 {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl FromArgs for f64 {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg
@@ -304,7 +304,7 @@ impl FromArgs for Interned {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl FromArgs for VecValue {
    fn from_args(arg: Value) -> Result<Self, Error> {
        Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
@@ -348,7 +348,7 @@ impl FromArgs for Gc<Method> {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl<T: HasPointerTag> FromArgs for Gc<T> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         Ok(arg.as_value_ptr().unwrap())
@@ -385,14 +385,14 @@ impl IntoValue for Interned {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for Gc<f64> {
     fn into_value(&self) -> Value {
         Value::AllocatedDouble(self.clone())
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for Vec<u8> {
     fn into_value(&self) -> Value {
         Value::TinyStr(self.clone())
@@ -487,7 +487,7 @@ impl IntoReturn for () {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
         match self {
@@ -519,7 +519,7 @@ impl IntoValue for IntegerLike {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for DoubleLike {
     fn into_value(&self) -> Value {
         match self {

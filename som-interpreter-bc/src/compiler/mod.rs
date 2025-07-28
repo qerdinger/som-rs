@@ -85,7 +85,7 @@ impl Hash for Literal {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(*sym),

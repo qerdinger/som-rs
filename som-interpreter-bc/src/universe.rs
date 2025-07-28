@@ -104,7 +104,7 @@ impl Universe {
     }
 
     /// Load a class from its name into this universe.
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
     pub fn load_class(&mut self, class_name: impl Into<String>) -> Result<Gc<Class>, Error> {
         let class_name = class_name.into();
 

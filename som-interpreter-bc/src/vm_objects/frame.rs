@@ -45,7 +45,7 @@ pub struct Frame {
     pub locals_marker: PhantomData<[Value]>,
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl Frame {
     /// Allocates a frame for a block.
     /// We assume that the block is on the stack of the previous frame, as is the case when calling
