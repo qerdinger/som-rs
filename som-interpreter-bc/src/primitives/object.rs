@@ -70,6 +70,7 @@ fn eq(receiver: Value, other: Value) -> Result<bool, Error> {
     Ok(receiver == other)
 }
 
+#[cfg(feature = "idiomatic")]
 fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:";
 
@@ -82,6 +83,33 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
         let args = vec![receiver.clone()];
         return universe
             .does_not_understand(interpreter, receiver.clone(), signature, args)
+            .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe),));
+    };
+
+    // if let Method::Primitive(..) = &*invokable {
+    //     let mut frame = interpreter.current_frame;
+    //     let ret = frame.stack_pop();
+    //     frame.remove_n_last_elements(2);
+    //     frame.stack_push(ret);
+    // }
+
+    invokable.invoke(interpreter, universe, receiver, vec![]);
+    Ok(())
+}
+
+#[cfg(not(feature = "idiomatic"))]
+fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    const SIGNATURE: &str = "Object>>#perform:";
+
+    // TODO: popping from the previous frame in this, and all the other perform family function should NOT happen
+    // if GC happens, that makes those values (receiver, signature) orphaned, and might cause a crash. it's highly unlikely in practice but TODO fix
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Interned);
+
+    let Some(invokable) = receiver.lookup_method(universe, signature) else {
+        let signature_str = universe.lookup_symbol(signature).to_owned();
+        let args = vec![receiver];
+        return universe
+            .does_not_understand(interpreter, receiver, signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe),));
     };
 

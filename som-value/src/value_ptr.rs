@@ -1,5 +1,6 @@
+#[cfg(not(feature = "idiomatic"))]
 use std::{marker::PhantomData, ops::Deref};
-
+#[cfg(not(feature = "idiomatic"))]
 use num_bigint::BigInt;
 
 #[cfg(feature = "nan")]

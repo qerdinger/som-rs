@@ -65,15 +65,13 @@ impl Class {
     }
 
     /// Search for a local binding.
-    /*
+    #[cfg(any(feature = "nan", feature = "lbits"))]
     pub fn lookup_field(&self, idx: usize) -> Value {
         self.fields.get(idx).copied().unwrap_or_else(|| {
             let super_class = self.super_class().unwrap();
             super_class.lookup_field(idx)
         })
     }
-    TODO
-     */
 
     #[cfg(feature = "idiomatic")]
     pub fn lookup_field(&self, idx: usize) -> Value {

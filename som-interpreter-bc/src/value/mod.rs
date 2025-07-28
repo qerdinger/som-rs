@@ -20,11 +20,12 @@ pub mod value_enum;
 mod value_ptr;
 
 /// Represents an SOM value.
-//#[cfg(any(feature = "nan", feature = "lbits"))]
-//#[derive(Clone, Copy)]
-//#[repr(transparent)]
-//pub struct Value(pub BaseValue);
+#[cfg(any(feature = "nan", feature = "lbits"))]
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct Value(pub BaseValue);
 
+#[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 #[repr(transparent)]
 pub struct Value(pub value_enum::ValueEnum);

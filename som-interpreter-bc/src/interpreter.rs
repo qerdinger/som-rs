@@ -12,7 +12,9 @@ use std::cell::UnsafeCell;
 #[cfg(feature = "profiler")]
 use crate::debug::profiler::Profiler;
 
+#[cfg(not(feature = "idiomatic"))]
 use num_bigint::BigInt;
+
 use som_core::bytecode::Bytecode;
 use som_gc::gc_interface::{AllocSiteMarker, GCInterface, SOMAllocator};
 use som_gc::gcref::Gc;
@@ -284,7 +286,7 @@ impl Interpreter {
                         *last = Value::new_integer(int + 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double + 1.0);
-                    } else if let Some(mut big_int) = last.as_big_integer() {
+                    } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
                         *big_int += 1;
                     } else {
                         panic!("Invalid type in Inc")
@@ -300,7 +302,7 @@ impl Interpreter {
                         *last = Value::new_integer(int - 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double - 1.0);
-                    } else if let Some(mut big_int) = last.as_big_integer() {
+                    } else if let Some(mut big_int) = last.as_big_integer::<Gc<BigInt>>() {
                         *big_int -= 1;
                     } else {
                         panic!("Invalid type in DEC")

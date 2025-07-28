@@ -6,11 +6,18 @@ use crate::vm_objects::instance::Instance;
 use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
 use som_gc::gcref::Gc;
-use som_gc::gcslice::GcSlice;
 use som_value::interned::Interned;
-//use som_value::value_ptr::TypedPtrValue;
+
+#[cfg(any(feature = "nan", feature = "lbits"))]
+use som_value::value_ptr::TypedPtrValue;
+
+#[cfg(feature = "idiomatic")]
 use crate::value::value_ptr::TypedPtrValue;
 
+#[cfg(feature = "idiomatic")]
+use som_gc::gcslice::GcSlice;
+
+#[cfg(not(feature = "idiomatic"))]
 use std::fmt;
 
 /// Represents an SOM value as an enum.
@@ -45,6 +52,7 @@ pub enum ValueEnum {
     Invokable(Gc<Method>),
 }
 
+#[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum ValueEnum {
     /// The **nil** value.
@@ -360,6 +368,16 @@ impl ValueEnum {
     }
 
     /// Assign a value to a local binding within this value.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
+    pub fn assign_local(&mut self, idx: usize, value: Self) {
+        match self {
+            Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
+            Self::Class(class) => class.assign_field(idx, value.into()),
+            v => unreachable!("Attempting to assign a local in {:?}", v),
+        }
+    }
+
+    #[cfg(feature = "idiomatic")]
     pub fn assign_local(&mut self, idx: usize, value: Self) {
         match self {
             Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
@@ -590,6 +608,7 @@ impl ValueEnum {
         matches!(self, ValueEnum::String(_))
     }
     /// Returns whether this value is a char.
+    #[cfg(feature = "idiomatic")]
     #[inline(always)]
     pub fn is_char(&self) -> bool {
         matches!(self, ValueEnum::Char(_))
@@ -713,6 +732,7 @@ impl ValueEnum {
     }
 
     /// Returns this value as a char, if such is its type.
+    #[cfg(feature = "idiomatic")]
     #[inline(always)]
     pub fn as_char(&self) -> Option<char> {
         if let ValueEnum::Char(v) = self {
@@ -722,6 +742,17 @@ impl ValueEnum {
         }
     }
     /// Returns this value as an array, if such is its type.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[inline(always)]
+    pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
+        if let ValueEnum::Array(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "idiomatic")]
     #[inline(always)]
     pub fn as_array(&self) -> Option<GcSlice<Value>> {
         if let ValueEnum::Array(v) = self {
@@ -850,6 +881,7 @@ impl ValueEnum {
         }
     }
 
+    #[cfg(feature = "idiomatic")]
     #[inline(always)]
     pub fn new_char(value: char) -> Self {
         ValueEnum::Char(value)
@@ -892,6 +924,13 @@ impl ValueEnum {
         ValueEnum::String(value)
     }
     /// Returns a new array value.
+    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[inline(always)]
+    pub fn new_array(value: Gc<Vec<ValueEnum>>) -> Self {
+        ValueEnum::Array(value)
+    }
+
+    #[cfg(feature = "idiomatic")]
     #[inline(always)]
     pub fn new_array(value: GcSlice<Value>) -> Self {
         ValueEnum::Array(value)

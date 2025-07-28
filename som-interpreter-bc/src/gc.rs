@@ -19,6 +19,8 @@ use som_gc::object_model::VMObjectModel;
 use som_gc::slot::SOMSlot;
 use som_gc::SOMVM;
 use std::ops::{Deref, DerefMut};
+
+#[cfg(feature = "idiomatic")]
 use crate::value::value_enum::ValueEnum;
 
 // Mine. to put in GC headers
@@ -107,7 +109,7 @@ impl HasTypeInfoForGC for Frame {
 /// Visits a value, via a specialized `SOMSlot` for value types.
 /// # Safety
 /// Values passed to this function MUST live on the GC heap, or the pointer generated from the reference will be invalid.
-/*
+#[cfg(not(feature = "idiomatic"))]
 unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SOMSlot> + 'a)) {
     if val.is_ptr_type() {
         if let Some(slice) = val.clone().as_array() {
@@ -122,8 +124,8 @@ unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SO
         slot_visitor.visit_slot(SOMSlot::from(val.as_mut_ptr()))
     }
 }
-*/
 
+#[cfg(feature = "idiomatic")]
 unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SOMSlot> + 'a)) {
     match &val.0 {
         ValueEnum::Array(slice) => {
@@ -150,7 +152,7 @@ unsafe fn visit_value<'a>(val: &Value, slot_visitor: &'a mut (dyn SlotVisitor<SO
 /// Visits a value and potentially adds a slot made out of it to an array.
 /// # Safety
 /// Same as `visit_value`.
-/*
+#[cfg(not(feature = "idiomatic"))]
 unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) {
     if val.is_ptr_type() {
         if let Some(slice) = val.as_array() {
@@ -165,7 +167,8 @@ unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) 
         to_process.push(SOMSlot::from(val.as_mut_ptr()))
     }
 }
-*/
+
+#[cfg(feature = "idiomatic")]
 unsafe fn visit_value_maybe_process(val: &Value, to_process: &mut Vec<SOMSlot>) {
     match &val.0 {
         ValueEnum::Array(slice) => {

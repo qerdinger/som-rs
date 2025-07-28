@@ -1,4 +1,6 @@
 use anyhow::{bail, Context, Error};
+
+#[cfg(not(feature = "idiomatic"))]
 use som_gc::gcslice::GcSlice;
 
 #[cfg(any(feature = "nan", feature = "lbits"))]
@@ -11,7 +13,6 @@ use crate::gc::VecValue;
 use crate::interpreter::Interpreter;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::value_enum::ValueEnum;
 use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;
@@ -21,18 +22,24 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-// With NAN & LBITS
-//pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
-//pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
-//pub type StringLike = som_value::convert::StringLike<Gc<String>>;
+#[cfg(any(feature = "nan", feature = "lbits"))]
+pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
+#[cfg(any(feature = "nan", feature = "lbits"))]
+pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
+#[cfg(any(feature = "nan", feature = "lbits"))]
+pub type StringLike = som_value::convert::StringLike<Gc<String>>;
 
-// With idiomatic
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
+#[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum IntegerLike {
     Integer(i32),
     BigInteger(Gc<BigInt>),
 }
 
+#[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum DoubleLike {
     Double(f64),
@@ -40,6 +47,7 @@ pub enum DoubleLike {
     BigInteger(Gc<BigInt>),
 }
 
+#[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum StringLike {
     String(Gc<String>),
@@ -47,6 +55,7 @@ pub enum StringLike {
     Char(char),
 }
 
+#[cfg(feature = "idiomatic")]
 impl TryFrom<ValueEnum> for IntegerLike {
     type Error = Error;
 
@@ -59,6 +68,7 @@ impl TryFrom<ValueEnum> for IntegerLike {
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl TryFrom<ValueEnum> for DoubleLike {
     type Error = Error;
 
@@ -72,6 +82,7 @@ impl TryFrom<ValueEnum> for DoubleLike {
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl TryFrom<ValueEnum> for f64 {
     type Error = anyhow::Error;
 
@@ -83,6 +94,7 @@ impl TryFrom<ValueEnum> for f64 {
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl TryFrom<ValueEnum> for StringLike {
     type Error = Error;
 
@@ -101,7 +113,7 @@ impl TryFrom<ValueEnum> for StringLike {
     }
 }
 
-// Implement comparison operations for DoubleLike
+#[cfg(feature = "idiomatic")]
 impl DoubleLike {
     pub fn lt(&self, other: &DoubleLike) -> bool {
         match (self, other) {
@@ -132,6 +144,7 @@ impl DoubleLike {
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl PartialEq for DoubleLike {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -145,7 +158,7 @@ impl PartialEq for DoubleLike {
     }
 }
 
-// StringLike methods
+#[cfg(feature = "idiomatic")]
 impl StringLike {
     pub fn as_str<'a>(&'a self, lookup_symbol: impl Fn(Interned) -> &'a str) -> std::borrow::Cow<'a, str> {
         match self {
@@ -156,7 +169,6 @@ impl StringLike {
     }
 
     pub fn eq_with_lookup(&self, other: &Self, lookup_symbol: impl Fn(Interned) -> &'static str) -> bool {
-        println!("EQWITHLOOKUP");
         match (self, other) {
             (StringLike::Char(c1), StringLike::Char(c2)) => c1 == c2,
             (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
@@ -171,7 +183,6 @@ impl StringLike {
     where
         F: Copy + Fn(Interned) -> &'a str,
     {
-        // println!("EQSTRINGLIKE [{:?}]==[{:?}]", self, other);
         match (&self, &other) {
             (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
             (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
@@ -293,24 +304,28 @@ impl FromArgs for Interned {
     }
 }
 
-//impl FromArgs for VecValue {
-//    fn from_args(arg: Value) -> Result<Self, Error> {
-//        Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
-//    }
-//}
+#[cfg(any(feature = "nan", feature = "lbits"))]
+impl FromArgs for VecValue {
+   fn from_args(arg: Value) -> Result<Self, Error> {
+       Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
+   }
+}
 
+#[cfg(feature = "idiomatic")]
 impl FromArgs for VecValue {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_array().context("could not resolve `Value` as `Array`")
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl FromArgs for Gc<Class> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_class().context("could not resolve `Value` as `Class`")
     }
 }
 
+#[cfg(feature = "idiomatic")]
 impl FromArgs for Gc<String> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_string().context("could not resolve `Value` as `String`")
@@ -323,6 +338,7 @@ impl FromArgs for Gc<String> {
 //     }
 // }
 
+#[cfg(feature = "idiomatic")]
 impl FromArgs for Gc<Method> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         match arg.0 {
@@ -331,7 +347,6 @@ impl FromArgs for Gc<Method> {
         }
     }
 }
-
 
 #[cfg(any(feature = "nan", feature = "lbits"))]
 impl<T: HasPointerTag> FromArgs for Gc<T> {
@@ -504,6 +519,20 @@ impl IntoValue for IntegerLike {
     }
 }
 
+#[cfg(any(feature = "nan", feature = "lbits"))]
+impl IntoValue for DoubleLike {
+    fn into_value(&self) -> Value {
+        match self {
+            DoubleLike::Double(value) => value.into_value(),
+            // DoubleLike::AllocatedDouble(value) => value.into_value(),
+            DoubleLike::Integer(value) => value.into_value(),
+            DoubleLike::BigInteger(value) => value.into_value(),
+            _ => panic!("Undefined DoubleLike : {:?}", self)
+        }
+    }
+}
+
+#[cfg(feature = "idiomatic")]
 impl IntoValue for DoubleLike {
     fn into_value(&self) -> Value {
         match self {

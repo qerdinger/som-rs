@@ -5,7 +5,7 @@ use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
 use crate::value::Value;
 
-use anyhow::{bail, Error};
+use anyhow::Error;
 
 use num_traits::ToPrimitive;
 use once_cell::sync::Lazy;
@@ -20,6 +20,7 @@ use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 #[cfg(any(feature = "nan", feature = "idiomatic"))]
 use som_gc::gcref::Gc;
 
+#[cfg(any(feature = "nan", feature = "idiomatic"))]
 use anyhow::Context;
 
 #[cfg(feature = "lbits")]
@@ -61,6 +62,7 @@ pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     ])
 });
 
+#[cfg(feature = "idiomatic")]
 macro_rules! promote {
     ($signature:expr, $value:expr) => {
         match $value {
@@ -74,6 +76,24 @@ macro_rules! promote {
                 }
             },
             //_ => panic!("Undefined!")
+        }
+    };
+}
+
+#[cfg(not(feature = "idiomatic"))]
+macro_rules! promote {
+    ($signature:expr, $value:expr) => {
+        match $value {
+            DoubleLike::Double(value) => value,
+            // DoubleLike::AllocatedDouble(value) => *value,
+            DoubleLike::Integer(value) => value as f64,
+            DoubleLike::BigInteger(value) => match value.to_f64() {
+                Some(value) => value,
+                None => {
+                    panic!("'{}': `Integer` too big to be converted to `Double`", $signature)
+                }
+            },
+            _ => panic!("Undefined!")
         }
     };
 }

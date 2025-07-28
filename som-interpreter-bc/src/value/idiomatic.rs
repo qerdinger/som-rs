@@ -7,10 +7,15 @@ use crate::vm_objects::class::Class;
 use crate::vm_objects::instance::Instance;
 use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
-use som_gc::debug_assert_valid_semispace_ptr_value;
 use som_gc::gcref::Gc;
-use som_gc::gcslice::GcSlice;
+
+#[cfg(not(feature = "idiomatic"))]
 use crate::value::value_ptr::TypedPtrValue;
+
+#[cfg(not(feature = "idiomatic"))]
+use som_gc::debug_assert_valid_semispace_ptr_value;
+#[cfg(not(feature = "idiomatic"))]
+use som_gc::gcslice::GcSlice;
 
 //use som_value::delegate_to_base_value;
 macro_rules! delegate_to_value_enum {
@@ -28,8 +33,11 @@ macro_rules! delegate_to_value_enum {
 use som_value::interned::Interned;
 //use som_value::value::*;
 //use som_value::value_ptr::{HasPointerTag, TypedPtrValue};
+#[cfg(not(feature = "idiomatic"))]
 use std::fmt;
+#[cfg(not(feature = "idiomatic"))]
 use std::fmt::{Debug, Formatter};
+
 use std::ops::Deref;
 use mmtk::util::Address;
 use mmtk::vm::slot::SimpleSlot;
