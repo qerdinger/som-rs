@@ -26,6 +26,7 @@ num-bigint = "0.4.6"
 
 nan = []
 lbits = []
+l3bits = []
 idiomatic = []
 
 #default = ["mmtk/extreme_assertions"]

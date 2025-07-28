@@ -50,6 +50,7 @@ profiler = ["measureme"]
 
 nan = []
 lbits = []
+l3bits = []
 idiomatic = []
 
 ## mmtk stuff
