@@ -4,8 +4,11 @@ use crate::gc::VecValue;
 #[cfg(feature = "nan")]
 use som_value::value::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_TAG};
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 use som_value::value::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_TAG};
+
+#[cfg(feature = "l3bits")]
+use som_value::value::PTR_TAG;
 
 use crate::value::Value;
 use crate::vm_objects::block::Block;
@@ -137,37 +140,72 @@ impl<T> From<TypedPtrValue<T, Gc<T>>> for Value {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for VecValue {
     fn get_tag() -> u64 {
         ARRAY_TAG
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l3bits")]
+impl HasPointerTag for VecValue {
+    fn get_tag() -> u64 {
+        unreachable!("Not used in the Lower 3-bit implementation")
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for Block {
     fn get_tag() -> u64 {
         BLOCK_TAG
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l3bits")]
+impl HasPointerTag for Block {
+    fn get_tag() -> u64 {
+        unreachable!("Not used in the Lower 3-bit implementation")
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for Class {
     fn get_tag() -> u64 {
         CLASS_TAG
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l3bits")]
+impl HasPointerTag for Class {
+    fn get_tag() -> u64 {
+        unreachable!("Not used in the Lower 3-bit implementation")
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for Method {
     fn get_tag() -> u64 {
         INVOKABLE_TAG
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l3bits")]
+impl HasPointerTag for Method {
+    fn get_tag() -> u64 {
+        unreachable!("Not used in the Lower 3-bit implementation")
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for Instance {
     fn get_tag() -> u64 {
         INSTANCE_TAG
+    }
+}
+
+#[cfg(feature = "l3bits")]
+impl HasPointerTag for Instance {
+    fn get_tag() -> u64 {
+        unreachable!("Not used in the Lower 3-bit implementation")
     }
 }

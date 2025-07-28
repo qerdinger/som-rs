@@ -24,12 +24,8 @@ pub const BIG_INTEGER_TAG: u64 = 0b0111;
 pub const DOUBLE_NEG_TAG: u64 = 0b1100;
 pub const DOUBLE_BOXED_TAG: u64 = 0b1111;
 
-// 4-bit pointer tags object types
-pub const ARRAY_TAG: u64 = 0b1001;
-pub const BLOCK_TAG: u64 = 0b1010;
-pub const CLASS_TAG: u64 = 0b1011;
-pub const INSTANCE_TAG: u64 = 0b1000;
-pub const INVOKABLE_TAG: u64 = 0b1101;
+pub const PTR_TAG: u64 = 0b1001;
+
 pub const SYMBOL_TAG: u64 = 0b1110;
 
 pub const IMMEDIATE_OFFSET: u64 = 0x7000_0000_0000_0000;
@@ -58,11 +54,7 @@ impl BaseValue {
             tag,
             STRING_TAG |
             BIG_INTEGER_TAG |
-            ARRAY_TAG |
-            BLOCK_TAG |
-            CLASS_TAG |
-            INSTANCE_TAG |
-            INVOKABLE_TAG
+            PTR_TAG
         ) { return Self::new_ptr(tag, value); }
 
         Self {
@@ -98,11 +90,7 @@ impl BaseValue {
             STRING_TAG |
             BIG_INTEGER_TAG |
             DOUBLE_BOXED_TAG |
-            ARRAY_TAG |
-            BLOCK_TAG |
-            CLASS_TAG |
-            INSTANCE_TAG |
-            INVOKABLE_TAG
+            PTR_TAG
         )
     }
 
