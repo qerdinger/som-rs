@@ -19,10 +19,12 @@ build-and-test-interpreters:
 
     - cargo build --release --features=som-gc/marksweep --features=nan
     - cargo clippy --features=som-gc/marksweep --features=nan
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_nan.lz4
 
     - cargo build --release --features=som-gc/marksweep --features=lbits
     - cargo clippy --features=som-gc/marksweep --features=lbits
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=lbits
     - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_lbits.lz4
 
     # Package and Upload

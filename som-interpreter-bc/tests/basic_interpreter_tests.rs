@@ -202,6 +202,6 @@ fn basic_benchmark_runner(universe: &mut Universe, #[case] benchmark_name: &str)
     assert!(universe.has_global(intern_id.unwrap()));
     let benchmark_harness_class = universe.lookup_global(intern_id.unwrap()).unwrap().as_class().unwrap();
 
-    assert!(output.clone().unwrap().is_instance());
+    assert!(output.clone().unwrap().is_value_ptr::<Instance>()); // TODO change is_value_ptr to is_instance when compiled with idiomatic feature 
     assert_eq!(output.unwrap().as_instance().unwrap().class, benchmark_harness_class)
 }
