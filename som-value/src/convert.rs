@@ -1,8 +1,15 @@
-use anyhow::{Context, Error};
-use num_bigint::BigInt;
-use std::borrow::Cow;
-use std::ops::Deref;
+use anyhow::Context;
 
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use anyhow::Error;
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use num_bigint::BigInt;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use std::borrow::Cow;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use std::ops::Deref;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 use crate::interned::Interned;
 
 #[cfg(feature = "nan")]

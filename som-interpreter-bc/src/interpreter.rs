@@ -12,7 +12,7 @@ use std::cell::UnsafeCell;
 #[cfg(feature = "profiler")]
 use crate::debug::profiler::Profiler;
 
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 use num_bigint::BigInt;
 
 use som_core::bytecode::Bytecode;

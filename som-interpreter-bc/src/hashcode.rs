@@ -6,13 +6,11 @@ use crate::vm_objects::method::Method;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 use num_bigint::BigInt;
 
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 use som_gc::gcref::Gc;
-
-use som_value::interned::Interned;
 
 impl Hash for Value {
     #[cfg(feature = "idiomatic")]

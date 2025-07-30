@@ -1,6 +1,6 @@
 #[cfg(not(feature = "idiomatic"))]
 use std::{marker::PhantomData, ops::Deref};
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 use num_bigint::BigInt;
 
 #[cfg(feature = "nan")]
@@ -11,7 +11,6 @@ use crate::l4bits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_
 
 #[cfg(feature = "l3bits")]
 use crate::l3bits::value::{BaseValue};
-use crate::interned::Interned;
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]

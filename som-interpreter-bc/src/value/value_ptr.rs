@@ -7,9 +7,6 @@ use som_value::value::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_
 #[cfg(feature = "l4bits")]
 use som_value::value::{ARRAY_TAG, BLOCK_TAG, CLASS_TAG, INSTANCE_TAG, INVOKABLE_TAG};
 
-#[cfg(feature = "l3bits")]
-use som_value::value::PTR_TAG;
-
 use crate::value::Value;
 use crate::vm_objects::block::Block;
 use crate::vm_objects::class::Class;

@@ -9,11 +9,10 @@ use crate::vm_objects::method::Method;
 use num_bigint::BigInt;
 use som_gc::debug_assert_valid_semispace_ptr_value;
 use som_gc::gcref::Gc;
-use som_gc::gcslice::GcSlice;
 use som_value::delegate_to_base_value;
 use som_value::interned::Interned;
 use som_value::value::*;
-use som_value::value_ptr::{HasPointerTag, TypedPtrValue};
+use som_value::value_ptr::HasPointerTag;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
@@ -243,15 +242,15 @@ impl Value {
                         return cls.class();
                     } else if let Some(invokable) = self.as_invokable() {
                         return invokable.class(universe);
-                    } else if let Some(big_int) = self.as_big_integer() {
+                    } else if let Some(_) = self.as_big_integer() {
                         return universe.core.integer_class();
-                    } else if let Some(string) = self.as_string() {
+                    } else if let Some(_) = self.as_string() {
                         return universe.core.string_class();
-                    } else if let Some(sym) = self.as_symbol() {
+                    } else if let Some(_) = self.as_symbol() {
                         return universe.core.symbol_class();
-                    } else if let Some(double) = self.as_allocated_double() {
+                    } else if let Some(_) = self.as_allocated_double() {
                         return universe.core.double_class();
-                    } else if let Some(symbol) = self.as_symbol() {
+                    } else if let Some(_) = self.as_symbol() {
                         return universe.core.symbol_class();
                     } else {
                         panic!("Error: Pointer not recognized!")
@@ -306,7 +305,7 @@ impl Value {
                 } else if let Some(string) = self.as_string() {
                     string.to_string()
                 } else if let Some(symbol) = self.as_symbol() {
-                    let symbol = universe.lookup_symbol(*self.as_symbol().unwrap());
+                    let symbol = universe.lookup_symbol(*symbol);
                     if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                         format!("#'{}'", symbol.replace("'", "\\'"))
                     } else {
@@ -351,32 +350,27 @@ impl Value {
 
     #[inline(always)]
     pub fn Block(value: Gc<Block>) -> Self {
-        // TypedPtrValue::new(value).into()
         Value(BaseValue::new(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Class(value: Gc<Class>) -> Self {
-        // TypedPtrValue::new(value).into()
         Value(BaseValue::new(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Instance(value: Gc<Instance>) -> Self {
-        // TypedPtrValue::new(value).into()
         Value(BaseValue::new(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Invokable(value: Gc<Method>) -> Self {
-        // TypedPtrValue::new(value).into()
         Value(BaseValue::new(PTR_TAG, value.into()))
     }
 }
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        // println!("EQ : [{:?}]==[{:?}]", self, other);
         if self.as_u64() == other.as_u64() {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {

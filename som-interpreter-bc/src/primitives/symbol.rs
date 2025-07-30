@@ -12,8 +12,7 @@ use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
 use crate::value::convert::Primitive;
 
-use som_value::interned::Interned;
-
+#[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
 use som_gc::gcref::Gc;
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
