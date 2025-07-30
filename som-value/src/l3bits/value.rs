@@ -49,7 +49,7 @@ impl BaseValue {
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
         if matches!(
-            tag, PTR_TAG
+            tag, PTR_TAG | SYMBOL_TAG
         ) { return Self::new_ptr(tag, value); }
 
         Self {
@@ -83,6 +83,7 @@ impl BaseValue {
         matches!(
             self.tag(),
             DOUBLE_BOXED_TAG |
+            SYMBOL_TAG |
             PTR_TAG
         )
     }
@@ -204,8 +205,13 @@ impl BaseValue {
     }
 
     #[inline(always)]
-    pub fn new_symbol(value: Interned) -> Self {
-        Self::new(SYMBOL_TAG, value.0.into())
+    pub fn new_symbol<Ptr>(value: Ptr) -> Self
+    where
+        u64: From<Ptr>,
+        Ptr: Deref<Target = Interned> + From<u64>,
+    {
+        // Self::new(SYMBOL_TAG, value.0.into())
+        Self::new_ptr(SYMBOL_TAG, value.into())
     }
 
     #[inline(always)]
@@ -413,8 +419,13 @@ impl BaseValue {
     }
 
     #[inline(always)]
-    pub fn as_symbol(self) -> Option<Interned> {
-        self.is_symbol().then_some(Interned(self.payload() as u16))
+    pub fn as_symbol<SymbolPtr>(self) -> Option<SymbolPtr>
+    where
+        SymbolPtr: From<u64>,
+        SymbolPtr: Deref<Target = Interned>,
+    {
+        // self.is_symbol().then_some(Interned(self.payload() as u16))
+        self.is_symbol().then(|| self.extract_gc_cell())
     }
 
     #[inline(always)]
@@ -475,7 +486,11 @@ impl BaseValue {
 
     #[allow(non_snake_case)]
     #[inline(always)]
-    pub fn Symbol(value: Interned) -> Self {
+    pub fn Symbol<Ptr>(value: Ptr) -> Self
+    where
+        u64: From<Ptr>,
+        Ptr: Deref<Target = Interned> + From<u64>,
+    {
         Self::new_symbol(value)
     }
 

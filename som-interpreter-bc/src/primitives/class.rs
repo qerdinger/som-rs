@@ -85,9 +85,10 @@ fn new(interp: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
 }
 
 
-fn name(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
+fn name(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Interned>, Error> {
     pop_args_from_stack!(interp, receiver => Gc<Class>);
-    Ok(universe.intern_symbol(receiver.name()))
+    let sym: Interned = universe.intern_symbol(receiver.name());
+    Ok(universe.gc_interface.alloc(sym))
 }
 
 #[cfg(feature = "idiomatic")]
@@ -120,8 +121,15 @@ fn methods(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue
 
 fn fields(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, Error> {
     pop_args_from_stack!(interp, receiver => Gc<Class>);
-    let fields: Vec<Value> = receiver.field_names.iter().copied().map(Value::Symbol).collect();
-    Ok(VecValue(universe.gc_interface.alloc_slice(&fields)))
+    // let fields: Vec<Value> = receiver.field_names.iter().copied().map(Value::Symbol).collect();
+    let mut values = Vec::with_capacity(receiver.field_names.len());
+
+    for interned in &receiver.field_names {
+        let gc_interned = universe.gc_interface.alloc(*interned);
+        values.push(Value::Symbol(gc_interned));
+    }
+    // Ok(VecValue(universe.gc_interface.alloc_slice(&fields)))
+    Ok(VecValue(universe.gc_interface.alloc_slice(&values)))
 }
 
 /// Search for an instance primitive matching the given signature.

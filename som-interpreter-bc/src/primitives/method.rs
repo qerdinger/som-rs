@@ -12,6 +12,7 @@ use anyhow::Error;
 use once_cell::sync::Lazy;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
+use som_gc::gc_interface::SOMAllocator;
 
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     Box::new([
@@ -26,9 +27,10 @@ fn holder(invokable: Gc<Method>) -> Result<Gc<Class>, Error> {
     Ok(invokable.holder().clone())
 }
 
-fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
+fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Interned>, Error> {
     pop_args_from_stack!(interp, invokable => Gc<Method>);
-    Ok(universe.intern_symbol(invokable.signature()))
+    let sym: Interned = universe.intern_symbol(invokable.signature());
+    Ok(universe.gc_interface.alloc(sym))
 }
 
 #[cfg(feature = "idiomatic")]

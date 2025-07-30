@@ -12,6 +12,10 @@ use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
 use crate::value::convert::Primitive;
 
+use som_value::interned::Interned;
+
+use som_gc::gcref::Gc;
+
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
 use crate::value::Value;
 
@@ -32,8 +36,8 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
-    let symbol = cur_frame!(interp).stack_pop().as_symbol().unwrap();
-    let val = universe.lookup_symbol(symbol).to_owned();
+    let symbol = cur_frame!(interp).stack_pop().as_symbol::<Gc<Interned>>().unwrap();
+    let val = universe.lookup_symbol(*symbol).to_owned();
     let val_len = val.len();
 
     if val_len < 8 {

@@ -1388,12 +1388,12 @@ impl Interpreter {
                         Literal::Symbol(sym) => sym,
                         _ => panic!("Global is not a symbol."),
                     };
-                    if let Some(value) = universe.lookup_global(*symbol) {
+                    if let Some(value) = universe.lookup_global(**symbol) {
                         self.get_current_frame().stack_push(value);
                         unsafe { *self.get_current_frame().get_inline_cache_entry(self.bytecode_idx as usize) = Some(CacheEntry::Global(value)) }
                     } else {
                         let self_value = self.get_current_frame().get_self();
-                        universe.unknown_global(self, self_value, *symbol)?;
+                        universe.unknown_global(self, self_value, **symbol)?;
                     };
                     profiler_maybe_stop!(_timing);
                 }

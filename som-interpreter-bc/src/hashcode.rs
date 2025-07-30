@@ -12,6 +12,8 @@ use num_bigint::BigInt;
 #[cfg(not(feature = "idiomatic"))]
 use som_gc::gcref::Gc;
 
+use som_value::interned::Interned;
+
 impl Hash for Value {
     #[cfg(feature = "idiomatic")]
     fn hash<H: Hasher>(&self, hasher: &mut H) {
@@ -76,7 +78,7 @@ impl Hash for Value {
             hasher.write(b"#double#");
             let raw_bytes: &[u8] = unsafe { std::slice::from_raw_parts((&value as *const f64) as *const u8, std::mem::size_of::<f64>()) };
             hasher.write(raw_bytes);
-        } else if let Some(value) = self.as_symbol() {
+        } else if let Some(value) = self.as_symbol::<Gc<Interned>>() {
             hasher.write(b"#sym#");
             value.hash(hasher);
         } else if let Some(value) = self.as_string() {

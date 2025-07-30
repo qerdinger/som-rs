@@ -21,7 +21,7 @@ use som_gc::gcslice::GcSlice;
 use std::fmt;
 
 /// Represents an SOM value as an enum.
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 #[derive(Clone)]
 pub enum ValueEnum {
     /// The **nil** value.
@@ -37,6 +37,37 @@ pub enum ValueEnum {
     AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
     Symbol(Interned),
+    /// A string value.
+    TinyStr(Vec<u8>),
+    String(Gc<String>),
+    /// An array of values.
+    Array(Gc<Vec<ValueEnum>>),
+    /// A block value, ready to be evaluated.
+    Block(Gc<Block>),
+    /// A generic (non-primitive) class instance.
+    Instance(Gc<Instance>),
+    /// A bare class object.
+    Class(Gc<Class>),
+    /// A bare invokable.
+    Invokable(Gc<Method>),
+}
+
+#[cfg(feature = "l3bits")]
+#[derive(Clone)]
+pub enum ValueEnum {
+    /// The **nil** value.
+    Nil,
+    /// A boolean value (**true** or **false**).
+    Boolean(bool),
+    /// An integer value.
+    Integer(i32),
+    /// A big integer value (arbitrarily big).
+    BigInteger(Gc<BigInt>),
+    /// An floating-point value.
+    Double(f64),
+    AllocatedDouble(Gc<f64>),
+    /// An interned symbol value.
+    Symbol(Gc<Interned>),
     /// A string value.
     TinyStr(Vec<u8>),
     String(Gc<String>),
@@ -408,7 +439,7 @@ impl ValueEnum {
             Self::Double(value) => value.to_string(),
             Self::AllocatedDouble(value) => value.to_string(),
             Self::Symbol(value) => {
-                let symbol = universe.lookup_symbol(*value);
+                let symbol = universe.lookup_symbol(**value);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                     format!("#'{}'", symbol.replace("'", "\\'"))
                 } else {
@@ -820,9 +851,9 @@ impl ValueEnum {
     }
     /// Returns this value as a symbol, if such is its type.
     #[inline(always)]
-    pub fn as_symbol(&self) -> Option<Interned> {
+    pub fn as_symbol(&self) -> Option<Gc<Interned>> {
         if let ValueEnum::Symbol(v) = self {
-            Some(*v)
+            Some(v.clone())
         } else {
             None
         }
@@ -900,7 +931,7 @@ impl ValueEnum {
 
     /// Returns a new symbol value.
     #[inline(always)]
-    pub fn new_symbol(value: Interned) -> Self {
+    pub fn new_symbol(value: Gc<Interned>) -> Self {
         ValueEnum::Symbol(value)
     }
 

@@ -84,27 +84,27 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
 }
 
 fn load(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Class>, Error> {
-    pop_args_from_stack!(interp, _a => Value, class_name => Interned);
-    let class_name = universe.lookup_symbol(class_name).to_string();
+    pop_args_from_stack!(interp, _a => Value, class_name => Gc<Interned>);
+    let class_name = universe.lookup_symbol(*class_name).to_string();
     let class = universe.load_class(class_name)?;
 
     Ok(class)
 }
 
 fn has_global(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Interned);
-    Ok(universe.has_global(name))
+    pop_args_from_stack!(interp, _a => Value, name => Gc<Interned>);
+    Ok(universe.has_global(*name))
 }
 
 fn global(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Interned);
+    pop_args_from_stack!(interp, _a => Value, name => Gc<Interned>);
 
-    Ok(universe.lookup_global(name))
+    Ok(universe.lookup_global(*name))
 }
 
 fn global_put(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Interned, value => Value);
-    universe.assign_global(name, value.clone());
+    pop_args_from_stack!(interp, _a => Value, name => Gc<Interned>, value => Value);
+    universe.assign_global(*name, value.clone());
     Ok(Some(value))
 }
 

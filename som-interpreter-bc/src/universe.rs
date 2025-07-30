@@ -298,7 +298,7 @@ impl Universe {
 
         interpreter.push_method_frame_with_args(
             method,
-            vec![value, Value::Symbol(symbol), Value::Array(VecValue(self.gc_interface.alloc_slice(&args)))],
+            vec![value, Value::Symbol(self.gc_interface.alloc(symbol)), Value::Array(VecValue(self.gc_interface.alloc_slice(&args)))],
             self.gc_interface,
         );
 
@@ -311,7 +311,7 @@ impl Universe {
         let method = value.lookup_method(self, method_name)?;
 
         interpreter.get_current_frame().bytecode_idx = interpreter.bytecode_idx;
-        interpreter.push_method_frame_with_args(method, vec![value, Value::Symbol(name)], self.gc_interface);
+        interpreter.push_method_frame_with_args(method, vec![value, Value::Symbol(self.gc_interface.alloc(name))], self.gc_interface);
 
         Some(())
     }

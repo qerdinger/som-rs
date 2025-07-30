@@ -12,13 +12,14 @@ use mmtk::util::ObjectReference;
 use mmtk::vm::{ObjectModel, SlotVisitor};
 use mmtk::Mutator;
 use num_bigint::BigInt;
-use som_gc::gc_interface::{HasTypeInfoForGC, MMTKtoVMCallbacks, SupportedSliceType, BIGINT_MAGIC_ID, DOUBLE_MAGIC_ID, STRING_MAGIC_ID};
+use som_gc::gc_interface::{HasTypeInfoForGC, MMTKtoVMCallbacks, SupportedSliceType, BIGINT_MAGIC_ID, DOUBLE_MAGIC_ID, STRING_MAGIC_ID, INTERNED_MAGIC_ID};
 use som_gc::gcref::Gc;
 use som_gc::gcslice::GcSlice;
 use som_gc::object_model::VMObjectModel;
 use som_gc::slot::SOMSlot;
 use som_gc::SOMVM;
 use std::ops::{Deref, DerefMut};
+use som_value::interned::Interned;
 
 #[cfg(feature = "idiomatic")]
 use crate::value::value_enum::ValueEnum;
@@ -36,6 +37,7 @@ pub enum BCObjMagicId {
     Instance = 104,
     Method = 105,
     ArrayVal = 106,
+    Symbol = INTERNED_MAGIC_ID as isize
 }
 
 #[derive(Clone, Debug)]
@@ -197,6 +199,7 @@ pub fn visit_literal<'a>(lit: &Literal, slot_visitor: &'a mut (dyn SlotVisitor<S
         Literal::Block(blk) => slot_visitor.visit_slot(SOMSlot::from(blk)),
         Literal::String(str) => slot_visitor.visit_slot(SOMSlot::from(str)),
         Literal::BigInteger(bigint) => slot_visitor.visit_slot(SOMSlot::from(bigint)),
+        Literal::Symbol(sym) => slot_visitor.visit_slot(SOMSlot::from(sym)),
         Literal::Array(arr) => slot_visitor.visit_slot(SOMSlot::from(arr)),
         _ => {}
     }
@@ -316,7 +319,7 @@ pub fn scan_object<'a>(object: ObjectReference, slot_visitor: &'a mut (dyn SlotV
                     visit_literal(lit, slot_visitor)
                 }
             }
-            BCObjMagicId::String | BCObjMagicId::BigInt | BCObjMagicId::Double => {
+            BCObjMagicId::String | BCObjMagicId::BigInt | BCObjMagicId::Double | BCObjMagicId::Symbol => {
                 // leaf nodes: no children.
             }
         }
@@ -375,6 +378,7 @@ fn get_object_size(object: ObjectReference) -> usize {
             BCObjMagicId::String => size_of::<String>(),
             BCObjMagicId::BigInt => size_of::<BigInt>(),
             BCObjMagicId::Double => size_of::<f64>(),
+            BCObjMagicId::Symbol => size_of::<Interned>(),
             BCObjMagicId::ArrayLiteral => {
                 let literals: GcSlice<Literal> = GcSlice::from(object.to_raw_address());
                 literals.get_true_size()

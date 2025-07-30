@@ -51,7 +51,7 @@ impl Value {
         new_integer(value: i32) -> Self,
         new_double(value: f64) -> Self,
         new_allocated_double(value: Gc<f64>) -> Self,
-        new_symbol(value: Interned) -> Self,
+        new_symbol(value: Gc<Interned>) -> Self,
         new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
         new_tiny_str(value: Vec<u8>) -> Self,
@@ -61,7 +61,7 @@ impl Value {
         Integer(value: i32) -> Self,
         Double(value: f64) -> Self,
         AllocatedDouble(value: Gc<f64>) -> Self,
-        Symbol(value: Interned) -> Self,
+        Symbol(value: Gc<Interned>) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
         TinyStr(value: Vec<u8>) -> Self,
         String(value: Gc<String>) -> Self,
@@ -220,6 +220,8 @@ impl Value {
                         return universe.core.integer_class();
                     } else if let Some(string) = self.as_string() {
                         return universe.core.string_class();
+                    } else if let Some(sym) = self.as_symbol::<Gc<Interned>>() {
+                        return universe.core.symbol_class();
                     } else {
                         panic!("Error: Pointer not recognized!")
                     }
@@ -255,7 +257,7 @@ impl Value {
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
             _ if self.is_double() => self.as_double().unwrap().to_string(),
             SYMBOL_TAG => {
-                let symbol = universe.lookup_symbol(self.as_symbol().unwrap());
+                let symbol = universe.lookup_symbol(*self.as_symbol::<Gc<Interned>>().unwrap());
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                     format!("#'{}'", symbol.replace("'", "\\'"))
                 } else {
@@ -376,7 +378,7 @@ impl PartialEq for Value {
             *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string()) {
             String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
-        } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
+        } else if let (Some(a), Some(b)) = (self.as_symbol::<Gc<Interned>>(), other.as_symbol::<Gc<Interned>>()) {
             a.eq(&b)
         } else {
             false

@@ -22,7 +22,7 @@ mod inliner;
 
 #[derive(Debug, Clone)]
 pub enum Literal {
-    Symbol(Interned),
+    Symbol(Gc<Interned>),
     String(Gc<String>),
     Double(f64),
     Integer(i32),
@@ -88,7 +88,7 @@ impl Hash for Literal {
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
-        Literal::Symbol(sym) => Value::Symbol(*sym),
+        Literal::Symbol(sym) => Value::Symbol(sym.clone()),
         Literal::String(val) => {
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
