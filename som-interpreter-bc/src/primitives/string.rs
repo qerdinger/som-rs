@@ -31,7 +31,7 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
 });
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
@@ -49,6 +49,26 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
         StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
         StringLike::Char(_) => Ok(Value::Integer(1)),
+    }
+}
+
+#[cfg(feature = "l3bits")]
+fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    // tragically, we do not allow strings to have over 2 billion characters and just cast as i32
+    // i apologize to everyone for that. i will strive to be better
+    match receiver {
+        StringLike::TinyStr(data) => {
+            // let mut size = data.iter().rev().take_while(|&&x| x == 0).count() as i32;
+            // size = 8 - size;
+            // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
+            // Ok(Value::Integer(if size == 0 {1} else {size}))
+            // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
+            Ok(Value::Integer(data.len() as i32))
+        }
+        StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
+        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
     }
 }
 
@@ -147,7 +167,7 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
@@ -155,6 +175,19 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
         StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
         StringLike::Char(char) => universe.intern_symbol(&String::from(char)),
+        StringLike::Symbol(symbol) => symbol,
+    };
+
+    Ok(symbol)
+}
+
+#[cfg(feature = "l3bits")]
+fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike);
+
+    let symbol = match receiver {
+        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
+        StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
         StringLike::Symbol(symbol) => symbol,
     };
 

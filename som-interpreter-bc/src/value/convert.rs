@@ -85,7 +85,6 @@ pub enum StringLike {
     TinyStr(Vec<u8>),
     String(Gc<String>),
     Symbol(Interned),
-    Char(char),
 }
 
 trait BaseValueExt {
@@ -409,7 +408,6 @@ impl StringLike {
             StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
-            StringLike::Char(char) => Cow::from(char.to_string()),
         }
     }
 
@@ -418,22 +416,11 @@ impl StringLike {
         F: Copy + Fn(Interned) -> &'a str,
     {
         match (&self, &other) {
-            (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
-            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
-            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
             (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
                 (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap(),
-            (StringLike::TinyStr(tstr1), StringLike::Char(c2)) => {
-                let s1 = std::str::from_utf8(tstr1).unwrap();
-                s1.len() == 1 &&  s1.chars().next().unwrap() == *c2
-            },
-            (StringLike::Char(c1), StringLike::TinyStr(tstr2)) => {
-                let s2 = std::str::from_utf8(tstr2).unwrap();
-                s2.len() == 1 &&  s2.chars().next().unwrap() == *c1
-            },
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
                 let str2_bytes = str2.as_str().as_bytes();
                 tstr1.iter()
@@ -753,13 +740,24 @@ impl IntoReturn for () {
     }
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
         match self {
             StringLike::TinyStr(value) => value.into_value(),
             StringLike::String(value) => value.into_value(),
             StringLike::Char(value) => value.into_value(),
+            StringLike::Symbol(value) => value.into_value(),
+        }
+    }
+}
+
+#[cfg(feature = "l3bits")]
+impl IntoValue for StringLike {
+    fn into_value(&self) -> Value {
+        match self {
+            StringLike::TinyStr(value) => value.into_value(),
+            StringLike::String(value) => value.into_value(),
             StringLike::Symbol(value) => value.into_value(),
         }
     }

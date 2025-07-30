@@ -113,7 +113,7 @@ fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
 }
 
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
 
@@ -125,6 +125,33 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
         },
         StringLike::String(ref value) => value.as_str(),
         StringLike::Char(char) => &*String::from(char),
+        StringLike::Symbol(sym) => universe.lookup_symbol(sym),
+    };
+
+    match string.parse::<f64>() {
+        Ok(parsed) => {
+            let bits = (parsed as f64).to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            let in_range = (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1;
+            let heap = &mut universe.gc_interface;
+            if in_range { Ok(Value::Double(parsed)) } else { Ok(Value::AllocatedDouble(heap.alloc(parsed))) }
+        },
+        Err(err) => panic!("'{}': {}", SIGNATURE, err),
+    }
+    // string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
+}
+
+#[cfg(feature = "l3bits")]
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const SIGNATURE: &str = "Double>>#fromString:";
+
+    pop_args_from_stack!(interp, _a => Value, string => StringLike);
+
+    let string = match string {
+        StringLike::TinyStr(ref value) => {
+            std::str::from_utf8(value).unwrap()
+        },
+        StringLike::String(ref value) => value.as_str(),
         StringLike::Symbol(sym) => universe.lookup_symbol(sym),
     };
 
