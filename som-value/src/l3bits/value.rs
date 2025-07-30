@@ -9,19 +9,19 @@ use std::ops::Deref;
 static_assertions::const_assert_eq!(size_of::<f64>(), 8);
 static_assertions::assert_eq_size!(f64, u64, *const ());
 
-pub const VALUE_TAG_BITS: u64 = 4;
-pub const TAG_BITS: u64 = 0b1111;
+pub const VALUE_TAG_BITS: u64 = 3;
+pub const TAG_BITS: u64 = 0b111;
 
-pub const TINY_STRING_TAG: u64 = 0b0000;
-pub const NIL_TAG: u64 = 0b0001;
-pub const INTEGER_TAG: u64 = 0b0010;
-pub const BOOLEAN_TAG: u64 = 0b0011;
-pub const DOUBLE_TAG: u64 = 0b0100;
-pub const CHAR_TAG: u64 = 0b0101;
+pub const TINY_STRING_TAG: u64 = 0b000;
+pub const NIL_TAG: u64 = 0b001;
+pub const INTEGER_TAG: u64 = 0b010;
+pub const BOOLEAN_TAG: u64 = 0b011;
+pub const DOUBLE_TAG: u64 = 0b100;
+pub const CHAR_TAG: u64 = 0b101;
 
-pub const DOUBLE_NEG_TAG: u64 = 0b1100;
+pub const DOUBLE_NEG_TAG: u64 = 0b110;
 
-pub const PTR_TAG: u64 = 0b1001;
+pub const PTR_TAG: u64 = 0b111;
 
 pub const IMMEDIATE_OFFSET: u64 = 0x7000_0000_0000_0000;
 pub const ROTATE_AMOUNT: u32 = 1;
@@ -45,34 +45,9 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
-        if matches!(
-            tag, PTR_TAG
-        ) { return Self::new_ptr(tag, value); }
-
         Self {
             encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
-    }
-
-    #[inline(always)]
-    pub const fn new_ptr(tag: u64, ptr: u64) -> Self {
-        // assert_eq!(ptr & 0b111, 0, "Pointer must be 8byte aligned");
-        Self {
-            encoded: (ptr << 1) | (tag & TAG_BITS),
-        }
-    }
-
-    #[inline(always)]
-    pub fn encode_ptr(tag: u64, ptr: u64) -> u64 {
-        assert_eq!(ptr & 0b111, 0, "Pointer must be 8byte aligned");
-        let shifted = ptr << 1;
-        shifted | tag
-    }
-
-    #[inline(always)]
-    pub fn decode_ptr(encoded: u64) -> u64 {
-        // Remove the tag and shift right by 1 to get the original pointer
-        (encoded & !TAG_BITS) >> 1
     }
 
     #[inline(always)]
@@ -98,9 +73,6 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn payload(self) -> u64 {
-        if self.is_ptr_type() {
-            return Self::decode_ptr(self.encoded);
-        }
         self.encoded >> VALUE_TAG_BITS
     }
 
@@ -117,24 +89,6 @@ impl BaseValue {
         self.payload()
     }
 
-    // #[inline(always)]
-    // pub fn new_tiny_str(value: Vec<u8>) -> Self {
-    //     //println!("new tiny str !");
-    //     let mut ptr: u64 = 0;
-    //     ptr |= (value[0] as u64) << 0;
-    //     ptr |= (value[1] as u64) << 8;
-    //     ptr |= (value[2] as u64) << 16;
-    //     ptr |= (value[3] as u64) << 24;
-    //     ptr |= (value[4] as u64) << 32;
-    //     ptr |= (value[5] as u64) << 40;
-    //     ptr |= (value[6] as u64) << 48;
-    //     //ptr |= (value[7] as u64) << 56;
-    //     //println!("encoding with value : {:?}", value);
-    //     //println!("encoded ptr : {:#64b}", ptr);
-    //     let finalptr = Self::new(TINY_STRING_TAG, ptr);
-    //     //println!("encode + tag : {:#64b}", finalptr.encoded as u64);
-    //     finalptr
-    // }
     #[inline(always)]
     pub fn new_tiny_str(value: Vec<u8>) -> Self {
         assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
@@ -183,7 +137,6 @@ impl BaseValue {
         // Integrate tag
         let encoded = (payload << PAYLOAD_SHIFT) | tag;
 
-        // println!("Final double addr : {:#64b}", encoded);
         Self { encoded }
     }
 
@@ -193,7 +146,7 @@ impl BaseValue {
         u64: From<DoublePtr>,
         DoublePtr: Deref<Target = f64> + From<u64>,
     {
-        Self::new_ptr(PTR_TAG, value.into())
+        Self::new(PTR_TAG, value.into())
     }
 
     #[inline(always)]
@@ -202,8 +155,7 @@ impl BaseValue {
         u64: From<Ptr>,
         Ptr: Deref<Target = Interned> + From<u64>,
     {
-        // Self::new(SYMBOL_TAG, value.0.into())
-        Self::new_ptr(PTR_TAG, value.into())
+        Self::new(PTR_TAG, value.into())
     }
 
     #[inline(always)]
@@ -271,60 +223,6 @@ impl BaseValue {
         self.tag() == CHAR_TAG
     }
 
-    // #[inline(always)]
-    // pub fn as_big_integer<BigIntPtr>(self) -> Option<BigIntPtr>
-    // where
-    //     u64: From<BigIntPtr>,
-    //     BigIntPtr: From<u64>,
-    // {
-    //     self.is_big_integer().then(|| self.extract_gc_cell())
-    // }
-
-    // #[inline(always)]
-    // pub fn as_string<StringPtr>(self) -> Option<StringPtr>
-    // where
-    //     StringPtr: From<u64>,
-    //     StringPtr: Deref<Target = String>,
-    // {
-    //     self.is_string().then(|| self.extract_gc_cell())
-    // }
-
-    // #[inline(always)]
-    // pub fn as_tiny_str(self) -> Option<Vec<u8>> {
-    //     if !self.is_tiny_str() {
-    //         return None;
-    //     }
-    //     let mut bytes = [0u8];
-    //     let payload: u64 = self.payload();
-    //     //println!("payload : {:#64b}", payload);
-    //     bytes[0] = ((payload >>  0) & 0xFF) as u8;
-    //     bytes[1] = ((payload >>  8) & 0xFF) as u8;
-    //     bytes[2] = ((payload >> 16) & 0xFF) as u8;
-    //     bytes[3] = ((payload >> 24) & 0xFF) as u8;
-    //     bytes[4] = ((payload >> 32) & 0xFF) as u8;
-    //     bytes[5] = ((payload >> 40) & 0xFF) as u8;
-    //     bytes[6] = ((payload >> 48) & 0xFF) as u8;
-    //     //bytes[7] = ((payload >> 56) & 0xFF) as u8;
-    //     //println!("tmp : {:?}", bytes);
-    //     Some(bytes)
-    // }
-
-    // #[inline(always)]
-    // pub fn as_tiny_str(self) -> Option<Vec<u8>> {
-    //     if !self.is_tiny_str() {
-    //         return None;
-    //     }
-
-    //     let mut bytes = Vec::new();
-    //     let mut value = self.payload();
-
-    //     while value != 0 {
-    //         bytes.push((value & 0xFF) as u8);
-    //         value >>= 8;
-    //     }
-
-    //     Some(bytes)
-    // }
     #[inline(always)]
     pub fn as_tiny_str(self) -> Option<Vec<u8>> {
         if !self.is_tiny_str() {
@@ -352,27 +250,17 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
-        match self.tag() {
-            DOUBLE_TAG | DOUBLE_NEG_TAG => {
-                // Retrieve payload
-                let payload = self.encoded >> PAYLOAD_SHIFT;
-
-                // Payload is lower or equal to 1 handle special case +/- 0
-                let rebased = if payload <= 1 { payload } else { payload.wrapping_add(IMMEDIATE_OFFSET) };
-
-                let bits = rebased.rotate_right(ROTATE_AMOUNT);
-                Some(f64::from_bits(bits))
-            },
-            // DOUBLE_BOXED_TAG => {
-            //     // println!("Decoding : {:#64b}", self.encoded);
-            //     // println!("Decoding PTR : {:#64b}", Self::decode_ptr(self.encoded));
-            //     // Some((*Box::new(Self::decode_ptr(self.encoded))) as f64)
-            //     // let data = u64::from(self.payload());
-            //     // println!("Data : {}", *data);
-            //     return Some(2.5 as f64);
-            // }
-            _ => None,
+        if !matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG) {
+            return None;
         }
+        // Retrieve payload
+        let payload = self.encoded >> PAYLOAD_SHIFT;
+
+        // Payload is lower or equal to 1 handle special case +/- 0
+        let rebased = if payload <= 1 { payload } else { payload.wrapping_add(IMMEDIATE_OFFSET) };
+
+        let bits = rebased.rotate_right(ROTATE_AMOUNT);
+        Some(f64::from_bits(bits))
     }
 
     #[inline(always)]
