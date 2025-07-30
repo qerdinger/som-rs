@@ -323,7 +323,10 @@ impl SOMAllocator for GCInterface {
     }
 
     /// Allocates a type, but with a given size.
-    fn alloc_with_size<T: HasTypeInfoForGC>(&mut self, obj: T, size: usize, alloc_origin_marker: Option<AllocSiteMarker>) -> Gc<T> {
+    fn alloc_with_size<T: HasTypeInfoForGC>(&mut self, obj: T, mut size: usize, alloc_origin_marker: Option<AllocSiteMarker>) -> Gc<T> {
+        if size < MIN_OBJECT_SIZE {
+            size = MIN_OBJECT_SIZE; //TODO // TODO
+        }
         debug_assert!(size >= MIN_OBJECT_SIZE);
 
         // adding VM header size (type info) to amount we allocate
