@@ -10,7 +10,7 @@ use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 use crate::l4bits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_TAG};
 
 #[cfg(feature = "l3bits")]
-use crate::l3bits::value::{BaseValue, SYMBOL_TAG};
+use crate::l3bits::value::{BaseValue};
 use crate::interned::Interned;
 
 /// Bundles a value to a pointer with the type to its pointer.
@@ -90,12 +90,12 @@ impl HasPointerTag for String {
     }
 }
 
-#[cfg(feature = "l3bits")]
-impl HasPointerTag for Interned {
-    fn get_tag() -> u64 {
-        SYMBOL_TAG
-    }
-}
+// #[cfg(feature = "l3bits")]
+// impl HasPointerTag for Interned {
+//     fn get_tag() -> u64 {
+//         SYMBOL_TAG
+//     }
+// }
 
 #[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for BigInt {

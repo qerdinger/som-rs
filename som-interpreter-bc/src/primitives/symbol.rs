@@ -36,7 +36,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
-    let symbol = cur_frame!(interp).stack_pop().as_symbol::<Gc<Interned>>().unwrap();
+    let symbol = cur_frame!(interp).stack_pop().as_symbol().unwrap();
     let val = universe.lookup_symbol(*symbol).to_owned();
     let val_len = val.len();
 

@@ -23,8 +23,6 @@ pub const DOUBLE_NEG_TAG: u64 = 0b1100;
 
 pub const PTR_TAG: u64 = 0b1001;
 
-pub const SYMBOL_TAG: u64 = 0b1110;
-
 pub const IMMEDIATE_OFFSET: u64 = 0x7000_0000_0000_0000;
 pub const ROTATE_AMOUNT: u32 = 1;
 pub const PAYLOAD_SHIFT: u32 = 3;
@@ -48,7 +46,7 @@ impl BaseValue {
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
         if matches!(
-            tag, PTR_TAG | SYMBOL_TAG
+            tag, PTR_TAG
         ) { return Self::new_ptr(tag, value); }
 
         Self {
@@ -79,11 +77,7 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn is_ptr_type(self) -> bool {
-        matches!(
-            self.tag(),
-            SYMBOL_TAG |
-            PTR_TAG
-        )
+        matches!(self.tag(), PTR_TAG)
     }
 
     pub unsafe fn as_something<PTR>(self) -> Option<PTR>
@@ -209,7 +203,7 @@ impl BaseValue {
         Ptr: Deref<Target = Interned> + From<u64>,
     {
         // Self::new(SYMBOL_TAG, value.0.into())
-        Self::new_ptr(SYMBOL_TAG, value.into())
+        Self::new_ptr(PTR_TAG, value.into())
     }
 
     #[inline(always)]
@@ -270,11 +264,6 @@ impl BaseValue {
     #[inline(always)]
     pub fn is_boolean_false(self) -> bool {
         self.payload() == 0
-    }
-
-    #[inline(always)]
-    pub fn is_symbol(self) -> bool {
-        self.tag() == SYMBOL_TAG
     }
 
     #[inline(always)]
@@ -399,16 +388,6 @@ impl BaseValue {
     #[inline(always)]
     pub fn as_boolean_unchecked(self) -> bool {
         self.payload() != 0
-    }
-
-    #[inline(always)]
-    pub fn as_symbol<SymbolPtr>(self) -> Option<SymbolPtr>
-    where
-        SymbolPtr: From<u64>,
-        SymbolPtr: Deref<Target = Interned>,
-    {
-        // self.is_symbol().then_some(Interned(self.payload() as u16))
-        self.is_symbol().then(|| self.extract_gc_cell())
     }
 
     #[inline(always)]

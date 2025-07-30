@@ -125,6 +125,21 @@ impl Value {
     }
 
     #[inline(always)]
+    pub fn as_symbol(self) -> Option<Gc<Interned>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::Symbol => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
         if !self.is_ptr_type() {
             return None;
@@ -212,7 +227,6 @@ impl Value {
                 }
             }
             INTEGER_TAG => universe.core.integer_class(),
-            SYMBOL_TAG => universe.core.symbol_class(),
             TINY_STRING_TAG => universe.core.string_class(),
             CHAR_TAG => universe.core.string_class(),
             _ => {
@@ -233,10 +247,12 @@ impl Value {
                         return universe.core.integer_class();
                     } else if let Some(string) = self.as_string() {
                         return universe.core.string_class();
-                    } else if let Some(sym) = self.as_symbol::<Gc<Interned>>() {
+                    } else if let Some(sym) = self.as_symbol() {
                         return universe.core.symbol_class();
                     } else if let Some(double) = self.as_allocated_double() {
                         return universe.core.double_class();
+                    } else if let Some(symbol) = self.as_symbol() {
+                        return universe.core.symbol_class();
                     } else {
                         panic!("Error: Pointer not recognized!")
                     }
@@ -271,14 +287,6 @@ impl Value {
             BOOLEAN_TAG => self.as_boolean().unwrap().to_string(),
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
             _ if self.is_double() => self.as_double().unwrap().to_string(),
-            SYMBOL_TAG => {
-                let symbol = universe.lookup_symbol(*self.as_symbol::<Gc<Interned>>().unwrap());
-                if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
-                    format!("#'{}'", symbol.replace("'", "\\'"))
-                } else {
-                    format!("#{}", symbol)
-                }
-            }
             TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
             _ => {
                 if let Some(block) = self.as_block() {
@@ -297,6 +305,13 @@ impl Value {
                     big_int.to_string()
                 } else if let Some(string) = self.as_string() {
                     string.to_string()
+                } else if let Some(symbol) = self.as_symbol() {
+                    let symbol = universe.lookup_symbol(*self.as_symbol().unwrap());
+                    if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
+                        format!("#'{}'", symbol.replace("'", "\\'"))
+                    } else {
+                        format!("#{}", symbol)
+                    }
                 } else {
                     panic!("unknown tag")
                 }
@@ -394,7 +409,7 @@ impl PartialEq for Value {
             *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string()) {
             String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
-        } else if let (Some(a), Some(b)) = (self.as_symbol::<Gc<Interned>>(), other.as_symbol::<Gc<Interned>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             (*a).eq(&*b)
         } else {
             false

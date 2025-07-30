@@ -78,7 +78,7 @@ impl Hash for Value {
             hasher.write(b"#double#");
             let raw_bytes: &[u8] = unsafe { std::slice::from_raw_parts((&value as *const f64) as *const u8, std::mem::size_of::<f64>()) };
             hasher.write(raw_bytes);
-        } else if let Some(value) = self.as_symbol::<Gc<Interned>>() {
+        } else if let Some(value) = self.as_symbol() {
             hasher.write(b"#sym#");
             value.hash(hasher);
         } else if let Some(value) = self.as_string() {

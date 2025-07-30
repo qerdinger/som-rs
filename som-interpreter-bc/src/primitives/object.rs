@@ -103,7 +103,12 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
 
     // TODO: popping from the previous frame in this, and all the other perform family function should NOT happen
     // if GC happens, that makes those values (receiver, signature) orphaned, and might cause a crash. it's highly unlikely in practice but TODO fix
-    pop_args_from_stack!(interpreter, receiver => Value, signature => Gc<Interned>);
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Value);
+
+    let signature: Gc<Interned> = match signature.as_symbol() {
+        Some(sym) => sym,
+        _ => panic!()
+    };
 
     let Some(invokable) = receiver.lookup_method(universe, *signature) else {
         let signature_str = universe.lookup_symbol(*signature).to_owned();
@@ -127,7 +132,12 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
 fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:withArguments:";
 
-    pop_args_from_stack!(interpreter, receiver => Value, signature => Gc<Interned>, arguments => VecValue);
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Value, arguments => VecValue);
+
+    let signature: Gc<Interned> = match signature.as_symbol() {
+        Some(sym) => sym,
+        _ => panic!()
+    };
 
     let Some(invokable) = receiver.lookup_method(universe, *signature) else {
         let signature_str = universe.lookup_symbol(*signature).to_owned();
@@ -144,7 +154,12 @@ fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe
 fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:inSuperclass:";
 
-    pop_args_from_stack!(interpreter, receiver => Value, signature => Gc<Interned>, class => Gc<Class>);
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Value, class => Gc<Class>);
+
+    let signature: Gc<Interned> = match signature.as_symbol() {
+        Some(sym) => sym,
+        _ => panic!()
+    };
 
     let Some(invokable) = class.lookup_method(*signature) else {
         let signature_str = universe.lookup_symbol(*signature).to_owned();
@@ -161,7 +176,12 @@ fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe
 fn perform_with_arguments_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:withArguments:inSuperclass:";
 
-    pop_args_from_stack!(interpreter, receiver => Value, signature => Gc<Interned>, arguments => VecValue, class => Gc<Class>);
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Value, arguments => VecValue, class => Gc<Class>);
+
+    let signature: Gc<Interned> = match signature.as_symbol() {
+        Some(sym) => sym,
+        _ => panic!()
+    };
 
     let method = class.lookup_method(*signature);
 
