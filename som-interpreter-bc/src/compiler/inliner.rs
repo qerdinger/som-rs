@@ -430,7 +430,7 @@ impl PrimMessageInliner for ast::Message {
             Or => ctxt.intern_symbol("true"),
             And => ctxt.intern_symbol("false"),
         };
-        let idx = ctxt.push_literal(Literal::Symbol(gc_interface.alloc(name)));
+        let idx = ctxt.push_literal(Literal::Symbol(name));
         ctxt.push_instr(Bytecode::PushGlobal(idx as u8));
 
         ctxt.backpatch_jump_to_current(skip_return_true_idx);

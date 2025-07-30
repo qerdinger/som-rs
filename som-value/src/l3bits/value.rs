@@ -20,7 +20,6 @@ pub const DOUBLE_TAG: u64 = 0b0100;
 pub const CHAR_TAG: u64 = 0b0101;
 
 pub const DOUBLE_NEG_TAG: u64 = 0b1100;
-pub const DOUBLE_BOXED_TAG: u64 = 0b1111;
 
 pub const PTR_TAG: u64 = 0b1001;
 
@@ -82,7 +81,6 @@ impl BaseValue {
     pub fn is_ptr_type(self) -> bool {
         matches!(
             self.tag(),
-            DOUBLE_BOXED_TAG |
             SYMBOL_TAG |
             PTR_TAG
         )
@@ -201,7 +199,7 @@ impl BaseValue {
         u64: From<DoublePtr>,
         DoublePtr: Deref<Target = f64> + From<u64>,
     {
-        Self::new_ptr(DOUBLE_BOXED_TAG, value.into())
+        Self::new_ptr(PTR_TAG, value.into())
     }
 
     #[inline(always)]
@@ -257,11 +255,6 @@ impl BaseValue {
     #[inline(always)]
     pub fn is_double(self) -> bool {
         matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG)
-    }
-
-    #[inline(always)]
-    pub fn is_allocated_double(self) -> bool {
-        self.tag() == DOUBLE_BOXED_TAG
     }
 
     #[inline(always)]
@@ -392,16 +385,6 @@ impl BaseValue {
             _ => None,
         }
     }
-
-    #[inline(always)]
-    pub fn as_allocated_double<DoublePtr>(self) -> Option<DoublePtr>
-    where
-        DoublePtr: From<u64>,
-        DoublePtr: Deref<Target = f64>,
-    {
-        self.is_allocated_double().then(|| self.extract_gc_cell())
-    }
-
 
     #[inline(always)]
     pub fn as_boolean(self) -> Option<bool> {

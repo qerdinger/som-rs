@@ -441,7 +441,7 @@ impl MethodCodegen for ast::Expression {
                         },
                         _ => {
                             let name = ctxt.intern_symbol(name);
-                            let idx = ctxt.push_literal(Literal::Symbol(mutator.alloc(name)));
+                            let idx = ctxt.push_literal(Literal::Symbol(name));
                             ctxt.push_instr(Bytecode::PushGlobal(idx as u8));
                         }
                     },
@@ -538,7 +538,7 @@ impl MethodCodegen for ast::Expression {
             ast::Expression::Literal(literal) => {
                 fn convert_literal(ctxt: &mut dyn InnerGenCtxt, literal: &ast::Literal, gc_interface: &mut GCInterface) -> Literal {
                     match literal {
-                        ast::Literal::Symbol(val) => Literal::Symbol(gc_interface.alloc(ctxt.intern_symbol(val.as_str()))),
+                        ast::Literal::Symbol(val) => Literal::Symbol(ctxt.intern_symbol(val.as_str())),
                         ast::Literal::String(val) => {
                             // TODO: this whole bit is to avoid redundant literals. previous logic broke with strings being put on the GC heap. is it indicative of a deeper issue with redundant strings?
                             // it feels a bit bandaid-ey, since I'm not sure where the bug came from exactly.
@@ -656,7 +656,7 @@ fn compile_method(outer: &mut dyn GenCtxt, defn: &ast::MethodDef, gc_interface: 
             ([Bytecode::PushGlobal(x), Bytecode::ReturnLocal], 0) => match literals.get(*x as usize)? {
                 Literal::Symbol(interned) => Some(Method::TrivialGlobal(
                     TrivialGlobalMethod {
-                        global_name: **interned,
+                        global_name: *interned,
                         cached_entry: Cell::new(None),
                     },
                     BasicMethodInfo::new(String::from(signature), Gc::default()),

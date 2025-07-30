@@ -110,6 +110,21 @@ impl Value {
     }
 
     #[inline(always)]
+    pub fn as_allocated_double(self) -> Option<Gc<f64>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::Double => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
         if !self.is_ptr_type() {
             return None;
@@ -203,8 +218,6 @@ impl Value {
             _ => {
                 if self.is_double() {
                     return universe.core.double_class();
-                } else if self.is_allocated_double() {
-                    return universe.core.double_class();
                 } else if self.is_ptr_type() {
                     if self.as_array().is_some() {
                         return universe.core.array_class(); 
@@ -222,6 +235,8 @@ impl Value {
                         return universe.core.string_class();
                     } else if let Some(sym) = self.as_symbol::<Gc<Interned>>() {
                         return universe.core.symbol_class();
+                    } else if let Some(double) = self.as_allocated_double() {
+                        return universe.core.double_class();
                     } else {
                         panic!("Error: Pointer not recognized!")
                     }
@@ -346,23 +361,24 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
+        // println!("EQ : [{:?}]==[{:?}]", self, other);
         if self.as_u64() == other.as_u64() {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
             a == b
-        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_allocated_double::<Gc<f64>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double(), other.as_allocated_double()) {
             *a == *b
-        } else if let (Some(a), Some(b)) = (self.as_double(), other.as_allocated_double::<Gc<f64>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_double(), other.as_allocated_double()) {
             a == *b
-        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), other.as_double()) {
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double(), other.as_double()) {
             *a == b
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_double()) {
             (a as f64) == b
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_integer()) {
             (b as f64) == a
-        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_allocated_double::<Gc<f64>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_allocated_double()) {
             (a as f64) == *b
-        } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), self.as_integer()) {
+        } else if let (Some(a), Some(b)) = (self.as_allocated_double(), self.as_integer()) {
             *a == (b as f64)
         } else if let (Some(a), Some(b)) = (self.as_big_integer(), other.as_big_integer()) {
             a == b
@@ -379,7 +395,7 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string()) {
             String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol::<Gc<Interned>>(), other.as_symbol::<Gc<Interned>>()) {
-            a.eq(&b)
+            (*a).eq(&*b)
         } else {
             false
         }

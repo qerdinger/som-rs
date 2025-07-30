@@ -83,7 +83,7 @@ fn disassemble_body(universe: &Universe, class: &Class, level: usize, env: &mut 
                 };
                 match literal {
                     Literal::Symbol(symbol) => {
-                        println!(" (Symbol(#{0}))", universe.lookup_symbol(**symbol));
+                        println!(" (Symbol(#{0}))", universe.lookup_symbol(*symbol));
                     }
                     _ => {
                         println!(" ({literal:?})");
@@ -99,7 +99,7 @@ fn disassemble_body(universe: &Universe, class: &Class, level: usize, env: &mut 
                     println!(" (invalid global)");
                     continue;
                 };
-                println!(" (`{0}`)", universe.lookup_symbol(**signature));
+                println!(" (`{0}`)", universe.lookup_symbol(*signature));
             }
             Bytecode::Pop => {
                 println!();

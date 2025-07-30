@@ -1322,7 +1322,7 @@ impl Interpreter {
                         *last = Value::new_integer(int + 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double + 1.0);
-                    } else if let Some(double) = last.as_allocated_double::<Gc<f64>>() {
+                    } else if let Some(double) = last.as_allocated_double() {
                         *last = Value::new_allocated_double(universe.gc_interface.alloc(*double + 1.0));
                     } else if let Some(mut big_int) = last.as_big_integer() {
                         *big_int += 1;
@@ -1340,7 +1340,7 @@ impl Interpreter {
                         *last = Value::new_integer(int - 1);
                     } else if let Some(double) = last.as_double() {
                         *last = Value::new_double(double - 1.0);
-                    } else if let Some(double) = last.as_allocated_double::<Gc<f64>>() {
+                    } else if let Some(double) = last.as_allocated_double() {
                         *last = Value::new_allocated_double(universe.gc_interface.alloc(*double - 1.0));
                     } else if let Some(mut big_int) = last.as_big_integer() {
                         *big_int -= 1;
@@ -1388,12 +1388,12 @@ impl Interpreter {
                         Literal::Symbol(sym) => sym,
                         _ => panic!("Global is not a symbol."),
                     };
-                    if let Some(value) = universe.lookup_global(**symbol) {
+                    if let Some(value) = universe.lookup_global(*symbol) {
                         self.get_current_frame().stack_push(value);
                         unsafe { *self.get_current_frame().get_inline_cache_entry(self.bytecode_idx as usize) = Some(CacheEntry::Global(value)) }
                     } else {
                         let self_value = self.get_current_frame().get_self();
-                        universe.unknown_global(self, self_value, **symbol)?;
+                        universe.unknown_global(self, self_value, *symbol)?;
                     };
                     profiler_maybe_stop!(_timing);
                 }

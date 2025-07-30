@@ -90,6 +90,7 @@ pub enum StringLike {
 trait BaseValueExt {
     fn as_big_integer(self) -> Option<Gc<BigInt>>;
     fn as_string(self) -> Option<Gc<String>>;
+    fn as_allocated_double(self) -> Option<Gc<f64>>;
 }
 
 impl BaseValueExt for BaseValue {
@@ -118,6 +119,21 @@ impl BaseValueExt for BaseValue {
             let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
             match header {
                 BCObjMagicId::String => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn as_allocated_double(self) -> Option<Gc<f64>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::Double => Some(ptr.into()),
                 _ => None,
             }
         }
