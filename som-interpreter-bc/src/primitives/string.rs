@@ -211,9 +211,17 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
     Ok(universe.gc_interface.alloc(string.chars().skip(from).take(to - from).collect()))
 }
 
+#[cfg(any(feature = "l3bits", feature = "l4bits"))]
 fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
+    let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let char = *string.as_bytes().get((idx - 1) as usize).unwrap();
+    Ok(Value::TinyStr(vec![char]))
+}
 
+#[cfg(any(feature = "idiomatic", feature = "nan"))]
+fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let char = *string.as_bytes().get((idx - 1) as usize).unwrap();
     Ok(Value::Char(char.into()))

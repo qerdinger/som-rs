@@ -18,8 +18,6 @@ pub const INTEGER_TAG: u64 = 0b0010;
 pub const BOOLEAN_TAG: u64 = 0b0011;
 pub const DOUBLE_TAG: u64 = 0b0100;
 pub const CHAR_TAG: u64 = 0b0101;
-pub const STRING_TAG: u64 = 0b0110;
-pub const BIG_INTEGER_TAG: u64 = 0b0111;
 
 pub const DOUBLE_NEG_TAG: u64 = 0b1100;
 pub const DOUBLE_BOXED_TAG: u64 = 0b1111;
@@ -51,10 +49,7 @@ impl BaseValue {
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
         if matches!(
-            tag,
-            STRING_TAG |
-            BIG_INTEGER_TAG |
-            PTR_TAG
+            tag, PTR_TAG
         ) { return Self::new_ptr(tag, value); }
 
         Self {
@@ -87,8 +82,6 @@ impl BaseValue {
     pub fn is_ptr_type(self) -> bool {
         matches!(
             self.tag(),
-            STRING_TAG |
-            BIG_INTEGER_TAG |
             DOUBLE_BOXED_TAG |
             PTR_TAG
         )
@@ -227,7 +220,7 @@ impl BaseValue {
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(BIG_INTEGER_TAG, ptr)
+        Self::new(PTR_TAG, ptr)
     }
 
     #[inline(always)]
@@ -237,17 +230,7 @@ impl BaseValue {
         StringPtr: Deref<Target = String> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(STRING_TAG, ptr)
-    }
-
-    #[inline(always)]
-    pub fn is_big_integer(self) -> bool {
-        self.tag() == BIG_INTEGER_TAG
-    }
-
-    #[inline(always)]
-    pub fn is_string(self) -> bool {
-        self.tag() == STRING_TAG
+        Self::new(PTR_TAG, ptr)
     }
 
     #[inline(always)]
@@ -300,23 +283,23 @@ impl BaseValue {
         self.tag() == CHAR_TAG
     }
 
-    #[inline(always)]
-    pub fn as_big_integer<BigIntPtr>(self) -> Option<BigIntPtr>
-    where
-        u64: From<BigIntPtr>,
-        BigIntPtr: From<u64>,
-    {
-        self.is_big_integer().then(|| self.extract_gc_cell())
-    }
+    // #[inline(always)]
+    // pub fn as_big_integer<BigIntPtr>(self) -> Option<BigIntPtr>
+    // where
+    //     u64: From<BigIntPtr>,
+    //     BigIntPtr: From<u64>,
+    // {
+    //     self.is_big_integer().then(|| self.extract_gc_cell())
+    // }
 
-    #[inline(always)]
-    pub fn as_string<StringPtr>(self) -> Option<StringPtr>
-    where
-        StringPtr: From<u64>,
-        StringPtr: Deref<Target = String>,
-    {
-        self.is_string().then(|| self.extract_gc_cell())
-    }
+    // #[inline(always)]
+    // pub fn as_string<StringPtr>(self) -> Option<StringPtr>
+    // where
+    //     StringPtr: From<u64>,
+    //     StringPtr: Deref<Target = String>,
+    // {
+    //     self.is_string().then(|| self.extract_gc_cell())
+    // }
 
     // #[inline(always)]
     // pub fn as_tiny_str(self) -> Option<Vec<u8>> {

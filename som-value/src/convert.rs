@@ -32,12 +32,14 @@ impl TryFrom<BaseValue> for f64 {
     }
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 #[derive(Debug, Clone)]
 pub enum IntegerLike<BIGINTPTR> {
     Integer(i32),
     BigInteger(BIGINTPTR),
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 impl<BIGINTPTR> TryFrom<BaseValue> for IntegerLike<BIGINTPTR>
 where
     BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
@@ -54,6 +56,7 @@ where
     }
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 #[derive(Debug, Clone)]
 pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     Double(f64),
@@ -63,7 +66,7 @@ pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     __Phantom(std::marker::PhantomData<DOUBLEPTR>),
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -110,6 +113,7 @@ where
     // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
 }
 
+#[cfg(feature = "l4bits")]
 impl<DOUBLEPTR, BIGINTPTR> DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -169,6 +173,7 @@ where
     }
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl<DOUBLEPTR, BIGINTPTR> PartialEq for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -191,7 +196,7 @@ where
     }
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
     TinyStr(Vec<u8>),
@@ -216,7 +221,7 @@ pub enum StringLike<SPTR> {
     Char(char),
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
 impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
 where
     SPTR: Deref<Target = String> + From<u64> + Into<u64>,
@@ -228,7 +233,7 @@ where
         .as_string().map(Self::String)
             .or_else(|| value.as_tiny_str().map(Self::TinyStr))
             .or_else(|| value.as_symbol().map(Self::Symbol))
-            .or_else(|| value.as_char().map(Self::Char))
+            // .or_else(|| value.as_char().map(Self::Char))
             .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
     }
 }
@@ -249,6 +254,7 @@ where
     }
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
 
     #[cfg(any(feature = "l4bits", feature = "l3bits"))]

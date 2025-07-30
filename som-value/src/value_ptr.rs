@@ -10,7 +10,7 @@ use crate::nan::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG};
 use crate::l4bits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_TAG};
 
 #[cfg(feature = "l3bits")]
-use crate::l3bits::value::{BaseValue, BIG_INTEGER_TAG, STRING_TAG, DOUBLE_BOXED_TAG};
+use crate::l3bits::value::{BaseValue, DOUBLE_BOXED_TAG};
 
 /// Bundles a value to a pointer with the type to its pointer.
 #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
@@ -82,14 +82,14 @@ impl<T, PTR> From<TypedPtrValue<T, PTR>> for BaseValue {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for String {
     fn get_tag() -> u64 {
         STRING_TAG
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl HasPointerTag for BigInt {
     fn get_tag() -> u64 {
         BIG_INTEGER_TAG

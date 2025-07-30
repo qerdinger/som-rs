@@ -80,6 +80,36 @@ impl Value {
     }
 
     #[inline(always)]
+    pub fn as_big_integer(self) -> Option<Gc<BigInt>> {
+        if !self.is_ptr_type() { //TODO // TODO
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::BigInt => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_string(self) -> Option<Gc<String>> {
+        if !self.is_ptr_type() { //TODO // TODO
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::String => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
     pub fn as_array(self) -> Option<VecValue> {
         if !self.is_ptr_type() {
             return None;
@@ -166,10 +196,9 @@ impl Value {
                     universe.core.false_class()
                 }
             }
-            INTEGER_TAG | BIG_INTEGER_TAG => universe.core.integer_class(),
+            INTEGER_TAG => universe.core.integer_class(),
             SYMBOL_TAG => universe.core.symbol_class(),
             TINY_STRING_TAG => universe.core.string_class(),
-            STRING_TAG => universe.core.string_class(),
             CHAR_TAG => universe.core.string_class(),
             _ => {
                 if self.is_double() {
@@ -187,6 +216,10 @@ impl Value {
                         return cls.class();
                     } else if let Some(invokable) = self.as_invokable() {
                         return invokable.class(universe);
+                    } else if let Some(big_int) = self.as_big_integer() {
+                        return universe.core.integer_class();
+                    } else if let Some(string) = self.as_string() {
+                        return universe.core.string_class();
                     } else {
                         panic!("Error: Pointer not recognized!")
                     }
@@ -220,7 +253,6 @@ impl Value {
             NIL_TAG => "nil".to_string(),
             BOOLEAN_TAG => self.as_boolean().unwrap().to_string(),
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
-            BIG_INTEGER_TAG => self.as_big_integer::<Gc<BigInt>>().unwrap().to_string(),
             _ if self.is_double() => self.as_double().unwrap().to_string(),
             SYMBOL_TAG => {
                 let symbol = universe.lookup_symbol(self.as_symbol().unwrap());
@@ -231,7 +263,6 @@ impl Value {
                 }
             }
             TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
-            STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             _ => {
                 if let Some(block) = self.as_block() {
                     format!("instance of Block{}", block.nb_parameters() + 1)
@@ -245,6 +276,10 @@ impl Value {
                     // TODO: I think we can do better here (less allocations).
                     let strings: Vec<String> = arr.iter().map(|value| value.to_string(universe)).collect();
                     format!("#({})", strings.join(" "))
+                } else if let Some(big_int) = self.as_big_integer() {
+                    big_int.to_string()
+                } else if let Some(string) = self.as_string() {
+                    string.to_string()
                 } else {
                     panic!("unknown tag")
                 }
@@ -327,19 +362,19 @@ impl PartialEq for Value {
             (a as f64) == *b
         } else if let (Some(a), Some(b)) = (self.as_allocated_double::<Gc<f64>>(), self.as_integer()) {
             *a == (b as f64)
-        } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_big_integer()) {
+        } else if let (Some(a), Some(b)) = (self.as_big_integer(), other.as_big_integer()) {
             a == b
-        } else if let (Some(a), Some(b)) = (self.as_big_integer::<Gc<BigInt>>(), other.as_integer()) {
+        } else if let (Some(a), Some(b)) = (self.as_big_integer(), other.as_integer()) {
             (*a).eq(&BigInt::from(b))
-        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer::<Gc<BigInt>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer()) {
             BigInt::from(a).eq(&*b)
-        } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_string::<Gc<String>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_string(), other.as_string()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
             a == b
-        } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
+        } else if let (Some(a), Some(b)) = (self.as_string(), other.as_tiny_str()) {
             *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
-        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string()) {
             String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a.eq(&b)
