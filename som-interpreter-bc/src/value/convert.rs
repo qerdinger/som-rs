@@ -456,7 +456,13 @@ impl StringLike {
                 (*sym1 == *sym2) || (lookup_symbol_fn(**sym1) == lookup_symbol_fn(**sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
-            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap(),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                // std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap()
+                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                    (Ok(s1), Ok(s2)) => s1 == s2,
+                    _ => false,
+                }
+            },
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
                 let str2_bytes = str2.as_str().as_bytes();
                 tstr1.iter()

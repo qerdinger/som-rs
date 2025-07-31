@@ -317,7 +317,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         }
     }
     
-    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
+    #[cfg(feature = "l4bits")]
     pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
     where
         F: Copy + Fn(Interned) -> &'a str,
@@ -330,7 +330,13 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
                 (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
-            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap(),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                // std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap()
+                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                    (Ok(s1), Ok(s2)) => s1 == s2,
+                    _ => false,
+                }
+            },
             (StringLike::TinyStr(tstr1), StringLike::Char(c2)) => {
                 let s1 = std::str::from_utf8(tstr1).unwrap();
                 s1.len() == 1 &&  s1.chars().next().unwrap() == *c2
