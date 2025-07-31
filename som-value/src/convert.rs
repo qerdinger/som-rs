@@ -331,7 +331,6 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
-                // std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap()
                 match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
                     (Ok(s1), Ok(s2)) => s1 == s2,
                     _ => false,
