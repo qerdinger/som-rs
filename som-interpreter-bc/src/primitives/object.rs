@@ -97,7 +97,7 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
     Ok(())
 }
 
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(feature = "l3bits")]
 fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:";
 
@@ -129,6 +129,7 @@ fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(),
     Ok(())
 }
 
+#[cfg(feature = "l3bits")]
 fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:withArguments:";
 
@@ -151,6 +152,52 @@ fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe
     Ok(())
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits"))]
+fn perform(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    const SIGNATURE: &str = "Object>>#perform:";
+
+    // TODO: popping from the previous frame in this, and all the other perform family function should NOT happen
+    // if GC happens, that makes those values (receiver, signature) orphaned, and might cause a crash. it's highly unlikely in practice but TODO fix
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Interned);
+
+    let Some(invokable) = receiver.lookup_method(universe, signature) else {
+        let signature_str = universe.lookup_symbol(signature).to_owned();
+        let args = vec![receiver];
+        return universe
+            .does_not_understand(interpreter, receiver, signature, args)
+            .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe),));
+    };
+
+    // if let Method::Primitive(..) = &*invokable {
+    //     let mut frame = interpreter.current_frame;
+    //     let ret = frame.stack_pop();
+    //     frame.remove_n_last_elements(2);
+    //     frame.stack_push(ret);
+    // }
+
+    invokable.invoke(interpreter, universe, receiver, vec![]);
+    Ok(())
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+fn perform_with_arguments(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    const SIGNATURE: &str = "Object>>#perform:withArguments:";
+
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Interned, arguments => VecValue);
+
+    let Some(invokable) = receiver.lookup_method(universe, signature) else {
+        let signature_str = universe.lookup_symbol(signature).to_owned();
+        let args = std::iter::once(receiver.clone()).chain(arguments.iter().cloned()).collect(); // lame clone
+        return universe
+            .does_not_understand(interpreter, receiver.clone(), signature, args)
+            .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
+    };
+
+    invokable.invoke(interpreter, universe, receiver, arguments.iter().cloned().collect());
+    Ok(())
+}
+
+#[cfg(feature = "l3bits")]
 fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:inSuperclass:";
 
@@ -173,6 +220,25 @@ fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe
     Ok(())
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+fn perform_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    const SIGNATURE: &str = "Object>>#perform:inSuperclass:";
+
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Interned, class => Gc<Class>);
+
+    let Some(invokable) = class.lookup_method(signature) else {
+        let signature_str = universe.lookup_symbol(signature).to_owned();
+        let args = vec![receiver.clone()];
+        return universe
+            .does_not_understand(interpreter, Value::Class(class), signature, args)
+            .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
+    };
+
+    invokable.invoke(interpreter, universe, receiver, vec![]);
+    Ok(())
+}
+
+#[cfg(feature = "l3bits")]
 fn perform_with_arguments_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     const SIGNATURE: &str = "Object>>#perform:withArguments:inSuperclass:";
 
@@ -190,6 +256,26 @@ fn perform_with_arguments_in_super_class(interpreter: &mut Interpreter, universe
         let args = std::iter::once(receiver.clone()).chain(arguments.iter().cloned()).collect(); // lame to clone args, right?
         return universe
             .does_not_understand(interpreter, Value::Class(class), *signature, args)
+            .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
+    };
+
+    invokable.invoke(interpreter, universe, receiver, arguments.iter().cloned().collect());
+    Ok(())
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+fn perform_with_arguments_in_super_class(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
+    const SIGNATURE: &str = "Object>>#perform:withArguments:inSuperclass:";
+
+    pop_args_from_stack!(interpreter, receiver => Value, signature => Interned, arguments => VecValue, class => Gc<Class>);
+
+    let method = class.lookup_method(signature);
+
+    let Some(invokable) = method else {
+        let signature_str = universe.lookup_symbol(signature).to_owned();
+        let args = std::iter::once(receiver.clone()).chain(arguments.iter().cloned()).collect(); // lame to clone args, right?
+        return universe
+            .does_not_understand(interpreter, Value::Class(class), signature, args)
             .with_context(|| format!("`{SIGNATURE}`: method `{signature_str}` not found for `{}`", receiver.to_string(universe)));
     };
 

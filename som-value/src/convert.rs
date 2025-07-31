@@ -120,7 +120,7 @@ where
     // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
 }
 
-#[cfg(feature = "l4bits")]
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 impl<DOUBLEPTR, BIGINTPTR> DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,

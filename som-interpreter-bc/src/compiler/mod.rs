@@ -85,7 +85,43 @@ impl Hash for Literal {
     }
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(feature = "l4bits")]
+pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
+    match literal {
+        Literal::Symbol(sym) => Value::Symbol(*sym),
+        Literal::String(val) => {
+            //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
+
+            let val_len = (*val).len();
+            if val_len < 8 {
+                let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+                // println!("buf : {:?}", data_buf);
+                // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+                return Value::TinyStr(data_buf);
+            }
+
+            Value::String(val.clone())
+        },
+        Literal::Double(val) => {
+            let bits = val.to_bits();
+            let exponent  = (bits >> 52) & 0x7FF;
+            if (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1 {
+                // In range
+                return Value::Double(*val);
+            }
+            Value::new_allocated_double(gc_interface.alloc(*val))
+        },
+        Literal::Integer(val) => Value::Integer(*val),
+        Literal::BigInteger(val) => Value::BigInteger(val.clone()),
+        Literal::Array(val) => {
+            let arr = &val.iter().map(|lit| value_from_literal(lit, gc_interface)).collect::<Vec<_>>();
+            Value::Array(VecValue(gc_interface.alloc_slice(arr)))
+        }
+        Literal::Block(val) => Value::Block(val.clone()),
+    }
+}
+
+#[cfg(feature = "l3bits")]
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(gc_interface.alloc(*sym)),

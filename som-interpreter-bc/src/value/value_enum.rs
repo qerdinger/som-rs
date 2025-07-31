@@ -428,7 +428,43 @@ impl ValueEnum {
         }
     }
 
-    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
+    #[cfg(feature = "l4bits")]
+    /// Get the string representation of this value.
+    pub fn to_string(&self, universe: &Universe) -> String {
+        match self {
+            Self::Nil => "nil".to_string(),
+            Self::Boolean(value) => value.to_string(),
+            Self::Integer(value) => value.to_string(),
+            Self::BigInteger(value) => value.to_string(),
+            Self::Double(value) => value.to_string(),
+            Self::AllocatedDouble(value) => value.to_string(),
+            Self::Symbol(value) => {
+                let symbol = universe.lookup_symbol(*value);
+                if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
+                    format!("#'{}'", symbol.replace("'", "\\'"))
+                } else {
+                    format!("#{}", symbol)
+                }
+            },
+            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::String(value) => value.as_str().to_string(),
+            Self::Array(values) => {
+                // TODO (from nicolas): I think we can do better here (less allocations).
+                let strings: Vec<String> = values.iter().map(|value| value.to_string(universe)).collect();
+                format!("#({})", strings.join(" "))
+            }
+            Self::Block(block) => format!("instance of Block{}", block.nb_parameters() + 1),
+            Self::Instance(instance_ptr) => {
+                format!("instance of {} class", instance_ptr.class().name(),)
+            }
+            Self::Class(class) => class.name().to_string(),
+            Self::Invokable(invokable) => {
+                format!("{}>>#{}", invokable.holder().name(), invokable.signature())
+            }
+        }
+    }
+
+    #[cfg(feature = "l3bits")]
     /// Get the string representation of this value.
     pub fn to_string(&self, universe: &Universe) -> String {
         match self {
@@ -850,10 +886,21 @@ impl ValueEnum {
         }
     }
     /// Returns this value as a symbol, if such is its type.
+    #[cfg(feature = "l3bits")]
     #[inline(always)]
     pub fn as_symbol(&self) -> Option<Gc<Interned>> {
         if let ValueEnum::Symbol(v) = self {
             Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
+    #[inline(always)]
+    pub fn as_symbol(&self) -> Option<Interned> {
+        if let ValueEnum::Symbol(v) = self {
+            Some(*v)
         } else {
             None
         }
@@ -930,8 +977,15 @@ impl ValueEnum {
     }
 
     /// Returns a new symbol value.
+    #[cfg(feature = "l3bits")]
     #[inline(always)]
     pub fn new_symbol(value: Gc<Interned>) -> Self {
+        ValueEnum::Symbol(value)
+    }
+
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
+    #[inline(always)]
+    pub fn new_symbol(value: Interned) -> Self {
         ValueEnum::Symbol(value)
     }
 

@@ -22,8 +22,10 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
+#[cfg(feature = "l3bits")]
 use crate::gc::BCObjMagicId;
 
+#[cfg(feature = "l3bits")]
 use som_value::value::BaseValue;
 
 #[cfg(any(feature = "nan", feature = "l4bits"))]
@@ -87,6 +89,7 @@ pub enum StringLike {
     Symbol(Gc<Interned>),
 }
 
+#[cfg(feature = "l3bits")]
 trait BaseValueExt {
     fn as_big_integer(self) -> Option<Gc<BigInt>>;
     fn as_string(self) -> Option<Gc<String>>;
@@ -94,6 +97,7 @@ trait BaseValueExt {
     fn as_symbol(self) -> Option<Gc<Interned>>;
 }
 
+#[cfg(feature = "l3bits")]
 impl BaseValueExt for BaseValue {
     #[inline(always)]
     fn as_big_integer(self) -> Option<Gc<BigInt>> {
@@ -583,11 +587,12 @@ impl FromArgs for f64 {
     }
 }
 
-// impl FromArgs for Gc<Interned> {
-//     fn from_args(arg: Value) -> Result<Self, Error> {
-//         arg.as_symbol().context("could not resolve `Value` as `Symbol`")
-//     }
-// }
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+impl FromArgs for Interned {
+    fn from_args(arg: Value) -> Result<Self, Error> {
+        arg.as_symbol().context("could not resolve `Value` as `Symbol`")
+    }
+}
 
 #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl FromArgs for VecValue {
@@ -664,9 +669,17 @@ impl IntoValue for char {
     }
 }
 
+#[cfg(feature = "l3bits")]
 impl IntoValue for Gc<Interned> {
     fn into_value(&self) -> Value {
         Value::Symbol(self.clone())
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+impl IntoValue for Interned {
+    fn into_value(&self) -> Value {
+        Value::Symbol(*self)
     }
 }
 
