@@ -25,7 +25,8 @@ num-bigint = "0.4.6"
 # default = ["marksweep"]
 
 nan = []
-lbits = []
+l4bits = []
+l3bits = []
 idiomatic = []
 
 #default = ["mmtk/extreme_assertions"]

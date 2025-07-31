@@ -25,7 +25,7 @@ impl TrivialLiteralMethod {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrivialGlobalMethod {
     pub(crate) global_name: Interned,
@@ -40,7 +40,7 @@ pub struct TrivialGlobalMethod {
     pub(crate) cached_entry: RefCell<Option<Value>>,
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl TrivialGlobalMethod {
     pub fn invoke(&self, universe: &mut Universe, interpreter: &mut Interpreter) {
         interpreter.get_current_frame().stack_pop(); // receiver off the stack.
@@ -95,7 +95,7 @@ pub struct TrivialGetterMethod {
     pub(crate) field_idx: u8,
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl TrivialGetterMethod {
     pub fn invoke(&self, _universe: &mut Universe, interpreter: &mut Interpreter) {
         let arg = interpreter.get_current_frame().stack_pop();

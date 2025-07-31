@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Error};
 #[cfg(not(feature = "idiomatic"))]
 use som_gc::gcslice::GcSlice;
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 use som_value::value_ptr::HasPointerTag;
 
 use std::convert::TryFrom;
@@ -22,17 +22,33 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(feature = "l3bits")]
+use crate::gc::BCObjMagicId;
+
+#[cfg(feature = "l3bits")]
+use som_value::value::BaseValue;
+
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 pub type DoubleLike = som_value::convert::DoubleLike<Gc<f64>, Gc<BigInt>>;
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 pub type StringLike = som_value::convert::StringLike<Gc<String>>;
+
+#[cfg(feature = "l3bits")]
+use std::borrow::Cow;
 
 #[cfg(feature = "idiomatic")]
 use crate::value::value_enum::ValueEnum;
 
 #[cfg(feature = "idiomatic")]
+#[derive(Debug, Clone)]
+pub enum IntegerLike {
+    Integer(i32),
+    BigInteger(Gc<BigInt>),
+}
+
+#[cfg(feature = "l3bits")]
 #[derive(Debug, Clone)]
 pub enum IntegerLike {
     Integer(i32),
@@ -47,12 +63,101 @@ pub enum DoubleLike {
     BigInteger(Gc<BigInt>),
 }
 
+#[cfg(feature = "l3bits")]
+#[derive(Debug, Clone)]
+pub enum DoubleLike {
+    Double(f64),
+    Integer(i32),
+    BigInteger(Gc<BigInt>),
+    #[doc(hidden)]
+    __Phantom(std::marker::PhantomData<Gc<f64>>),
+}
+
 #[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum StringLike {
     String(Gc<String>),
     Symbol(Interned),
     Char(char),
+}
+
+#[cfg(feature = "l3bits")]
+#[derive(Debug, Clone)]
+pub enum StringLike {
+    TinyStr(Vec<u8>),
+    String(Gc<String>),
+    Symbol(Gc<Interned>),
+}
+
+#[cfg(feature = "l3bits")]
+trait BaseValueExt {
+    fn as_big_integer(self) -> Option<Gc<BigInt>>;
+    fn as_string(self) -> Option<Gc<String>>;
+    fn as_allocated_double(self) -> Option<Gc<f64>>;
+    fn as_symbol(self) -> Option<Gc<Interned>>;
+}
+
+#[cfg(feature = "l3bits")]
+impl BaseValueExt for BaseValue {
+    #[inline(always)]
+    fn as_big_integer(self) -> Option<Gc<BigInt>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::BigInt => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn as_string(self) -> Option<Gc<String>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::String => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn as_allocated_double(self) -> Option<Gc<f64>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::Double => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn as_symbol(self) -> Option<Gc<Interned>> {
+        if !self.is_ptr_type() {
+            return None;
+        }
+        let ptr = self.extract_pointer_bits();
+        unsafe {
+            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
+            match header {
+                BCObjMagicId::Symbol => Some(ptr.into()),
+                _ => None,
+            }
+        }
+    }
 }
 
 #[cfg(feature = "idiomatic")]
@@ -68,6 +173,19 @@ impl TryFrom<ValueEnum> for IntegerLike {
     }
 }
 
+#[cfg(feature = "l3bits")]
+impl TryFrom<BaseValue> for IntegerLike {
+    type Error = Error;
+
+    fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
+        value
+            .as_integer()
+            .map(Self::Integer)
+            .or_else(|| value.as_big_integer().map(Self::BigInteger))
+            .context("could not resolve `Value` as `Integer`, or `BigInteger`")
+    }
+}
+
 #[cfg(feature = "idiomatic")]
 impl TryFrom<ValueEnum> for DoubleLike {
     type Error = Error;
@@ -80,6 +198,27 @@ impl TryFrom<ValueEnum> for DoubleLike {
             _ => bail!("could not resolve `Value` as `Double`"),
         }
     }
+}
+
+#[cfg(feature = "l3bits")]
+impl TryFrom<BaseValue> for DoubleLike {
+    type Error = Error;
+
+    fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
+        value
+            .as_double()
+            .map(Self::Double)
+            .or_else(|| value.as_integer().map(Self::Integer))
+            // .or_else(|| value.as_allocated_double().map(|v: DOUBLEPTR | Self::Double(*v)))
+            .or_else(|| value.as_big_integer().map(Self::BigInteger))
+            .or_else(|| {
+                value.as_allocated_double().map(|v: Gc<f64> | {
+                    Self::Double(*v)
+                })
+            })
+            .context("could not resolve `Value` as `Double`, `Integer`, or `BigInteger`")
+    }
+    // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
 }
 
 #[cfg(feature = "idiomatic")]
@@ -110,6 +249,20 @@ impl TryFrom<ValueEnum> for StringLike {
         //     ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
         //     _ => bail!("could not resolve `Value` as `String`"),
         // }
+    }
+}
+
+#[cfg(feature = "l3bits")]
+impl TryFrom<BaseValue> for StringLike {
+    type Error = anyhow::Error;
+
+    fn try_from(value: BaseValue) -> Result<Self, Self::Error> {
+        value
+        .as_string().map(Self::String)
+            .or_else(|| value.as_tiny_str().map(Self::TinyStr))
+            .or_else(|| value.as_symbol().map(Self::Symbol))
+            // .or_else(|| value.as_char().map(Self::Char))
+            .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
     }
 }
 
@@ -158,6 +311,80 @@ impl PartialEq for DoubleLike {
     }
 }
 
+#[cfg(feature = "l3bits")]
+impl DoubleLike {
+    #[inline(always)]
+    pub fn lt(&self, other: &DoubleLike) -> bool {
+        match (self, other) {
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a < b,
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a < **b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => a < b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a < **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a < *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a < **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a < (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) < **b,
+            (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) < *b,
+            (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a < (*b as f64),
+            (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) => **a < BigInt::from(*b),
+            (DoubleLike::Integer(a), DoubleLike::BigInteger(b)) => BigInt::from(*a) < **b,
+            _ => {
+                panic!("invalid types when comparing two doublelike values");
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn gt(&self, other: &DoubleLike) -> bool {
+        match (self, other) {
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => a > b,
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a > **b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => a > b,
+            (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) > *b,
+            (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a > (*b as f64),
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a > **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a > *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a > **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a > (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) > **b,
+            (DoubleLike::BigInteger(a), DoubleLike::Integer(b)) => **a > BigInt::from(*b),
+            (DoubleLike::Integer(a), DoubleLike::BigInteger(b)) => BigInt::from(*a) > **b,
+            _ => {
+                panic!("invalid types when comparing two doublelike values");
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn lt_or_eq(&self, other: &DoubleLike) -> bool {
+        Self::lt(self, other) || Self::eq(self, other)
+    }
+
+    #[inline(always)]
+    pub fn gt_or_eq(&self, other: &DoubleLike) -> bool {
+        Self::gt(self, other) || Self::eq(self, other)
+    }
+}
+
+#[cfg(feature = "l3bits")]
+impl PartialEq for DoubleLike {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (DoubleLike::Integer(a), DoubleLike::Integer(b)) => *a == *b,
+            (DoubleLike::Double(a), DoubleLike::Double(b)) => a == b,
+            (DoubleLike::Integer(a), DoubleLike::Double(b)) => (*a as f64) == *b,
+            (DoubleLike::Double(a), DoubleLike::Integer(b)) => *a == (*b as f64),
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::AllocatedDouble(b)) => **a == **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Double(b)) => **a == *b,
+            // (DoubleLike::Double(a), DoubleLike::AllocatedDouble(b)) => *a == **b,
+            // (DoubleLike::AllocatedDouble(a), DoubleLike::Integer(b)) => **a == (*b as f64),
+            // (DoubleLike::Integer(a), DoubleLike::AllocatedDouble(b)) => (*a as f64) == **b,
+            (DoubleLike::BigInteger(a), DoubleLike::BigInteger(b)) => **a == **b,
+            _ => false,
+        }
+    }
+}
+
 #[cfg(feature = "idiomatic")]
 impl StringLike {
     pub fn as_str<'a>(&'a self, lookup_symbol: impl Fn(Interned) -> &'a str) -> std::borrow::Cow<'a, str> {
@@ -199,7 +426,74 @@ impl StringLike {
         }
     }
 }
-//
+
+#[cfg(feature = "l3bits")]
+impl StringLike {
+    pub fn as_str<'a, F>(&'a self, lookup_symbol_fn: F) -> Cow<'a, str>
+    where
+        F: Fn(Interned) -> &'a str,
+    {
+        match self {
+            // StringLike::TinyStr(tiny_str) => {
+            //     let full = std::str::from_utf8(&tiny_str[..])
+            //         .expect("TinyStr buffer was not valid UTF-8");
+
+            //     let trimmed = full.trim_end_matches('\0');
+            //     Cow::from(trimmed)
+            // },
+            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::String(ref value) => Cow::from(value.as_str()),
+            StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(**sym)),
+        }
+    }
+
+    pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
+    where
+        F: Copy + Fn(Interned) -> &'a str,
+    {
+        match (&self, &other) {
+            (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
+                (*sym1 == *sym2) || (lookup_symbol_fn(**sym1) == lookup_symbol_fn(**sym2))
+            },
+            (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                    (Ok(s1), Ok(s2)) => s1 == s2,
+                    _ => false,
+                }
+            },
+            (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
+                let str2_bytes = str2.as_str().as_bytes();
+                tstr1.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
+                let str1_bytes = str1.as_str().as_bytes();
+                tstr2.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
+                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s2 = lookup_symbol_fn(**sym2);
+                s1 == s2
+            },
+            (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
+                let s1 = lookup_symbol_fn(**sym1);
+                let s2 = std::str::from_utf8(tstr2).unwrap();
+
+                s1 == s2
+            },
+            _ => {
+                let a = self.as_str(lookup_symbol_fn);
+                let b = other.as_str(lookup_symbol_fn);
+                *a == *b
+            }
+        }
+    }
+}
+
 
 pub trait IntoValue {
     #[allow(clippy::wrong_self_convention)] // though i guess we could/should rename it
@@ -266,7 +560,7 @@ impl FromArgs for i32 {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl FromArgs for f64 {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg
@@ -298,13 +592,14 @@ impl FromArgs for f64 {
     }
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 impl FromArgs for Interned {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_symbol().context("could not resolve `Value` as `Symbol`")
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl FromArgs for VecValue {
    fn from_args(arg: Value) -> Result<Self, Error> {
        Ok(VecValue(GcSlice::from(arg.extract_pointer_bits())))
@@ -348,7 +643,7 @@ impl FromArgs for Gc<Method> {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl<T: HasPointerTag> FromArgs for Gc<T> {
     fn from_args(arg: Value) -> Result<Self, Error> {
         Ok(arg.as_value_ptr().unwrap())
@@ -379,20 +674,28 @@ impl IntoValue for char {
     }
 }
 
+#[cfg(feature = "l3bits")]
+impl IntoValue for Gc<Interned> {
+    fn into_value(&self) -> Value {
+        Value::Symbol(self.clone())
+    }
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 impl IntoValue for Interned {
     fn into_value(&self) -> Value {
         Value::Symbol(*self)
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for Gc<f64> {
     fn into_value(&self) -> Value {
         Value::AllocatedDouble(self.clone())
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for Vec<u8> {
     fn into_value(&self) -> Value {
         Value::TinyStr(self.clone())
@@ -487,13 +790,24 @@ impl IntoReturn for () {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(feature = "l4bits")]
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
         match self {
             StringLike::TinyStr(value) => value.into_value(),
             StringLike::String(value) => value.into_value(),
             StringLike::Char(value) => value.into_value(),
+            StringLike::Symbol(value) => value.into_value(),
+        }
+    }
+}
+
+#[cfg(feature = "l3bits")]
+impl IntoValue for StringLike {
+    fn into_value(&self) -> Value {
+        match self {
+            StringLike::TinyStr(value) => value.into_value(),
+            StringLike::String(value) => value.into_value(),
             StringLike::Symbol(value) => value.into_value(),
         }
     }
@@ -519,7 +833,7 @@ impl IntoValue for IntegerLike {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 impl IntoValue for DoubleLike {
     fn into_value(&self) -> Value {
         match self {

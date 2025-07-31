@@ -84,7 +84,14 @@ fn new(interp: &mut Interpreter, universe: &mut Universe) -> Result<(), Error> {
     Ok(())
 }
 
+#[cfg(feature = "l3bits")]
+fn name(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Interned>, Error> {
+    pop_args_from_stack!(interp, receiver => Gc<Class>);
+    let sym: Interned = universe.intern_symbol(receiver.name());
+    Ok(universe.gc_interface.alloc(sym))
+}
 
+#[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
 fn name(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => Gc<Class>);
     Ok(universe.intern_symbol(receiver.name()))
@@ -118,6 +125,21 @@ fn methods(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue
     Ok(VecValue(allocated))
 }
 
+#[cfg(feature = "l3bits")]
+fn fields(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, Error> {
+    pop_args_from_stack!(interp, receiver => Gc<Class>);
+    // let fields: Vec<Value> = receiver.field_names.iter().copied().map(Value::Symbol).collect();
+    let mut values = Vec::with_capacity(receiver.field_names.len());
+
+    for interned in &receiver.field_names {
+        let gc_interned = universe.gc_interface.alloc(*interned);
+        values.push(Value::Symbol(gc_interned));
+    }
+    // Ok(VecValue(universe.gc_interface.alloc_slice(&fields)))
+    Ok(VecValue(universe.gc_interface.alloc_slice(&values)))
+}
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 fn fields(interp: &mut Interpreter, universe: &mut Universe) -> Result<VecValue, Error> {
     pop_args_from_stack!(interp, receiver => Gc<Class>);
     let fields: Vec<Value> = receiver.field_names.iter().copied().map(Value::Symbol).collect();

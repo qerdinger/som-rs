@@ -8,7 +8,7 @@ use num_bigint::BigInt;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 use som_value::value_ptr::TypedPtrValue;
 
 #[cfg(feature = "idiomatic")]
@@ -21,7 +21,7 @@ use som_gc::gcslice::GcSlice;
 use std::fmt;
 
 /// Represents an SOM value as an enum.
-#[cfg(feature = "lbits")]
+#[cfg(feature = "l4bits")]
 #[derive(Clone)]
 pub enum ValueEnum {
     /// The **nil** value.
@@ -37,6 +37,37 @@ pub enum ValueEnum {
     AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
     Symbol(Interned),
+    /// A string value.
+    TinyStr(Vec<u8>),
+    String(Gc<String>),
+    /// An array of values.
+    Array(Gc<Vec<ValueEnum>>),
+    /// A block value, ready to be evaluated.
+    Block(Gc<Block>),
+    /// A generic (non-primitive) class instance.
+    Instance(Gc<Instance>),
+    /// A bare class object.
+    Class(Gc<Class>),
+    /// A bare invokable.
+    Invokable(Gc<Method>),
+}
+
+#[cfg(feature = "l3bits")]
+#[derive(Clone)]
+pub enum ValueEnum {
+    /// The **nil** value.
+    Nil,
+    /// A boolean value (**true** or **false**).
+    Boolean(bool),
+    /// An integer value.
+    Integer(i32),
+    /// A big integer value (arbitrarily big).
+    BigInteger(Gc<BigInt>),
+    /// An floating-point value.
+    Double(f64),
+    AllocatedDouble(Gc<f64>),
+    /// An interned symbol value.
+    Symbol(Gc<Interned>),
     /// A string value.
     TinyStr(Vec<u8>),
     String(Gc<String>),
@@ -111,7 +142,7 @@ pub enum ValueEnum {
     Invokable(Gc<Method>),
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl From<Value> for ValueEnum {
     fn from(value: Value) -> Self {
         if let Some(value) = value.as_double() {
@@ -220,7 +251,7 @@ impl From<Value> for ValueEnum {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl From<ValueEnum> for Value {
     fn from(value: ValueEnum) -> Self {
         match value {
@@ -291,7 +322,7 @@ impl From<ValueEnum> for Value {
 
 impl ValueEnum {
     /// Get the class of the current value.
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     pub fn class(&self, universe: &Universe) -> Gc<Class> {
         match self {
             Self::Nil => universe.core.nil_class(),
@@ -368,7 +399,7 @@ impl ValueEnum {
     }
 
     /// Assign a value to a local binding within this value.
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
     pub fn assign_local(&mut self, idx: usize, value: Self) {
         match self {
             Self::Instance(instance_ptr) => Instance::assign_field(instance_ptr, idx, value.into()),
@@ -397,7 +428,7 @@ impl ValueEnum {
         }
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(feature = "l4bits")]
     /// Get the string representation of this value.
     pub fn to_string(&self, universe: &Universe) -> String {
         match self {
@@ -409,6 +440,42 @@ impl ValueEnum {
             Self::AllocatedDouble(value) => value.to_string(),
             Self::Symbol(value) => {
                 let symbol = universe.lookup_symbol(*value);
+                if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
+                    format!("#'{}'", symbol.replace("'", "\\'"))
+                } else {
+                    format!("#{}", symbol)
+                }
+            },
+            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::String(value) => value.as_str().to_string(),
+            Self::Array(values) => {
+                // TODO (from nicolas): I think we can do better here (less allocations).
+                let strings: Vec<String> = values.iter().map(|value| value.to_string(universe)).collect();
+                format!("#({})", strings.join(" "))
+            }
+            Self::Block(block) => format!("instance of Block{}", block.nb_parameters() + 1),
+            Self::Instance(instance_ptr) => {
+                format!("instance of {} class", instance_ptr.class().name(),)
+            }
+            Self::Class(class) => class.name().to_string(),
+            Self::Invokable(invokable) => {
+                format!("{}>>#{}", invokable.holder().name(), invokable.signature())
+            }
+        }
+    }
+
+    #[cfg(feature = "l3bits")]
+    /// Get the string representation of this value.
+    pub fn to_string(&self, universe: &Universe) -> String {
+        match self {
+            Self::Nil => "nil".to_string(),
+            Self::Boolean(value) => value.to_string(),
+            Self::Integer(value) => value.to_string(),
+            Self::BigInteger(value) => value.to_string(),
+            Self::Double(value) => value.to_string(),
+            Self::AllocatedDouble(value) => value.to_string(),
+            Self::Symbol(value) => {
+                let symbol = universe.lookup_symbol(**value);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                     format!("#'{}'", symbol.replace("'", "\\'"))
                 } else {
@@ -494,10 +561,9 @@ impl PartialEq for ValueEnum {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl PartialEq for ValueEnum {
     fn eq(&self, other: &Self) -> bool {
-        println!("CHECK-1.");
         match (self, other) {
             (Self::Nil, Self::Nil) => true,
             (Self::Boolean(a), Self::Boolean(b)) => a.eq(b),
@@ -548,7 +614,7 @@ impl PartialEq for ValueEnum {
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(any(feature = "l4bits", feature = "l3bits"))]
 impl fmt::Debug for ValueEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -677,13 +743,13 @@ impl ValueEnum {
         matches!(self, ValueEnum::Symbol(_))
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn is_allocated_double(&self) -> bool {
         matches!(self, ValueEnum::AllocatedDouble(_))
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn is_tiny_str(&self) -> bool {
         matches!(self, ValueEnum::TinyStr(_))
@@ -742,7 +808,7 @@ impl ValueEnum {
         }
     }
     /// Returns this value as an array, if such is its type.
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
         if let ValueEnum::Array(v) = self {
@@ -820,6 +886,17 @@ impl ValueEnum {
         }
     }
     /// Returns this value as a symbol, if such is its type.
+    #[cfg(feature = "l3bits")]
+    #[inline(always)]
+    pub fn as_symbol(&self) -> Option<Gc<Interned>> {
+        if let ValueEnum::Symbol(v) = self {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }
+
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
     #[inline(always)]
     pub fn as_symbol(&self) -> Option<Interned> {
         if let ValueEnum::Symbol(v) = self {
@@ -839,7 +916,7 @@ impl ValueEnum {
         }
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_allocated_double(&self) -> Option<Gc<f64>> {
         if let ValueEnum::AllocatedDouble(v) = self {
@@ -849,7 +926,7 @@ impl ValueEnum {
         }
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
         if let ValueEnum::TinyStr(v) = self {
@@ -900,12 +977,19 @@ impl ValueEnum {
     }
 
     /// Returns a new symbol value.
+    #[cfg(feature = "l3bits")]
+    #[inline(always)]
+    pub fn new_symbol(value: Gc<Interned>) -> Self {
+        ValueEnum::Symbol(value)
+    }
+
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
     #[inline(always)]
     pub fn new_symbol(value: Interned) -> Self {
         ValueEnum::Symbol(value)
     }
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn new_allocated_double(value: Gc<f64>) -> Self {
         ValueEnum::AllocatedDouble(value)
@@ -924,7 +1008,7 @@ impl ValueEnum {
         ValueEnum::String(value)
     }
     /// Returns a new array value.
-    #[cfg(any(feature = "nan", feature = "lbits"))]
+    #[cfg(any(feature = "nan", feature = "l4bits"))]
     #[inline(always)]
     pub fn new_array(value: Gc<Vec<ValueEnum>>) -> Self {
         ValueEnum::Array(value)

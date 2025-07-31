@@ -3,7 +3,7 @@ use crate::gcslice::GcSlice;
 use mmtk::util::{Address, ObjectReference};
 use mmtk::vm::slot::{SimpleSlot, Slot};
 
-#[cfg(any(feature = "nan", feature = "lbits"))]
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
 use som_value::value::BaseValue;
 
 // pub type SOMSlot = mmtk::vm::slot::SimpleSlot;

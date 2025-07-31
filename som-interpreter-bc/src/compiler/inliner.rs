@@ -11,6 +11,7 @@ use som_core::bytecode::Bytecode;
 use som_core::interner::Interner;
 use som_gc::gc_interface::GCInterface;
 use som_gc::gcref::Gc;
+use som_gc::gc_interface::SOMAllocator;
 
 pub(crate) enum JumpType {
     JumpOnFalse,

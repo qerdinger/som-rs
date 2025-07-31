@@ -1,15 +1,25 @@
-use anyhow::{Context, Error};
-use num_bigint::BigInt;
-use std::borrow::Cow;
-use std::ops::Deref;
+use anyhow::Context;
 
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use anyhow::Error;
+
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use num_bigint::BigInt;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use std::borrow::Cow;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
+use std::ops::Deref;
+#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 use crate::interned::Interned;
 
 #[cfg(feature = "nan")]
 use crate::nan::value::BaseValue;
 
-#[cfg(feature = "lbits")]
-use crate::lbits::value::BaseValue;
+#[cfg(any(feature = "l4bits"))]
+use crate::l4bits::value::BaseValue;
+
+#[cfg(any(feature = "l3bits"))]
+use crate::l3bits::value::BaseValue;
 
 // Unfinished: using TryFrom to replace the convert.rs types FromArgs
 
@@ -29,12 +39,14 @@ impl TryFrom<BaseValue> for f64 {
     }
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 #[derive(Debug, Clone)]
 pub enum IntegerLike<BIGINTPTR> {
     Integer(i32),
     BigInteger(BIGINTPTR),
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 impl<BIGINTPTR> TryFrom<BaseValue> for IntegerLike<BIGINTPTR>
 where
     BIGINTPTR: Deref<Target = BigInt> + From<u64> + Into<u64>,
@@ -51,6 +63,7 @@ where
     }
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 #[derive(Debug, Clone)]
 pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     Double(f64),
@@ -60,7 +73,7 @@ pub enum DoubleLike<DOUBLEPTR, BIGINTPTR> {
     __Phantom(std::marker::PhantomData<DOUBLEPTR>),
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(feature = "l4bits")]
 impl<DOUBLEPTR, BIGINTPTR> TryFrom<BaseValue> for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -107,6 +120,7 @@ where
     // .or_else(|| value.as_allocated_double().map(Self::AllocatedDouble))
 }
 
+#[cfg(any(feature = "l4bits", feature = "nan"))]
 impl<DOUBLEPTR, BIGINTPTR> DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -166,6 +180,7 @@ where
     }
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl<DOUBLEPTR, BIGINTPTR> PartialEq for DoubleLike<DOUBLEPTR, BIGINTPTR>
 where
     DOUBLEPTR: Deref<Target = f64> + From<u64> + Into<u64>,
@@ -188,7 +203,7 @@ where
     }
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(feature = "l4bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
     TinyStr(Vec<u8>),
@@ -213,7 +228,7 @@ pub enum StringLike<SPTR> {
     Char(char),
 }
 
-#[cfg(feature = "lbits")]
+#[cfg(feature = "l4bits")]
 impl<SPTR> TryFrom<BaseValue> for StringLike<SPTR>
 where
     SPTR: Deref<Target = String> + From<u64> + Into<u64>,
@@ -225,7 +240,7 @@ where
         .as_string().map(Self::String)
             .or_else(|| value.as_tiny_str().map(Self::TinyStr))
             .or_else(|| value.as_symbol().map(Self::Symbol))
-            .or_else(|| value.as_char().map(Self::Char))
+            // .or_else(|| value.as_char().map(Self::Char))
             .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
     }
 }
@@ -246,9 +261,10 @@ where
     }
 }
 
+#[cfg(any(feature = "nan", feature = "l4bits"))]
 impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
 
-    #[cfg(feature = "lbits")]
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     pub fn as_str<'a, F>(&'a self, lookup_symbol_fn: F) -> Cow<'a, str>
     where
         F: Fn(Interned) -> &'a str,
@@ -301,7 +317,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         }
     }
     
-    #[cfg(feature = "lbits")]
+    #[cfg(feature = "l4bits")]
     pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
     where
         F: Copy + Fn(Interned) -> &'a str,
@@ -314,7 +330,12 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
                 (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
-            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => std::str::from_utf8(tstr1).unwrap() == std::str::from_utf8(tstr2).unwrap(),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                    (Ok(s1), Ok(s2)) => s1 == s2,
+                    _ => false,
+                }
+            },
             (StringLike::TinyStr(tstr1), StringLike::Char(c2)) => {
                 let s1 = std::str::from_utf8(tstr1).unwrap();
                 s1.len() == 1 &&  s1.chars().next().unwrap() == *c2

@@ -19,6 +19,7 @@ use mmtk::util::{Address, ObjectReference, OpaquePointer, VMMutatorThread, VMThr
 use mmtk::vm::SlotVisitor;
 use mmtk::{memory_manager, AllocationSemantics, MMTKBuilder, Mutator};
 use num_bigint::BigInt;
+use som_value::interned::Interned;
 use std::sync::{Condvar, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
@@ -322,7 +323,10 @@ impl SOMAllocator for GCInterface {
     }
 
     /// Allocates a type, but with a given size.
-    fn alloc_with_size<T: HasTypeInfoForGC>(&mut self, obj: T, size: usize, alloc_origin_marker: Option<AllocSiteMarker>) -> Gc<T> {
+    fn alloc_with_size<T: HasTypeInfoForGC>(&mut self, obj: T, mut size: usize, alloc_origin_marker: Option<AllocSiteMarker>) -> Gc<T> {
+        if size < MIN_OBJECT_SIZE {
+            size = MIN_OBJECT_SIZE; //TODO // TODO
+        }
         debug_assert!(size >= MIN_OBJECT_SIZE);
 
         // adding VM header size (type info) to amount we allocate
@@ -493,6 +497,7 @@ pub trait HasTypeInfoForGC {
 pub const STRING_MAGIC_ID: u8 = 10;
 pub const BIGINT_MAGIC_ID: u8 = 11;
 pub const DOUBLE_MAGIC_ID: u8 = 12;
+pub const INTERNED_MAGIC_ID: u8 = 13;
 
 impl HasTypeInfoForGC for String {
     fn get_magic_gc_id() -> u8 {
@@ -509,6 +514,12 @@ impl HasTypeInfoForGC for BigInt {
 impl HasTypeInfoForGC for f64 {
     fn get_magic_gc_id() -> u8 {
         DOUBLE_MAGIC_ID
+    }
+}
+
+impl HasTypeInfoForGC for Interned {
+    fn get_magic_gc_id() -> u8 {
+        INTERNED_MAGIC_ID
     }
 }
 
