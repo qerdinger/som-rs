@@ -35,7 +35,7 @@ pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
 #[cfg(any(feature = "nan", feature = "l4bits"))]
 pub type StringLike = som_value::convert::StringLike<Gc<String>>;
 
-#[cfg(feature = "l3bits")]
+#[cfg(any(feature = "l3bits", feature = "idiomatic"))]
 use std::borrow::Cow;
 
 #[cfg(feature = "idiomatic")]
@@ -76,9 +76,9 @@ pub enum DoubleLike {
 #[cfg(feature = "idiomatic")]
 #[derive(Debug, Clone)]
 pub enum StringLike {
+    TinyStr(Vec<u8>),
     String(Gc<String>),
     Symbol(Interned),
-    Char(char),
 }
 
 #[cfg(feature = "l3bits")]
@@ -241,9 +241,9 @@ impl TryFrom<ValueEnum> for StringLike {
         value
             .as_string()
             .map(Self::String)
+            .or_else(|| value.as_tiny_str().map(Self::TinyStr))
             .or_else(|| value.as_symbol().map(Self::Symbol))
-            .or_else(|| value.as_char().map(Self::Char))
-            .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
+            .context("could not resolve `Value` as `String`, `Symbol` or `TinyStr`")
         // match value {
         //     ValueEnum::String(s) => Ok(StringLike::String(s)),
         //     ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
@@ -262,7 +262,7 @@ impl TryFrom<BaseValue> for StringLike {
             .or_else(|| value.as_tiny_str().map(Self::TinyStr))
             .or_else(|| value.as_symbol().map(Self::Symbol))
             // .or_else(|| value.as_char().map(Self::Char))
-            .context("could not resolve `Value` as `String`, `Symbol` or `Char`")
+            .context("could not resolve `Value` as `String`, `Symbol` or `TinyStr`")
     }
 }
 
@@ -389,35 +389,61 @@ impl PartialEq for DoubleLike {
 impl StringLike {
     pub fn as_str<'a>(&'a self, lookup_symbol: impl Fn(Interned) -> &'a str) -> std::borrow::Cow<'a, str> {
         match self {
-            StringLike::String(s) => std::borrow::Cow::Borrowed(s.as_str()),
+            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => std::borrow::Cow::Borrowed(lookup_symbol(*sym)),
-            StringLike::Char(c) => std::borrow::Cow::Owned(c.to_string()),
         }
     }
 
-    pub fn eq_with_lookup(&self, other: &Self, lookup_symbol: impl Fn(Interned) -> &'static str) -> bool {
-        match (self, other) {
-            (StringLike::Char(c1), StringLike::Char(c2)) => c1 == c2,
-            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
-            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
-            (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => sym1 == sym2 || lookup_symbol(*sym1) == lookup_symbol(*sym2),
-            (StringLike::String(s1), StringLike::String(s2)) => s1 == s2,
-            _ => false,
-        }
-    }
+    // pub fn eq_with_lookup(&self, other: &Self, lookup_symbol: impl Fn(Interned) -> &'static str) -> bool {
+    //     match (self, other) {
+    //         (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => c1 == c2,
+    //         (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
+    //         (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
+    //         (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => sym1 == sym2 || lookup_symbol(*sym1) == lookup_symbol(*sym2),
+    //         (StringLike::String(s1), StringLike::String(s2)) => s1 == s2,
+    //         _ => false,
+    //     }
+    // }
 
     pub fn eq_stringlike<'a, F>(&'a self, other: &'a Self, lookup_symbol_fn: F) -> bool
     where
         F: Copy + Fn(Interned) -> &'a str,
     {
         match (&self, &other) {
-            (StringLike::Char(c1), StringLike::Char(c2)) => *c1 == *c2,
-            (StringLike::Char(c1), StringLike::String(s2)) => s2.len() == 1 && *c1 == s2.chars().next().unwrap(),
-            (StringLike::String(s1), StringLike::Char(c2)) => s1.len() == 1 && s1.chars().next().unwrap() == *c2,
             (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
                 (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
+            (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
+                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                    (Ok(s1), Ok(s2)) => s1 == s2,
+                    _ => false,
+                }
+            },
+            (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
+                let str2_bytes = str2.as_str().as_bytes();
+                tstr1.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
+                let str1_bytes = str1.as_str().as_bytes();
+                tstr2.iter()
+                    .filter(|&&b| b != 0)
+                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+            },
+            (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
+                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s2 = lookup_symbol_fn(*sym2);
+                s1 == s2
+            },
+            (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
+                let s1 = lookup_symbol_fn(*sym1);
+                let s2 = std::str::from_utf8(tstr2).unwrap();
+
+                s1 == s2
+            },
             _ => {
                 let a = self.as_str(lookup_symbol_fn);
                 let b = other.as_str(lookup_symbol_fn);
@@ -668,6 +694,7 @@ impl IntoValue for f64 {
     }
 }
 
+#[cfg(not(feature = "idiomatic"))]
 impl IntoValue for char {
     fn into_value(&self) -> Value {
         Value::Char(*self)

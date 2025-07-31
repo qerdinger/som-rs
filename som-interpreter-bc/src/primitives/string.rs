@@ -94,7 +94,14 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
     match receiver {
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
         StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
-        StringLike::Char(_) => Ok(Value::Integer(1)),
+        StringLike::TinyStr(data) => {
+            // let mut size = data.iter().rev().take_while(|&&x| x == 0).count() as i32;
+            // size = 8 - size;
+            // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
+            // Ok(Value::Integer(if size == 0 {1} else {size}))
+            // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
+            Ok(Value::Integer(data.len() as i32))
+        }
     }
 }
 
@@ -213,7 +220,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 
     let symbol = match receiver {
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
-        StringLike::Char(char) => universe.intern_symbol(&String::from(char)),
+        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
         StringLike::Symbol(symbol) => symbol,
     };
 
@@ -244,7 +251,7 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
     Ok(universe.gc_interface.alloc(string.chars().skip(from).take(to - from).collect()))
 }
 
-#[cfg(any(feature = "l3bits", feature = "l4bits"))]
+#[cfg(any(feature = "l3bits", feature = "l4bits", feature = "idiomatic"))]
 fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
@@ -252,7 +259,7 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
     Ok(Value::TinyStr(vec![char]))
 }
 
-#[cfg(any(feature = "idiomatic", feature = "nan"))]
+#[cfg(feature = "nan")]
 fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));

@@ -99,8 +99,8 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
+    TinyStr(Vec<u8>),
     String(Gc<String>),
-    Char(char),
     /// An array of values.
     Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
@@ -308,7 +308,7 @@ impl From<ValueEnum> for Value {
             ValueEnum::Double(value) => Self::new_double(value),
             ValueEnum::Symbol(value) => Self::new_symbol(value),
             ValueEnum::String(value) => Self::new_string(value),
-            ValueEnum::Char(value) => Self::new_char(value),
+            ValueEnum::TinyStr(value) => Self::new_tiny_str(value),
             ValueEnum::Array(_value) => unimplemented!(
                 "no impl for arr. would need mutator to be passed as an argument to create a new Gc. not hard, but we'd ditch the From trait"
             ),
@@ -373,7 +373,7 @@ impl ValueEnum {
             Self::Double(_) => universe.core.double_class(),
             Self::Symbol(_) => universe.core.symbol_class(),
             Self::String(_) => universe.core.string_class(),
-            Self::Char(_) => universe.core.string_class(),
+            Self::TinyStr(_) => universe.core.string_class(),
             Self::Array(_) => universe.core.array_class(),
             Self::Block(block) => block.class(universe),
             Self::Instance(instance_ptr) => instance_ptr.class(),
@@ -419,12 +419,12 @@ impl ValueEnum {
             | Self::Double(_)
             | Self::Symbol(_)
             | Self::String(_)
-            | Self::Char(_)
+            | Self::TinyStr(_)
             | Self::BigInteger(_)
             | Self::Array(_)
             | Self::Block(_)
             | Self::Invokable(_)
-            => unreachable!("Attempting to assign a local in Nil/Bool/Int/Double/Symbol/String/Char/BigInt/Array/Block/Invokable"),
+            => unreachable!("Attempting to assign a local in Nil/Bool/Int/Double/Symbol/String/TinyStr/BigInt/Array/Block/Invokable"),
         }
     }
 
@@ -676,8 +676,8 @@ impl ValueEnum {
     /// Returns whether this value is a char.
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn is_char(&self) -> bool {
-        matches!(self, ValueEnum::Char(_))
+    pub fn is_tiny_str(&self) -> bool {
+        matches!(self, ValueEnum::TinyStr(_))
     }
     /// Returns whether this value is an array.
     #[inline(always)]
@@ -800,8 +800,8 @@ impl ValueEnum {
     /// Returns this value as a char, if such is its type.
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn as_char(&self) -> Option<char> {
-        if let ValueEnum::Char(v) = self {
+    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+        if let ValueEnum::TinyStr(v) = self {
             Some(v.clone())
         } else {
             None
@@ -960,8 +960,8 @@ impl ValueEnum {
 
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn new_char(value: char) -> Self {
-        ValueEnum::Char(value)
+    pub fn new_tiny_str(value: Vec<u8>) -> Self {
+        ValueEnum::TinyStr(value)
     }
 
     /// Returns a new integer value.
