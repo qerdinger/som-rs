@@ -53,7 +53,7 @@ benchmark:
   parallel:
     matrix:
       - MACHINE:
-          - zullie1
+          # - zullie1
           - yuria
           - yuria2
           - yuria3
