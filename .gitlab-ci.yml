@@ -53,9 +53,11 @@ benchmark:
   parallel:
     matrix:
       - MACHINE:
+          - zulllie1
           - yuria
           - yuria2
           - yuria3
+          - yuria4
   stage: benchmark
   tags: [$MACHINE]
   script:
