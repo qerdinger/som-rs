@@ -823,7 +823,6 @@ impl IntoValue for StringLike {
         match self {
             StringLike::TinyStr(value) => value.into_value(),
             StringLike::String(value) => value.into_value(),
-            StringLike::Char(value) => value.into_value(),
             StringLike::Symbol(value) => value.into_value(),
         }
     }
