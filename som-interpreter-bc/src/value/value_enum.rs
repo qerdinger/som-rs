@@ -14,7 +14,7 @@ use som_value::value_ptr::TypedPtrValue;
 #[cfg(feature = "idiomatic")]
 use crate::value::value_ptr::TypedPtrValue;
 
-#[cfg(feature = "idiomatic")]
+#[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits", feature = "l3bits"))]
 use som_gc::gcslice::GcSlice;
 
 #[cfg(not(feature = "idiomatic"))]
@@ -41,7 +41,7 @@ pub enum ValueEnum {
     TinyStr(Vec<u8>),
     String(Gc<String>),
     /// An array of values.
-    Array(Gc<Vec<ValueEnum>>),
+    Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -72,7 +72,7 @@ pub enum ValueEnum {
     TinyStr(Vec<u8>),
     String(Gc<String>),
     /// An array of values.
-    Array(Gc<Vec<ValueEnum>>),
+    Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -131,7 +131,7 @@ pub enum ValueEnum {
     /// A string value.
     String(Gc<String>),
     /// An array of values.
-    Array(Gc<Vec<ValueEnum>>),
+    Array(GcSlice<Value>),
     /// A block value, ready to be evaluated.
     Block(Gc<Block>),
     /// A generic (non-primitive) class instance.
@@ -808,17 +808,7 @@ impl ValueEnum {
         }
     }
     /// Returns this value as an array, if such is its type.
-    #[cfg(any(feature = "nan", feature = "l4bits", feature = "l3bits"))]
-    #[inline(always)]
-    pub fn as_array(&self) -> Option<Gc<Vec<ValueEnum>>> {
-        if let ValueEnum::Array(v) = self {
-            Some(v.clone())
-        } else {
-            None
-        }
-    }
-
-    #[cfg(feature = "idiomatic")]
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_array(&self) -> Option<GcSlice<Value>> {
         if let ValueEnum::Array(v) = self {
@@ -1008,13 +998,7 @@ impl ValueEnum {
         ValueEnum::String(value)
     }
     /// Returns a new array value.
-    #[cfg(any(feature = "nan", feature = "l4bits"))]
-    #[inline(always)]
-    pub fn new_array(value: Gc<Vec<ValueEnum>>) -> Self {
-        ValueEnum::Array(value)
-    }
-
-    #[cfg(feature = "idiomatic")]
+    #[cfg(any(feature = "idiomatic", feature = "nan", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn new_array(value: GcSlice<Value>) -> Self {
         ValueEnum::Array(value)
