@@ -67,6 +67,8 @@ impl BaseValue {
         self.encoded
     }
 
+    /// Returns the tag bits of the value.
+    #[inline(always)]
     pub fn tag(self) -> u64 {
         self.encoded & TAG_BITS
     }
