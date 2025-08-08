@@ -45,9 +45,24 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
+        if matches!(tag, PTR_TAG) {
+            return Self::new_ptr(tag, value);
+        }
         Self {
             encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
+    }
+
+    #[inline(always)]
+    pub const fn new_ptr(tag: u64, ptr: u64) -> Self {
+        Self {
+            encoded: ptr | (tag & TAG_BITS),
+        }
+    }
+
+    #[inline(always)]
+    pub fn decode_ptr(encoded: u64) -> u64 {
+        encoded & !TAG_BITS
     }
 
     #[inline(always)]
@@ -75,6 +90,9 @@ impl BaseValue {
 
     #[inline(always)]
     pub fn payload(self) -> u64 {
+        if self.is_ptr_type() {
+            return Self::decode_ptr(self.encoded);
+        }
         self.encoded >> VALUE_TAG_BITS
     }
 
