@@ -29,7 +29,7 @@ pub const PAYLOAD_SHIFT: u32 = 3;
 const IM_DOUBLE_RANGE_MIN: u64 = 0x380;
 const IM_DOUBLE_RANGE_MAX: u64 = 0x47F;
 
-// pub const CHAR_TAG: u64 = 0b101;
+// pub const CHAR_TAG: u64 = 0b101; Replaced by TinyStr
 
 #[repr(C)]
 #[allow(clippy::derived_hash_with_manual_eq)]
