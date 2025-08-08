@@ -51,12 +51,10 @@ impl Value {
         new_double(value: f64) -> Self,
         new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
-        new_char(value: char) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
         new_tiny_str(value: Vec<u8>) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
-        Char(value: char) -> Self,
         Integer(value: i32) -> Self,
         Double(value: f64) -> Self,
         AllocatedDouble(value: Gc<f64>) -> Self,
@@ -64,6 +62,8 @@ impl Value {
         BigInteger(value: Gc<BigInt>) -> Self,
         TinyStr(value: Vec<u8>) -> Self,
         String(value: Gc<String>) -> Self,
+        // new_char(value: char) -> Self,
+        // Char(value: char) -> Self,
     );
 
     #[inline(always)]
@@ -117,7 +117,6 @@ impl Value {
             SYMBOL_TAG => universe.core.symbol_class(),
             TINY_STRING_TAG => universe.core.string_class(),
             STRING_TAG => universe.core.string_class(),
-            CHAR_TAG => universe.core.string_class(),
             ARRAY_TAG => universe.core.array_class(),
             BLOCK_TAG => self.as_block().unwrap().class(universe),
             INSTANCE_TAG => self.as_instance().unwrap().class(),
@@ -132,6 +131,7 @@ impl Value {
                     panic!("unknown tag")
                 }
             }
+            // CHAR_TAG => universe.core.string_class(),
         }
     }
 

@@ -67,7 +67,7 @@ pub enum ValueEnum {
     Double(f64),
     AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
-    Symbol(Gc<Interned>),
+    Symbol(Interned),
     /// A string value.
     TinyStr(Vec<u8>),
     String(Gc<String>),
@@ -475,7 +475,7 @@ impl ValueEnum {
             Self::Double(value) => value.to_string(),
             Self::AllocatedDouble(value) => value.to_string(),
             Self::Symbol(value) => {
-                let symbol = universe.lookup_symbol(**value);
+                let symbol = universe.lookup_symbol(*value);
                 if symbol.chars().any(|ch| ch.is_whitespace() || ch == '\'') {
                     format!("#'{}'", symbol.replace("'", "\\'"))
                 } else {
@@ -876,17 +876,7 @@ impl ValueEnum {
         }
     }
     /// Returns this value as a symbol, if such is its type.
-    #[cfg(feature = "l3bits")]
-    #[inline(always)]
-    pub fn as_symbol(&self) -> Option<Gc<Interned>> {
-        if let ValueEnum::Symbol(v) = self {
-            Some(v.clone())
-        } else {
-            None
-        }
-    }
-
-    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
+    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
     pub fn as_symbol(&self) -> Option<Interned> {
         if let ValueEnum::Symbol(v) = self {
@@ -969,7 +959,7 @@ impl ValueEnum {
     /// Returns a new symbol value.
     #[cfg(feature = "l3bits")]
     #[inline(always)]
-    pub fn new_symbol(value: Gc<Interned>) -> Self {
+    pub fn new_symbol(value: Interned) -> Self {
         ValueEnum::Symbol(value)
     }
 

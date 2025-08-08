@@ -281,33 +281,6 @@ impl Universe {
     }
 
     /// Call `doesNotUnderstand:` on the given value, if it is defined.
-    #[cfg(feature = "l3bits")]
-    #[allow(unreachable_code, unused_variables)]
-    pub fn does_not_understand(&mut self, interpreter: &mut Interpreter, value: Value, symbol: Interned, args: Vec<Value>) -> Option<()> {
-        // dbg!(&interpreter.stack);
-        // panic!("does not understand: {:?}, called on {:?}", self.interner.lookup(symbol), &value);
-
-        let method_name = self.intern_symbol("doesNotUnderstand:arguments:");
-        let method = value.lookup_method(self, method_name)?;
-
-        // #[cfg(debug_assertions)]
-        // {
-        //     let stack_trace_fn = crate::primitives::system::get_instance_primitive("printStackTrace")?;
-        //     stack_trace_fn(interpreter, self).expect("couldn't print stack trace");
-        //     std::process::exit(1);
-        // }
-
-        interpreter.push_method_frame_with_args(
-            method,
-            vec![value, Value::Symbol(self.gc_interface.alloc(symbol)), Value::Array(VecValue(self.gc_interface.alloc_slice(&args)))],
-            self.gc_interface,
-        );
-
-        Some(())
-    }
-
-    /// Call `doesNotUnderstand:` on the given value, if it is defined.
-    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
     #[allow(unreachable_code, unused_variables)]
     pub fn does_not_understand(&mut self, interpreter: &mut Interpreter, value: Value, symbol: Interned, args: Vec<Value>) -> Option<()> {
         // dbg!(&interpreter.stack);
@@ -333,19 +306,6 @@ impl Universe {
     }
 
     /// Call `unknownGlobal:` on the given value, if it is defined.
-    #[cfg(feature = "l3bits")]
-    pub fn unknown_global(&mut self, interpreter: &mut Interpreter, value: Value, name: Interned) -> Option<()> {
-        let method_name = self.intern_symbol("unknownGlobal:");
-        let method = value.lookup_method(self, method_name)?;
-
-        interpreter.get_current_frame().bytecode_idx = interpreter.bytecode_idx;
-        interpreter.push_method_frame_with_args(method, vec![value, Value::Symbol(self.gc_interface.alloc(name))], self.gc_interface);
-
-        Some(())
-    }
-
-    /// Call `unknownGlobal:` on the given value, if it is defined.
-    #[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
     pub fn unknown_global(&mut self, interpreter: &mut Interpreter, value: Value, name: Interned) -> Option<()> {
         let method_name = self.intern_symbol("unknownGlobal:");
         let method = value.lookup_method(self, method_name)?;

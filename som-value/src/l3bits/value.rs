@@ -17,7 +17,7 @@ pub const NIL_TAG: u64 = 0b001;
 pub const INTEGER_TAG: u64 = 0b010;
 pub const BOOLEAN_TAG: u64 = 0b011;
 pub const DOUBLE_TAG: u64 = 0b100;
-pub const CHAR_TAG: u64 = 0b101;
+pub const SYMBOL_TAG: u64 = 0b101;
 
 pub const DOUBLE_NEG_TAG: u64 = 0b110;
 
@@ -28,6 +28,8 @@ pub const ROTATE_AMOUNT: u32 = 1;
 pub const PAYLOAD_SHIFT: u32 = 3;
 const IM_DOUBLE_RANGE_MIN: u64 = 0x380;
 const IM_DOUBLE_RANGE_MAX: u64 = 0x47F;
+
+// pub const CHAR_TAG: u64 = 0b101;
 
 #[repr(C)]
 #[allow(clippy::derived_hash_with_manual_eq)]
@@ -170,18 +172,14 @@ impl BaseValue {
     }
 
     #[inline(always)]
-    pub fn new_symbol<Ptr>(value: Ptr) -> Self
-    where
-        u64: From<Ptr>,
-        Ptr: Deref<Target = Interned> + From<u64>,
-    {
-        Self::new(PTR_TAG, value.into())
+    pub fn new_symbol(value: Interned) -> Self {
+        Self::new(SYMBOL_TAG, value.0.into())
     }
 
-    #[inline(always)]
-    pub fn new_char(value: char) -> Self {
-        Self::new(CHAR_TAG, value.into())
-    }
+    // #[inline(always)]
+    // pub fn new_char(value: char) -> Self {
+    //     Self::new(CHAR_TAG, value.into())
+    // }
 
     #[inline(always)]
     pub fn new_big_integer<BigIntPtr>(value: BigIntPtr) -> Self
@@ -206,6 +204,11 @@ impl BaseValue {
     #[inline(always)]
     pub fn is_tiny_str(self) -> bool {
         self.tag() == TINY_STRING_TAG
+    }
+
+    #[inline(always)]
+    pub fn is_symbol(self) -> bool {
+        self.tag() == SYMBOL_TAG
     }
 
     #[inline(always)]
@@ -238,10 +241,10 @@ impl BaseValue {
         self.payload() == 0
     }
 
-    #[inline(always)]
-    pub fn is_char(self) -> bool {
-        self.tag() == CHAR_TAG
-    }
+    // #[inline(always)]
+    // pub fn is_char(self) -> bool {
+    //     self.tag() == CHAR_TAG
+    // }
 
     #[inline(always)]
     pub fn as_tiny_str(self) -> Option<Vec<u8>> {
@@ -269,6 +272,11 @@ impl BaseValue {
     }
 
     #[inline(always)]
+    pub fn as_symbol(self) -> Option<Interned> {
+        self.is_symbol().then_some(Interned(self.payload() as u16))
+    }
+
+    #[inline(always)]
     pub fn as_double(self) -> Option<f64> {
         if !matches!(self.tag(), DOUBLE_TAG | DOUBLE_NEG_TAG) {
             return None;
@@ -288,10 +296,10 @@ impl BaseValue {
         self.is_boolean().then_some(self.is_boolean_true())
     }
 
-    #[inline(always)]
-    pub fn as_char(self) -> Option<char> {
-        self.is_char().then_some(self.payload() as u8 as char)
-    }
+    // #[inline(always)]
+    // pub fn as_char(self) -> Option<char> {
+    //     self.is_char().then_some(self.payload() as u8 as char)
+    // }
 
     #[inline(always)]
     pub fn as_boolean_unchecked(self) -> bool {
@@ -356,19 +364,15 @@ impl BaseValue {
 
     #[allow(non_snake_case)]
     #[inline(always)]
-    pub fn Symbol<Ptr>(value: Ptr) -> Self
-    where
-        u64: From<Ptr>,
-        Ptr: Deref<Target = Interned> + From<u64>,
-    {
+    pub fn Symbol(value: Interned) -> Self {
         Self::new_symbol(value)
     }
 
-    #[allow(non_snake_case)]
-    #[inline(always)]
-    pub fn Char(value: char) -> Self {
-        Self::new_char(value)
-    }
+    // #[allow(non_snake_case)]
+    // #[inline(always)]
+    // pub fn Char(value: char) -> Self {
+    //     Self::new_char(value)
+    // }
 
     #[allow(non_snake_case)]
     #[inline(always)]

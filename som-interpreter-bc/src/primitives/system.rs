@@ -83,22 +83,6 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
     Ok(system)
 }
 
-#[cfg(feature = "l3bits")]
-fn load(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Class>, Error> {
-    pop_args_from_stack!(interp, _a => Value, class_name => Value);
-
-    let class_name: Gc<Interned> = match class_name.as_symbol() {
-        Some(sym) => sym,
-        _ => panic!()
-    };
-
-    let class_name = universe.lookup_symbol(*class_name).to_string();
-    let class = universe.load_class(class_name)?;
-
-    Ok(class)
-}
-
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 fn load(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Class>, Error> {
     pop_args_from_stack!(interp, _a => Value, class_name => Interned);
     let class_name = universe.lookup_symbol(class_name).to_string();
@@ -107,54 +91,17 @@ fn load(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Class>, 
     Ok(class)
 }
 
-#[cfg(feature = "l3bits")]
-fn has_global(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Value);
-    let name: Gc<Interned> = match name.as_symbol() {
-        Some(sym) => sym,
-        _ => panic!()
-    };
-    
-    Ok(universe.has_global(*name))
-}
-
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 fn has_global(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
     pop_args_from_stack!(interp, _a => Value, name => Interned);
     Ok(universe.has_global(name))
 }
 
-#[cfg(feature = "l3bits")]
-fn global(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Value);
-    let name: Gc<Interned> = match name.as_symbol() {
-        Some(sym) => sym,
-        _ => panic!()
-    };
-
-    Ok(universe.lookup_global(*name))
-}
-
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 fn global(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
     pop_args_from_stack!(interp, _a => Value, name => Interned);
 
     Ok(universe.lookup_global(name))
 }
 
-#[cfg(feature = "l3bits")]
-fn global_put(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
-    pop_args_from_stack!(interp, _a => Value, name => Value, value => Value);
-    let name: Gc<Interned> = match name.as_symbol() {
-        Some(sym) => sym,
-        _ => panic!()
-    };
-
-    universe.assign_global(*name, value.clone());
-    Ok(Some(value))
-}
-
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 fn global_put(interp: &mut Interpreter, universe: &mut Universe) -> Result<Option<Value>, Error> {
     pop_args_from_stack!(interp, _a => Value, name => Interned, value => Value);
     universe.assign_global(name, value.clone());

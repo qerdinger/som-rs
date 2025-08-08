@@ -67,7 +67,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
             Ok(Value::Integer(data.len() as i32))
         }
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
-        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(*sym).len() as i32)),
+        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
     }
 }
 
@@ -187,16 +187,16 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 }
 
 #[cfg(feature = "l3bits")]
-fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Interned>, Error> {
+fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
 
     let symbol = match receiver {
         StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
-        StringLike::Symbol(symbol) => *symbol,
+        StringLike::Symbol(symbol) => symbol,
     };
 
-    Ok(universe.gc_interface.alloc(symbol))
+    Ok(symbol)
 }
 
 #[cfg(feature = "nan")]

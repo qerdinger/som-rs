@@ -124,7 +124,7 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
 #[cfg(feature = "l3bits")]
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
-        Literal::Symbol(sym) => Value::Symbol(gc_interface.alloc(*sym)),
+        Literal::Symbol(sym) => Value::Symbol(*sym),
         Literal::String(val) => {
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
