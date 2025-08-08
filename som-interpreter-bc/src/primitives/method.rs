@@ -13,9 +13,6 @@ use once_cell::sync::Lazy;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
 
-#[cfg(feature = "l3bits")]
-use som_gc::gc_interface::SOMAllocator;
-
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     Box::new([
         ("holder", self::holder.into_func(), true),
@@ -29,14 +26,6 @@ fn holder(invokable: Gc<Method>) -> Result<Gc<Class>, Error> {
     Ok(invokable.holder().clone())
 }
 
-#[cfg(feature = "l3bits")]
-fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Interned>, Error> {
-    pop_args_from_stack!(interp, invokable => Gc<Method>);
-    let sym: Interned = universe.intern_symbol(invokable.signature());
-    Ok(universe.gc_interface.alloc(sym))
-}
-
-#[cfg(any(feature = "nan", feature = "idiomatic", feature = "l4bits"))]
 fn signature(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
     pop_args_from_stack!(interp, invokable => Gc<Method>);
     Ok(universe.intern_symbol(invokable.signature()))

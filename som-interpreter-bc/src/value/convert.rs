@@ -86,7 +86,7 @@ pub enum StringLike {
 pub enum StringLike {
     TinyStr(Vec<u8>),
     String(Gc<String>),
-    Symbol(Gc<Interned>),
+    Symbol(Interned),
 }
 
 #[cfg(feature = "l3bits")]
@@ -94,7 +94,6 @@ trait BaseValueExt {
     fn as_big_integer(self) -> Option<Gc<BigInt>>;
     fn as_string(self) -> Option<Gc<String>>;
     fn as_allocated_double(self) -> Option<Gc<f64>>;
-    fn as_symbol(self) -> Option<Gc<Interned>>;
 }
 
 #[cfg(feature = "l3bits")]
@@ -139,21 +138,6 @@ impl BaseValueExt for BaseValue {
             let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
             match header {
                 BCObjMagicId::Double => Some(ptr.into()),
-                _ => None,
-            }
-        }
-    }
-
-    #[inline(always)]
-    fn as_symbol(self) -> Option<Gc<Interned>> {
-        if !self.is_ptr_type() {
-            return None;
-        }
-        let ptr = self.extract_pointer_bits();
-        unsafe {
-            let header: &BCObjMagicId = &*((ptr - 8) as *const BCObjMagicId);
-            match header {
-                BCObjMagicId::Symbol => Some(ptr.into()),
                 _ => None,
             }
         }
@@ -469,7 +453,7 @@ impl StringLike {
             // },
             StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
-            StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(**sym)),
+            StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
         }
     }
 
@@ -479,7 +463,7 @@ impl StringLike {
     {
         match (&self, &other) {
             (StringLike::Symbol(sym1), StringLike::Symbol(sym2)) => {
-                (*sym1 == *sym2) || (lookup_symbol_fn(**sym1) == lookup_symbol_fn(**sym2))
+                (*sym1 == *sym2) || (lookup_symbol_fn(*sym1) == lookup_symbol_fn(*sym2))
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
@@ -502,11 +486,11 @@ impl StringLike {
             },
             (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
                 let s1 = std::str::from_utf8(tstr1).unwrap();
-                let s2 = lookup_symbol_fn(**sym2);
+                let s2 = lookup_symbol_fn(*sym2);
                 s1 == s2
             },
             (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
-                let s1 = lookup_symbol_fn(**sym1);
+                let s1 = lookup_symbol_fn(*sym1);
                 let s2 = std::str::from_utf8(tstr2).unwrap();
 
                 s1 == s2
@@ -618,7 +602,6 @@ impl FromArgs for f64 {
     }
 }
 
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 impl FromArgs for Interned {
     fn from_args(arg: Value) -> Result<Self, Error> {
         arg.as_symbol().context("could not resolve `Value` as `Symbol`")
@@ -694,21 +677,13 @@ impl IntoValue for f64 {
     }
 }
 
-#[cfg(not(feature = "idiomatic"))]
+#[cfg(feature = "nan")]
 impl IntoValue for char {
     fn into_value(&self) -> Value {
         Value::Char(*self)
     }
 }
 
-#[cfg(feature = "l3bits")]
-impl IntoValue for Gc<Interned> {
-    fn into_value(&self) -> Value {
-        Value::Symbol(self.clone())
-    }
-}
-
-#[cfg(any(feature = "nan", feature = "l4bits", feature = "idiomatic"))]
 impl IntoValue for Interned {
     fn into_value(&self) -> Value {
         Value::Symbol(*self)
