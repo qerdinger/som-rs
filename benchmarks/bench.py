@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-CSV_FILE = "som-rs-5516.csv"
+CSV_FILE = "som-rs-5523.csv"
 SEPARATOR  = ","
 
 
