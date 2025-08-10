@@ -5,7 +5,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# ---------------- Config ----------------
 CSV_PATH = "som-rs-5523.csv"
 
 GLOBAL_OUT_ROOT = "output3"
@@ -33,7 +32,6 @@ for sub in SUBFOLDERS:
     os.makedirs(os.path.join(GLOBAL_OUT_ROOT, sub), exist_ok=True)
 
 def bench_summary(bench_df: pd.DataFrame) -> pd.DataFrame:
-    """Per-exe stats + % vs baseline (lower is better) + CoV."""
     stats = (bench_df.groupby("exe")["value"]
              .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
              .reset_index())
@@ -94,7 +92,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
             pct_txt = f" ({sign}{abs(pct)*100:.1f}% vs base)"
         else:
             pct_txt = ""
-        label = f"{value_fmt.format(mean_val)} • n={n}{pct_txt}"
+        label = f"{value_fmt.format(mean_val)} {pct_txt}"
         annotate_text_side(ax, i, mean_val, label, xmin, xmax)
 
     envs = ", ".join(map(str, sorted(bench_data["envid"].unique())))
@@ -106,7 +104,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
     best_exe = stats.loc[stats["mean"].idxmin(), "exe"]
     overall_min, overall_max = bench_data["value"].min(), bench_data["value"].max()
     fig.text(0.01, 0.01,
-             f"Best mean: {best_exe} • Range: {value_fmt.format(overall_min)}–{value_fmt.format(overall_max)}",
+             f"Best mean: {best_exe} - Range: {value_fmt.format(overall_min)}–{value_fmt.format(overall_max)}",
              ha="left", va="bottom", fontsize=8, color="#444")
 
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -157,7 +155,7 @@ def plot_bench_panel(bench, out_path):
 
     i = 0
     for key in ["time_ms", "bytes", "gc_count", "gc_time_ms"]:
-        if key not in slices: 
+        if key not in slices:
             axes[i].axis("off"); i += 1; continue
         data, xlabel, fmt = slices[key]
         box_no_dots(axes[i], data, exe_order, xlabel)
@@ -217,5 +215,77 @@ for env in sorted(df["envid"].unique()):
     os.makedirs(panel_dir, exist_ok=True)
     for bench in sorted(env_df["bench"].unique()):
         plot_bench_panel(bench, os.path.join(panel_dir, f"{bench}.png"))
+
+def geometric_mean(x):
+    x = np.asarray([v for v in x if np.isfinite(v) and v > 0])
+    if x.size == 0:
+        return np.nan
+    return float(np.exp(np.mean(np.log(x))))
+
+def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
+    os.makedirs(outdir, exist_ok=True)
+
+    bench_means = (df_scope.groupby(["bench", "exe"])["value"]
+                   .mean()
+                   .reset_index())
+
+    have_base = bench_means["bench"].isin(
+        bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
+    )
+    bench_means = bench_means.loc[have_base].copy()
+    if bench_means.empty:
+        print(f"[overall] No benches with baseline for {metric_name}.")
+        return
+
+    pivot = bench_means.pivot(index="bench", columns="exe", values="value")
+    if BASELINE_EXE not in pivot.columns:
+        print(f"[overall] Baseline '{BASELINE_EXE}' missing for {metric_name}.")
+        return
+
+    speedup = pivot.apply(lambda col: pivot[BASELINE_EXE] / col)
+
+    # Geometric mean & median speedup across benches (skip NaN/inf)
+    gmeans = speedup.apply(geometric_mean, axis=0)
+    medians = speedup.median(axis=0, skipna=True)
+
+    winners = pivot.eq(pivot.min(axis=1), axis=0)
+    win_rates = winners.sum(axis=0) / winners.shape[0]
+
+    summary = pd.DataFrame({
+        "exe": speedup.columns,
+        "geo_mean_speedup_vs_baseline": gmeans.values,
+        "median_speedup_vs_baseline": medians.values,
+        "win_rate": win_rates.values,
+    }).sort_values(
+        ["geo_mean_speedup_vs_baseline", "win_rate", "median_speedup_vs_baseline"],
+        ascending=False
+    ).reset_index(drop=True)
+    summary.insert(0, "rank", np.arange(1, len(summary) + 1))
+
+    out_csv = os.path.join(outdir, f"OVERALL_{metric_name}.csv")
+    summary.to_csv(out_csv, index=False)
+
+    print("\n=== OVERALL PERFORMANCE —", metric_name, "===")
+    for _, r in summary.iterrows():
+        ex = r["exe"]
+        g = r["geo_mean_speedup_vs_baseline"]
+        m = r["median_speedup_vs_baseline"]
+        w = r["win_rate"]
+        star = "  (baseline)" if ex == BASELINE_EXE else ""
+        print(f"{int(r['rank']):>2}. {ex:<24} "
+              f"gmean (×) vs base: {g:6.3f} | median (×): {m:6.3f} | best (winning) rate: {w*100:5.1f}% {star}")
+
+overall_specs = [
+    ("time_ms",   {"criterion": "total",     "unit": "ms"}),
+    ("bytes",     {"criterion": "Allocated", "unit": "bytes"}),
+    ("gc_time_ms",{"criterion": "GC time",   "unit": "ms"}),
+    ("gc_count",  {"criterion": "GC count",  "unit": "n"}),
+]
+
+for metric_name, spec in overall_specs:
+    scope = df[(df["criterion"] == spec["criterion"]) & (df["unit"] == spec["unit"])]
+    if scope.empty:
+        continue
+    overall_comparison(scope, metric_name, SUMMARY_ROOT)
 
 print("Done!")
