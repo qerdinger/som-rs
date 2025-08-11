@@ -17,10 +17,13 @@ use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 #[cfg(feature = "idiomatic")]
 use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 
-#[cfg(any(feature = "nan", feature = "idiomatic"))]
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
+#[cfg(feature = "nan")]
 use som_gc::gcref::Gc;
 
-#[cfg(any(feature = "nan", feature = "idiomatic"))]
+#[cfg(feature = "nan")]
 use anyhow::Context;
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
@@ -106,10 +109,24 @@ fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
 }
 
 #[cfg(feature = "idiomatic")]
-fn from_string(_: Value, string: Gc<String>) -> Result<f64, Error> {
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#fromString:";
 
-    string.parse().with_context(|| format!("`{SIGNATURE}`: could not parse `f64` from string"))
+    pop_args_from_stack!(interp, _a => Value, string => Value);
+
+    let string = match string.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    match string.parse::<f64>() {
+        Ok(parsed) => Ok(Value::Double(parsed)),
+        Err(err) => panic!("'{}': {}", SIGNATURE, err),
+    }
 }
 
 

@@ -133,7 +133,7 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
     Ok(!string.is_empty() && string.chars().all(char::is_whitespace))
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
 fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
 
@@ -152,17 +152,6 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 }
 
 #[cfg(feature = "nan")]
-fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
-    pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
-
-    let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
-    let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
-
-    let final_str = format!("{s1}{s2}");
-    Ok(Value::String(universe.gc_interface.alloc(final_str)))
-}
-
-#[cfg(feature = "idiomatic")]
 fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
 
