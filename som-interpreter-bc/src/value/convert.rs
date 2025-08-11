@@ -35,7 +35,7 @@ pub type IntegerLike = som_value::convert::IntegerLike<Gc<BigInt>>;
 #[cfg(any(feature = "nan", feature = "l4bits"))]
 pub type StringLike = som_value::convert::StringLike<Gc<String>>;
 
-#[cfg(any(feature = "l3bits", feature = "idiomatic"))]
+#[cfg(feature = "l3bits")]
 use std::borrow::Cow;
 
 #[cfg(feature = "idiomatic")]

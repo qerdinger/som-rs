@@ -14,9 +14,6 @@ use crate::value::convert::{Primitive, StringLike};
 #[cfg(feature = "idiomatic")]
 use crate::value::convert::Primitive;
 
-#[cfg(feature = "idiomatic")]
-use std::borrow::Cow;
-
 use crate::value::Value;
 use anyhow::Error;
 use once_cell::sync::Lazy;
@@ -286,6 +283,14 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     // let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
 
     let final_str = format!("{s1}{s2}");
+    let final_str_len = final_str.len();
+
+    if final_str_len < 8 {
+        let data_buf: Vec<u8> = (*final_str).as_bytes().to_vec();
+        // final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
 

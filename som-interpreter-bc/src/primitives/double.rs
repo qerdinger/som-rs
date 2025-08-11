@@ -17,13 +17,13 @@ use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 #[cfg(feature = "idiomatic")]
 use crate::value::convert::{DoubleLike, IntoValue, Primitive};
 
-#[cfg(any(feature = "nan", feature = "idiomatic"))]
+#[cfg(feature = "nan")]
 use som_gc::gcref::Gc;
 
 #[cfg(feature = "idiomatic")]
 use crate::value::value_enum::ValueEnum;
 
-#[cfg(any(feature = "nan", feature = "idiomatic"))]
+#[cfg(feature = "nan")]
 use anyhow::Context;
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
@@ -171,18 +171,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     Ok(universe.gc_interface.alloc(receiver.to_string()))
 }
 
-#[cfg(feature = "idiomatic")]
-fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
-    const SIGNATURE: &str = "Double>>#asString";
-
-    pop_args_from_stack!(interp, receiver => DoubleLike);
-
-    let receiver = promote!(SIGNATURE, receiver);
-
-    Ok(universe.gc_interface.alloc(receiver.to_string()))
-}
-
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#asString";
 
