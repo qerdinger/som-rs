@@ -151,18 +151,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     Ok(universe.gc_interface.alloc(receiver.to_string()))
 }
 
-#[cfg(feature = "idiomatic")]
-fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
-    const SIGNATURE: &str = "Double>>#asString";
-
-    pop_args_from_stack!(interp, receiver => DoubleLike);
-
-    let receiver = promote!(SIGNATURE, receiver);
-
-    Ok(universe.gc_interface.alloc(receiver.to_string()))
-}
-
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const SIGNATURE: &str = "Double>>#asString";
 

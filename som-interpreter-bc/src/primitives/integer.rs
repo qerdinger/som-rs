@@ -96,19 +96,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
     Ok(universe.gc_interface.alloc(receiver))
 }
 
-#[cfg(feature = "idiomatic")]
-fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
-    pop_args_from_stack!(interp, receiver => IntegerLike);
-
-    let receiver = match receiver {
-        IntegerLike::Integer(value) => value.to_string(),
-        IntegerLike::BigInteger(value) => value.to_string(),
-    };
-
-    Ok(universe.gc_interface.alloc(receiver))
-}
-
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
 
