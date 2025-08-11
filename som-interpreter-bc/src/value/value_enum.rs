@@ -38,7 +38,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(u8),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -69,7 +69,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(u8),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -99,7 +99,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(u8),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -446,7 +446,7 @@ impl ValueEnum {
                     format!("#{}", symbol)
                 }
             },
-            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::TinyStr(value) => format!("{}", *value as char),
             Self::String(value) => value.as_str().to_string(),
             Self::Array(values) => {
                 // TODO (from nicolas): I think we can do better here (less allocations).
@@ -482,7 +482,7 @@ impl ValueEnum {
                     format!("#{}", symbol)
                 }
             },
-            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::TinyStr(value) => format!("{}", *value as char),
             Self::String(value) => value.as_str().to_string(),
             Self::Array(values) => {
                 // TODO (from nicolas): I think we can do better here (less allocations).
@@ -800,7 +800,7 @@ impl ValueEnum {
     /// Returns this value as a char, if such is its type.
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+    pub fn as_tiny_str(&self) -> Option<u8> {
         if let ValueEnum::TinyStr(v) = self {
             Some(v.clone())
         } else {
@@ -908,7 +908,7 @@ impl ValueEnum {
 
     #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+    pub fn as_tiny_str(&self) -> Option<u8> {
         if let ValueEnum::TinyStr(v) = self {
             Some(v.clone())
         } else {
@@ -940,7 +940,7 @@ impl ValueEnum {
 
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn new_tiny_str(value: Vec<u8>) -> Self {
+    pub fn new_tiny_str(value: u8) -> Self {
         ValueEnum::TinyStr(value)
     }
 

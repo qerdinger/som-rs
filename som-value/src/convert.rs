@@ -206,7 +206,7 @@ where
 #[cfg(feature = "l4bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
-    TinyStr(Vec<u8>),
+    TinyStr(u8),
     String(SPTR),
     Symbol(Interned),
 }
@@ -268,7 +268,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             //     let trimmed = full.trim_end_matches('\0');
             //     Cow::from(trimmed)
             // },
-            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::TinyStr(tiny_str) => Cow::from(format!("{}", *tiny_str as char)),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
         }
@@ -318,31 +318,28 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
-                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
-                    (Ok(s1), Ok(s2)) => s1 == s2,
-                    _ => false,
-                }
+                tstr1 == tstr2
             },
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
                 let str2_bytes = str2.as_str().as_bytes();
-                tstr1.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+                let str1 = format!("{}", *tstr1 as char);
+                let str1_bytes = str1.as_str().as_bytes();
+                str1_bytes == str2_bytes
             },
             (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
                 let str1_bytes = str1.as_str().as_bytes();
-                tstr2.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+                let str2 = format!("{}", *tstr2 as char);
+                let str2_bytes = str2.as_str().as_bytes();
+                str1_bytes == str2_bytes
             },
             (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
-                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s1 = format!("{}", *tstr1 as char);
                 let s2 = lookup_symbol_fn(*sym2);
                 s1 == s2
             },
             (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
                 let s1 = lookup_symbol_fn(*sym1);
-                let s2 = std::str::from_utf8(tstr2).unwrap();
+                let s2 = format!("{}", *tstr2 as char);
 
                 s1 == s2
             },

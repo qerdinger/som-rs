@@ -165,18 +165,19 @@ impl BaseValue {
     //     finalptr
     // }
     #[inline(always)]
-    pub fn new_tiny_str(value: Vec<u8>) -> Self {
-        assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
+    pub fn new_tiny_str(value: u8) -> Self {
+        // assert!(value.len() <= 7, "tiny str must be lower or equal to 7 bytes");
 
         let mut ptr = 0u64;
-        for (i, &b) in value.iter().take(7).enumerate() {
-            ptr |= (b as u64) << (i * 8);
-        }
+        // for (i, &b) in value.iter().take(7).enumerate() {
+        //     ptr |= (b as u64) << (i * 8);
+        // }
+        ptr |= (value as u64) << 0;
 
-        if value.len() < 7 {
-            let shift = (value.len() * 8) as u32;
-            ptr |= u64::MAX << shift;
-        }
+        // if value.len() < 7 {
+        //     let shift = (value.len() * 8) as u32;
+        //     ptr |= u64::MAX << shift;
+        // }
 
         Self::new(TINY_STRING_TAG, ptr)
     }
@@ -370,23 +371,23 @@ impl BaseValue {
     //     Some(bytes)
     // }
     #[inline(always)]
-    pub fn as_tiny_str(self) -> Option<Vec<u8>> {
+    pub fn as_tiny_str(self) -> Option<u8> {
         if !self.is_tiny_str() {
             return None;
         }
-        let mut bytes = Vec::new();
-        let mut v = self.payload();
+        // let mut bytes = Vec::new();
+        let v = self.payload();
 
-        for _ in 0..7 {
-            let b = (v & 0xFF) as u8;
-            if b == 0xFF {
-                break;
-            }
-            bytes.push(b);
-            v >>= 8;
-        }
+        // for _ in 0..7 {
+        //     let b = (v & 0xFF) as u8;
+        //     if b == 0xFF {
+        //         break;
+        //     }
+        //     bytes.push(b);
+        //     v >>= 8;
+        // }
 
-        Some(bytes)
+        Some((v & 0xFF) as u8)
     }
     
     #[inline(always)]
@@ -529,7 +530,7 @@ impl BaseValue {
 
     #[allow(non_snake_case)]
     #[inline(always)]
-    pub fn TinyStr(value: Vec<u8>) -> Self {
+    pub fn TinyStr(value: u8) -> Self {
         Self::new_tiny_str(value)
     }
 

@@ -119,10 +119,16 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     pop_args_from_stack!(interp, _a => Value, string => StringLike);
 
+    let mut tiny_buf = [0u8; 1];
+    // let tiny_str: Option<String> = None;
+
+
     let string = match string {
-        StringLike::TinyStr(ref value) => {
-            std::str::from_utf8(value).unwrap()
-        },
+        StringLike::TinyStr(value) => {
+            tiny_buf[0] = value;
+            // If ASCII: avoid allocation
+            std::str::from_utf8(&tiny_buf).unwrap()
+        }
         StringLike::String(ref value) => value.as_str(),
         StringLike::Symbol(sym) => universe.lookup_symbol(sym),
     };
@@ -172,11 +178,11 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = receiver.to_string();
     let val_len = val.len();
 
-    if val_len < 8 {
+    if val_len == 1 {
         let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
         // println!("buf : {:?}", data_buf);
         // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
+        return Ok(Value::TinyStr(data_buf[0]));
     }
 
     Ok(Value::String(universe.gc_interface.alloc(val)))

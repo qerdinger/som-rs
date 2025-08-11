@@ -44,7 +44,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
             // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
             // Ok(Value::Integer(if size == 0 {1} else {size}))
             // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
-            Ok(Value::Integer(data.len() as i32))
+            Ok(Value::Integer(1 as i32))
         }
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
         StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32))
@@ -64,7 +64,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
             // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
             // Ok(Value::Integer(if size == 0 {1} else {size}))
             // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
-            Ok(Value::Integer(data.len() as i32))
+            Ok(Value::Integer(1 as i32))
         }
         StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
         StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
@@ -99,7 +99,7 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
             // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
             // Ok(Value::Integer(if size == 0 {1} else {size}))
             // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
-            Ok(Value::Integer(data.len() as i32))
+            Ok(Value::Integer(1 as i32))
         }
     }
 }
@@ -143,10 +143,10 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     let final_str = format!("{s1}{s2}");
     let final_str_len = final_str.len();
 
-    if final_str_len < 8 {
+    if final_str_len == 1 {
         let data_buf: Vec<u8> = (*final_str).as_bytes().to_vec();
         // final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
-        return Ok(Value::TinyStr(data_buf));
+        return Ok(Value::TinyStr(data_buf[0]));
     }
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
 }
@@ -178,7 +178,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
     pop_args_from_stack!(interp, receiver => StringLike);
 
     let symbol = match receiver {
-        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
+        StringLike::TinyStr(data) => universe.intern_symbol(format!("{}", data as char).as_str()),
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
         StringLike::Symbol(symbol) => symbol,
     };
@@ -191,7 +191,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
     pop_args_from_stack!(interp, receiver => StringLike);
 
     let symbol = match receiver {
-        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
+        StringLike::TinyStr(data) => universe.intern_symbol(format!("{}", data as char).as_str()),
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
         StringLike::Symbol(symbol) => symbol,
     };
@@ -218,7 +218,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 
     let symbol = match receiver {
         StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
-        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
+        StringLike::TinyStr(data) => universe.intern_symbol(format!("{}", data as char).as_str()),
         StringLike::Symbol(symbol) => symbol,
     };
 
@@ -254,7 +254,7 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
     pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let char = *string.as_bytes().get((idx - 1) as usize).unwrap();
-    Ok(Value::TinyStr(vec![char]))
+    Ok(Value::TinyStr(char))
 }
 
 #[cfg(feature = "nan")]

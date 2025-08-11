@@ -93,11 +93,11 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
             let val_len = (*val).len();
-            if val_len < 8 {
+            if val_len == 1 {
                 let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
                 // println!("buf : {:?}", data_buf);
                 // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-                return Value::TinyStr(data_buf);
+                return Value::TinyStr(data_buf[0]);
             }
 
             Value::String(val.clone())
@@ -129,11 +129,11 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
             //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
 
             let val_len = (*val).len();
-            if val_len < 8 {
+            if val_len == 1 {
                 let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
                 // println!("buf : {:?}", data_buf);
                 // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-                return Value::TinyStr(data_buf);
+                return Value::TinyStr(data_buf[0]);
             }
 
             Value::String(val.clone())

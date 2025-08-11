@@ -120,11 +120,11 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val = receiver.to_string();
     let val_len = val.len();
 
-    if val_len < 8 {
+    if val_len == 1 {
         let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
         // println!("buf : {:?}", data_buf);
         // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
+        return Ok(Value::TinyStr(data_buf[0]));
     }
 
     Ok(Value::String(universe.gc_interface.alloc(receiver)))

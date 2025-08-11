@@ -52,7 +52,7 @@ impl Value {
         new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
-        new_tiny_str(value: Vec<u8>) -> Self,
+        new_tiny_str(value: u8) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Integer(value: i32) -> Self,
@@ -60,7 +60,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
-        TinyStr(value: Vec<u8>) -> Self,
+        TinyStr(value: u8) -> Self,
         String(value: Gc<String>) -> Self,
         // new_char(value: char) -> Self,
         // Char(value: char) -> Self,
@@ -268,7 +268,7 @@ impl Value {
             BOOLEAN_TAG => self.as_boolean().unwrap().to_string(),
             INTEGER_TAG => self.as_integer().unwrap().to_string(),
             _ if self.is_double() => self.as_double().unwrap().to_string(),
-            TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
+            TINY_STRING_TAG => format!("{}", self.as_tiny_str().unwrap() as char),
             _ => {
                 if let Some(block) = self.as_block() {
                     format!("instance of Block{}", block.nb_parameters() + 1)
@@ -382,9 +382,9 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_string(), other.as_tiny_str()) {
-            *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
+            *a == format!("{}", b as char)
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string()) {
-            String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
+            format!("{}", a as char) == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a.eq(&b)
         } else {

@@ -52,7 +52,7 @@ impl Value {
         new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
-        new_tiny_str(value: Vec<u8>) -> Self,
+        new_tiny_str(value: u8) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Integer(value: i32) -> Self,
@@ -60,7 +60,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
-        TinyStr(value: Vec<u8>) -> Self,
+        TinyStr(value: u8) -> Self,
         String(value: Gc<String>) -> Self,
         // new_char(value: char) -> Self,
         // Char(value: char) -> Self,
@@ -154,7 +154,7 @@ impl Value {
                     format!("#{}", symbol)
                 }
             }
-            TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
+            TINY_STRING_TAG => format!("{}", self.as_tiny_str().unwrap() as char),
             STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             ARRAY_TAG => {
                 let strings: Vec<String> = self
@@ -240,9 +240,9 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
-            *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
+            *a == format!("{}", b as char)
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
-            String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
+            format!("{}", a as char) == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a.eq(&b)
         } else {
