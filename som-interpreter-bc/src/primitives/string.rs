@@ -7,13 +7,25 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
+
+#[cfg(not(feature = "idiomatic"))]
 use crate::value::convert::{Primitive, StringLike};
+
+#[cfg(feature = "idiomatic")]
+use crate::value::convert::Primitive;
+
+#[cfg(feature = "idiomatic")]
+use std::borrow::Cow;
+
 use crate::value::Value;
 use anyhow::Error;
 use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
+
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
 
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     Box::new([
@@ -86,24 +98,26 @@ fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Er
 
 #[cfg(feature = "idiomatic")]
 fn length(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
-    pop_args_from_stack!(interp, receiver => StringLike);
+    pop_args_from_stack!(interp, receiver => Value);
 
     // tragically, we do not allow strings to have over 2 billion characters and just cast as i32
     // i apologize to everyone for that. i will strive to be better
-    match receiver {
-        StringLike::String(ref value) => Ok(Value::Integer(value.len() as i32)),
-        StringLike::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
-        StringLike::TinyStr(data) => {
+    match receiver.0 {
+        ValueEnum::String(ref value) => Ok(Value::Integer(value.len() as i32)),
+        ValueEnum::Symbol(sym) => Ok(Value::Integer(universe.lookup_symbol(sym).len() as i32)),
+        ValueEnum::TinyStr(data) => {
             // let mut size = data.iter().rev().take_while(|&&x| x == 0).count() as i32;
             // size = 8 - size;
             // println!("TinyStr SIZE : {}", if size == 0 {1} else {size});
             // Ok(Value::Integer(if size == 0 {1} else {size}))
             // Ok(Value::Integer(data.into_iter().filter(|&x| x > 0).collect::<Vec<_>>().len() as i32))
             Ok(Value::Integer(data.len() as i32))
-        }
+        },
+        _ => panic!()
     }
 }
 
+#[cfg(not(feature = "idiomatic"))]
 fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
@@ -114,21 +128,89 @@ fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Er
     Ok(hash)
 }
 
+#[cfg(feature = "idiomatic")]
+fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Error> {
+    pop_args_from_stack!(interp, receiver => Value);
+    // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+    let mut hasher = DefaultHasher::new();
+    hasher.write(string.as_bytes());
+    let hash = (hasher.finish() as i32).abs();
+
+    Ok(hash)
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn is_letters(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     Ok(!string.is_empty() && string.chars().all(char::is_alphabetic))
 }
 
+#[cfg(feature = "idiomatic")]
+fn is_letters(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
+    pop_args_from_stack!(interp, receiver => Value);
+    // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+    Ok(!string.is_empty() && string.chars().all(char::is_alphabetic))
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn is_digits(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     Ok(!string.is_empty() && string.chars().all(char::is_numeric))
 }
 
+#[cfg(feature = "idiomatic")]
+fn is_digits(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
+    pop_args_from_stack!(interp, receiver => Value);
+    // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+    Ok(!string.is_empty() && string.chars().all(char::is_numeric))
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
     pop_args_from_stack!(interp, receiver => StringLike);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+
+    Ok(!string.is_empty() && string.chars().all(char::is_whitespace))
+}
+
+#[cfg(feature = "idiomatic")]
+fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
+    pop_args_from_stack!(interp, receiver => Value);
+    // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
 
     Ok(!string.is_empty() && string.chars().all(char::is_whitespace))
 }
@@ -164,10 +246,26 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
 #[cfg(feature = "idiomatic")]
 fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
-    pop_args_from_stack!(interp, receiver => StringLike, other => StringLike);
+    pop_args_from_stack!(interp, receiver => Value, other => Value);
 
-    let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
-    let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
+    // let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let s1 = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+    let s2 = match other.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+    // let s2 = other.as_str(|sym| universe.lookup_symbol(sym));
 
     let final_str = format!("{s1}{s2}");
     Ok(Value::String(universe.gc_interface.alloc(final_str)))
@@ -214,17 +312,21 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 
 #[cfg(feature = "idiomatic")]
 fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Interned, Error> {
-    pop_args_from_stack!(interp, receiver => StringLike);
+    pop_args_from_stack!(interp, receiver => Value);
 
-    let symbol = match receiver {
-        StringLike::String(ref value) => universe.intern_symbol(value.as_str()),
-        StringLike::TinyStr(data) => universe.intern_symbol(std::str::from_utf8(&data).unwrap()),
-        StringLike::Symbol(symbol) => symbol,
+    let symbol = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            universe.intern_symbol(std::str::from_utf8(&value).unwrap())
+        },
+        ValueEnum::String(ref value) => universe.intern_symbol(value.as_str()),
+        ValueEnum::Symbol(sym) => sym,
+        _ => panic!()
     };
 
     Ok(symbol)
 }
 
+#[cfg(not(feature = "idiomatic"))]
 fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
     pop_args_from_stack!(interp, a => Value, b => Value);
 
@@ -238,6 +340,46 @@ fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> 
     Ok(a.eq_stringlike(&b, |sym| universe.lookup_symbol(sym)))
 }
 
+#[cfg(feature = "idiomatic")]
+fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> {
+    pop_args_from_stack!(interp, a => Value, b => Value);
+
+    #[inline]
+    fn tinystr_to_str(bytes: &[u8]) -> Option<&str> {
+        let end = bytes.iter().rposition(|&b| b != 0).map(|i| i + 1).unwrap_or(0);
+        std::str::from_utf8(&bytes[..end]).ok()
+    }
+
+    let res = match (&a.0, &b.0) {
+        (ValueEnum::String(sa), ValueEnum::String(sb)) => **sa == **sb,
+
+        (ValueEnum::Symbol(x), ValueEnum::Symbol(y)) => {
+            *x == *y || universe.lookup_symbol(*x) == universe.lookup_symbol(*y)
+        }
+
+        (ValueEnum::TinyStr(ta), ValueEnum::TinyStr(tb)) => match (std::str::from_utf8(ta), std::str::from_utf8(tb)) {
+            (Ok(s1), Ok(s2)) => s1 == s2,
+            _ => false,
+        }
+
+        (ValueEnum::TinyStr(ta), ValueEnum::String(sb)) => tinystr_to_str(ta).map_or(false, |a| a == **sb),
+        (ValueEnum::String(sa), ValueEnum::TinyStr(tb)) => tinystr_to_str(tb).map_or(false, |b| **sa == b),
+
+        (ValueEnum::TinyStr(ta), ValueEnum::Symbol(y)) => tinystr_to_str(ta)
+            .map_or(false, |a| a == universe.lookup_symbol(*y)),
+        (ValueEnum::Symbol(x), ValueEnum::TinyStr(tb)) => tinystr_to_str(tb)
+            .map_or(false, |b| universe.lookup_symbol(*x) == b),
+
+        (ValueEnum::String(sa), ValueEnum::Symbol(y)) => **sa == universe.lookup_symbol(*y),
+        (ValueEnum::Symbol(x), ValueEnum::String(sb)) => universe.lookup_symbol(*x) == **sb,
+
+        _ => false,
+    };
+
+    Ok(res)
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, from => i32, to => i32);
 
@@ -249,10 +391,45 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
     Ok(universe.gc_interface.alloc(string.chars().skip(from).take(to - from).collect()))
 }
 
-#[cfg(any(feature = "l3bits", feature = "l4bits", feature = "idiomatic"))]
+#[cfg(feature = "idiomatic")]
+fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+    pop_args_from_stack!(interp, receiver => Value, from => i32, to => i32);
+
+    let from = usize::try_from(from - 1)?;
+    let to = usize::try_from(to)?;
+
+    // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    Ok(universe.gc_interface.alloc(string.chars().skip(from).take(to - from).collect()))
+}
+
+#[cfg(any(feature = "l3bits", feature = "l4bits"))]
 fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => StringLike, idx => i32);
     let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
+    let char = *string.as_bytes().get((idx - 1) as usize).unwrap();
+    Ok(Value::TinyStr(vec![char]))
+}
+
+#[cfg(feature = "idiomatic")]
+fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, receiver => Value, idx => i32);
+    let string = match receiver.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
     let char = *string.as_bytes().get((idx - 1) as usize).unwrap();
     Ok(Value::TinyStr(vec![char]))
 }

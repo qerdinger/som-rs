@@ -4,7 +4,17 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
+
+#[cfg(not(feature = "idiomatic"))]
 use crate::value::convert::{DoubleLike, IntegerLike, IntoValue, Primitive, StringLike};
+
+
+#[cfg(feature = "idiomatic")]
+use crate::value::convert::{DoubleLike, IntegerLike, IntoValue, Primitive};
+
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
 use crate::value::Value;
 use anyhow::{bail, Context, Error};
 use num_bigint::{BigInt, BigUint, ToBigInt};
@@ -65,6 +75,8 @@ macro_rules! demote {
     }};
 }
 
+
+#[cfg(not(feature = "idiomatic"))]
 fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Integer>>#fromString:";
 
@@ -84,6 +96,35 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     }
 }
 
+#[cfg(feature = "idiomatic")]
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const _: &str = "Integer>>#fromString:";
+
+    pop_args_from_stack!(interp, _a => Value, string => Value);
+
+    // let string = string.as_str(|sym| universe.lookup_symbol(sym));
+    let string = match string.0 {
+        ValueEnum::TinyStr(ref value) => {
+            std::str::from_utf8(&value).unwrap()
+        },
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    // bad implem, can be improved
+    match string.parse::<i32>() {
+        Ok(a) => Ok(Value::Integer(a)),
+        Err(_) => match string.parse::<BigInt>() {
+            Ok(b) => {
+                Ok(Value::BigInteger(universe.gc_interface.alloc(b)))
+            },
+            _ => panic!("couldn't turn an int/bigint into a string"),
+        },
+    }
+}
+
+
 #[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
@@ -97,7 +138,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
 }
 
 #[cfg(feature = "idiomatic")]
-fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
 
     let receiver = match receiver {
@@ -105,7 +146,17 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
         IntegerLike::BigInteger(value) => value.to_string(),
     };
 
-    Ok(universe.gc_interface.alloc(receiver))
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len < 8 {
+        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+        // println!("buf : {:?}", data_buf);
+        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+        return Ok(Value::TinyStr(data_buf));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(receiver)))
 }
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
