@@ -134,7 +134,10 @@ fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Er
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -160,7 +163,10 @@ fn is_letters(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool,
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -182,7 +188,10 @@ fn is_digits(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, 
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -205,7 +214,10 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -251,7 +263,10 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     // let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let s1 = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -259,7 +274,10 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     };
     let s2 = match other.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -401,7 +419,10 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -424,7 +445,10 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
     pop_args_from_stack!(interp, receiver => Value, idx => i32);
     let string = match receiver.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),

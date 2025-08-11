@@ -64,7 +64,10 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
 
     let path = match path.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -95,7 +98,10 @@ fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Val
 
     let string = match string.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -133,7 +139,10 @@ fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     let string = match string.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
@@ -160,7 +169,10 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
 
     let string = match string.0 {
         ValueEnum::TinyStr(ref value) => {
-            std::str::from_utf8(&value).unwrap()
+            match std::str::from_utf8(value) {
+                Ok(s) => s,
+                Err(_) => ""
+            }
         },
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
