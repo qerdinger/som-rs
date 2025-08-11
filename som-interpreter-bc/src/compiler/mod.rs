@@ -177,7 +177,19 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
 pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> Value {
     match literal {
         Literal::Symbol(sym) => Value::Symbol(*sym),
-        Literal::String(val) => Value::String(val.clone()),
+        Literal::String(val) => {
+            //println!("Str length : {} content : [{:?}]", (*val).len(), *val);
+
+            let val_len = (*val).len();
+            if val_len < 8 {
+                let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
+                // println!("buf : {:?}", data_buf);
+                // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
+                return Value::TinyStr(data_buf);
+            }
+
+            Value::String(val.clone())
+        },
         Literal::Double(val) => Value::Double(*val),
         Literal::Integer(val) => Value::Integer(*val),
         Literal::BigInteger(val) => Value::BigInteger(val.clone()),

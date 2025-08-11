@@ -299,6 +299,8 @@ impl PartialEq for Value {
             (*a).eq(&BigInt::from(b))
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer()) {
             BigInt::from(a).eq(&*b)
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
+            *a == *b
         } else if let (Some(a), Some(b)) = (self.as_string(), other.as_string()) {
             *a == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
