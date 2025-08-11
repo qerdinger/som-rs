@@ -282,7 +282,6 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        // println!("PE2 [{:?}]==[{:?}]", self, other);
         if self.is_nil() && other.is_nil() {
             true
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_integer()) {
@@ -300,6 +299,8 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer()) {
             BigInt::from(a).eq(&*b)
         } else if let (Some(a), Some(b)) = (self.as_string(), other.as_string()) {
+            *a == *b
+        } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
             *a == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a == b

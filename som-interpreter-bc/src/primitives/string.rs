@@ -145,6 +145,7 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     if final_str_len < 8 {
         let data_buf: Vec<u8> = (*final_str).as_bytes().to_vec();
+
         // final_data_buf[..final_str_len].copy_from_slice(final_str.as_bytes());
         return Ok(Value::TinyStr(data_buf));
     }
