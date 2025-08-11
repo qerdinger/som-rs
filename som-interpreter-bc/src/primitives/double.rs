@@ -121,7 +121,7 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     let string = match string {
         StringLike::TinyStr(ref value) => {
-            std::str::from_utf8(value).unwrap()
+            std::str::from_utf8(&value).unwrap()
         },
         StringLike::String(ref value) => value.as_str(),
         StringLike::Symbol(sym) => universe.lookup_symbol(sym),

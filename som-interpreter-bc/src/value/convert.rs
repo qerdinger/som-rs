@@ -373,7 +373,7 @@ impl PartialEq for DoubleLike {
 impl StringLike {
     pub fn as_str<'a>(&'a self, lookup_symbol: impl Fn(Interned) -> &'a str) -> std::borrow::Cow<'a, str> {
         match self {
-            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(&tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => std::borrow::Cow::Borrowed(lookup_symbol(*sym)),
         }
@@ -400,31 +400,33 @@ impl StringLike {
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
-                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                match (std::str::from_utf8(&tstr1), std::str::from_utf8(&tstr2)) {
                     (Ok(s1), Ok(s2)) => s1 == s2,
                     _ => false,
                 }
             },
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
-                let str2_bytes = str2.as_str().as_bytes();
-                tstr1.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+                // let str2_bytes = str2.as_str().as_bytes();
+                // tstr1.iter()
+                //     .filter(|&&b| b != 0)
+                //     .eq(str2_bytes.iter().filter(|&&b| b != 0))
+                std::str::from_utf8(&tstr1).unwrap() == str2.as_str()
             },
             (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
-                let str1_bytes = str1.as_str().as_bytes();
-                tstr2.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+                // let str1_bytes = str1.as_str().as_bytes();
+                // tstr2.iter()
+                //     .filter(|&&b| b != 0)
+                //     .eq(str1_bytes.iter().filter(|&&b| b != 0))
+                std::str::from_utf8(&tstr2).unwrap() == str1.as_str()
             },
             (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
-                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s1 = std::str::from_utf8(&tstr1).unwrap();
                 let s2 = lookup_symbol_fn(*sym2);
                 s1 == s2
             },
             (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
                 let s1 = lookup_symbol_fn(*sym1);
-                let s2 = std::str::from_utf8(tstr2).unwrap();
+                let s2 = std::str::from_utf8(&tstr2).unwrap();
 
                 s1 == s2
             },
@@ -451,7 +453,7 @@ impl StringLike {
             //     let trimmed = full.trim_end_matches('\0');
             //     Cow::from(trimmed)
             // },
-            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(tiny_str).unwrap()),
+            StringLike::TinyStr(tiny_str) => Cow::from(std::str::from_utf8(&tiny_str).unwrap()),
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
         }
@@ -467,31 +469,33 @@ impl StringLike {
             },
             (StringLike::String(str1), StringLike::String(str2)) => str1.as_str().eq(str2.as_str()),
             (StringLike::TinyStr(tstr1), StringLike::TinyStr(tstr2)) => {
-                match (std::str::from_utf8(tstr1), std::str::from_utf8(tstr2)) {
+                match (std::str::from_utf8(&tstr1), std::str::from_utf8(&tstr2)) {
                     (Ok(s1), Ok(s2)) => s1 == s2,
                     _ => false,
                 }
             },
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
-                let str2_bytes = str2.as_str().as_bytes();
-                tstr1.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str2_bytes.iter().filter(|&&b| b != 0))
+                // let str2_bytes = str2.as_str().as_bytes();
+                // tstr1.iter()
+                //     .filter(|&&b| b != 0)
+                //     .eq(str2_bytes.iter().filter(|&&b| b != 0))
+                std::str::from_utf8(&tstr1).unwrap() == str2.as_str()
             },
             (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
-                let str1_bytes = str1.as_str().as_bytes();
-                tstr2.iter()
-                    .filter(|&&b| b != 0)
-                    .eq(str1_bytes.iter().filter(|&&b| b != 0))
+                // let str1_bytes = str1.as_str().as_bytes();
+                // tstr2.iter()
+                //     .filter(|&&b| b != 0)
+                //     .eq(str1_bytes.iter().filter(|&&b| b != 0))
+                str1.as_str() == std::str::from_utf8(&tstr2).unwrap()
             },
             (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
-                let s1 = std::str::from_utf8(tstr1).unwrap();
+                let s1 = std::str::from_utf8(&tstr1).unwrap();
                 let s2 = lookup_symbol_fn(*sym2);
                 s1 == s2
             },
             (StringLike::Symbol(sym1), StringLike::TinyStr(tstr2)) => {
                 let s1 = lookup_symbol_fn(*sym1);
-                let s2 = std::str::from_utf8(tstr2).unwrap();
+                let s2 = std::str::from_utf8(&tstr2).unwrap();
 
                 s1 == s2
             },
