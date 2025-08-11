@@ -326,14 +326,22 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
             (StringLike::TinyStr(tstr1), StringLike::String(str2)) => {
                 // let str2_bytes = str2.as_str().as_bytes();
                 // let str1 = std::string();
-                std::str::from_utf8(&tstr1).unwrap() == str2.as_str()
+                // std::str::from_utf8(&tstr1).unwrap() == str2.as_str()
+                match std::str::from_utf8(&tstr1) {
+                    Ok(s) => s == str2.as_str(),
+                    Err(_) => false
+                }
             },
             (StringLike::String(str1), StringLike::TinyStr(tstr2)) => {
                 // let str1_bytes = str1.as_str().as_bytes();
                 // tstr2.iter()
                     // .filter(|&&b| b != 0)
                 //     .eq(str1_bytes.iter().filter(|&&b| b != 0))
-                std::str::from_utf8(&tstr2).unwrap() == str1.as_str()
+                // std::str::from_utf8(&tstr2).unwrap() == str1.as_str()
+                match std::str::from_utf8(&tstr2) {
+                    Ok(s) => s == str1.as_str(),
+                    Err(_) => false
+                }
             },
             (StringLike::TinyStr(tstr1), StringLike::Symbol(sym2)) => {
                 let s1 = std::str::from_utf8(&tstr1).unwrap();
