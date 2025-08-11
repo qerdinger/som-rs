@@ -222,17 +222,18 @@ impl TryFrom<ValueEnum> for StringLike {
     type Error = Error;
 
     fn try_from(value: ValueEnum) -> Result<Self, Self::Error> {
-        value
-            .as_string()
-            .map(Self::String)
-            .or_else(|| value.as_tiny_str().map(Self::TinyStr))
-            .or_else(|| value.as_symbol().map(Self::Symbol))
-            .context("could not resolve `Value` as `String`, `Symbol` or `TinyStr`")
-        // match value {
-        //     ValueEnum::String(s) => Ok(StringLike::String(s)),
-        //     ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
-        //     _ => bail!("could not resolve `Value` as `String`"),
-        // }
+        // value
+        //     .as_string()
+        //     .map(Self::String)
+        //     .or_else(|| value.as_tiny_str().map(Self::TinyStr))
+        //     .or_else(|| value.as_symbol().map(Self::Symbol))
+        //     .context("could not resolve `Value` as `String`, `Symbol` or `TinyStr`")
+        match value {
+            ValueEnum::TinyStr(s) => Ok(StringLike::TinyStr(s)),
+            ValueEnum::String(s) => Ok(StringLike::String(s)),
+            ValueEnum::Symbol(s) => Ok(StringLike::Symbol(s)),
+            _ => bail!("could not resolve `Value` as `String`"),
+        }
     }
 }
 
@@ -697,7 +698,7 @@ impl IntoValue for Gc<f64> {
     }
 }
 
-#[cfg(any(feature = "l4bits", feature = "l3bits"))]
+#[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
 impl IntoValue for Vec<u8> {
     fn into_value(&self) -> Value {
         Value::TinyStr(self.clone())

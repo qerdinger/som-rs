@@ -54,9 +54,9 @@ benchmark:
     matrix:
       - MACHINE:
           # - zullie1
-          - yuria
+#          - yuria
           - yuria2
-          - yuria3
+#          - yuria3
           - yuria4
   stage: benchmark
   tags: [$MACHINE]
