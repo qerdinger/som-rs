@@ -804,6 +804,17 @@ impl IntoValue for StringLike {
     }
 }
 
+#[cfg(feature = "idiomatic")]
+impl IntoValue for StringLike {
+    fn into_value(&self) -> Value {
+        match self {
+            StringLike::TinyStr(value) => value.into_value(),
+            StringLike::String(value) => value.into_value(),
+            StringLike::Symbol(value) => value.into_value(),
+        }
+    }
+}
+
 #[cfg(feature = "l3bits")]
 impl IntoValue for StringLike {
     fn into_value(&self) -> Value {
