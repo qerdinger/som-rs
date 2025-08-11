@@ -55,7 +55,7 @@ benchmark:
       - MACHINE:
           # - zullie1
 #          - yuria
-          - yuria2
+          # - yuria2
 #          - yuria3
           - yuria4
   stage: benchmark
