@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-CSV_PATH = "som-rs-5548.csv"
+CSV_PATH = "som-rs-5549.csv"
 
 GLOBAL_OUT_ROOT = "output5-with-safe-tinystr"
 ENV_OUT_ROOT = "output5-with-safe-tinystr/envs"
