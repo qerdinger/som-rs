@@ -244,7 +244,7 @@ impl PartialEq for Value {
                 buf[i] = b;
                 len += 1;
             }
-            match str::from_utf8(&buf[..len]) {
+            match std::str::from_utf8(&buf[..len]) {
                 Ok(s) => s,
                 Err(_) => "",
             }

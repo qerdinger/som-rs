@@ -114,7 +114,7 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }

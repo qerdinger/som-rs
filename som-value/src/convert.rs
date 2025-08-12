@@ -280,7 +280,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
                     len += 1;
                 }
 
-                match str::from_utf8(&buf[..len]) {
+                match std::str::from_utf8(&buf[..len]) {
                     Ok(s)  => Cow::Owned(s.to_owned()),
                     Err(_) => Cow::Borrowed(""),
                 }
@@ -339,7 +339,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
                 buf[i] = b;
                 len += 1;
             }
-            match str::from_utf8(&buf[..len]) {
+            match std::str::from_utf8(&buf[..len]) {
                 Ok(s) => s,
                 Err(_) => "",
             }

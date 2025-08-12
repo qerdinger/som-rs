@@ -152,7 +152,7 @@ fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Er
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -194,7 +194,7 @@ fn is_letters(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool,
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -232,7 +232,7 @@ fn is_digits(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, 
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -272,7 +272,7 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -342,7 +342,7 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -399,7 +399,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -444,7 +444,7 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -490,7 +490,7 @@ fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> 
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -565,7 +565,7 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -607,7 +607,7 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }

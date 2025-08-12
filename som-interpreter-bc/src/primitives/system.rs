@@ -73,7 +73,7 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -120,7 +120,7 @@ fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Val
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -174,7 +174,7 @@ fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
@@ -217,7 +217,7 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
             buf[i] = b;
             len += 1;
         }
-        match str::from_utf8(&buf[..len]) {
+        match std::str::from_utf8(&buf[..len]) {
             Ok(s) => s,
             Err(_) => "",
         }
