@@ -143,14 +143,19 @@ fn hashcode(interp: &mut Interpreter, universe: &mut Universe) -> Result<i32, Er
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -180,14 +185,19 @@ fn is_letters(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool,
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -213,14 +223,19 @@ fn is_digits(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, 
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -248,14 +263,19 @@ fn is_whitespace(interp: &mut Interpreter, universe: &mut Universe) -> Result<bo
 
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -313,14 +333,19 @@ fn concatenate(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     // let s1 = receiver.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf1 = [0u8; 7];
@@ -365,14 +390,19 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -405,14 +435,19 @@ fn as_symbol(interp: &mut Interpreter, universe: &mut Universe) -> Result<Intern
 
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -446,14 +481,19 @@ fn eq(interp: &mut Interpreter, universe: &mut Universe) -> Result<bool, Error> 
 
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf_a = [0u8; 7];
@@ -516,14 +556,19 @@ fn prim_substring_from_to(interp: &mut Interpreter, universe: &mut Universe) -> 
     // let string = receiver.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
@@ -553,14 +598,19 @@ fn char_at(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, E
 
     #[inline]
     fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+        let mut len = 0;
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
-                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                break;
             }
             buf[i] = b;
+            len += 1;
         }
-        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        match str::from_utf8(&buf[..len]) {
+            Ok(s) => s,
+            Err(_) => "",
+        }
     }
 
     let mut buf = [0u8; 7];
