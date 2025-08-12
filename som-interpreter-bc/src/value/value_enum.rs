@@ -34,11 +34,13 @@ pub enum ValueEnum {
     BigInteger(Gc<BigInt>),
     /// An floating-point value.
     Double(f64),
+    /// An allocated floating-point number.
     AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
     Symbol(Interned),
-    /// A string value.
+    /// A TinyStr, <= 7 chars, not allocated.
     TinyStr(i64),
+    /// A string value.
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -65,11 +67,13 @@ pub enum ValueEnum {
     BigInteger(Gc<BigInt>),
     /// An floating-point value.
     Double(f64),
+    /// An allocated floating-point number.
     AllocatedDouble(Gc<f64>),
     /// An interned symbol value.
     Symbol(Interned),
-    /// A string value.
+    /// A TinyStr, <= 7 chars, not allocated.
     TinyStr(i64),
+    /// A string value.
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -98,8 +102,9 @@ pub enum ValueEnum {
     Double(f64),
     /// An interned symbol value.
     Symbol(Interned),
-    /// A string value.
+    /// A TinyStr, <= 7 chars, not allocated.
     TinyStr(i64),
+    /// A string value.
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
