@@ -235,14 +235,19 @@ impl PartialEq for Value {
 
         #[inline]
         fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+            let mut len = 0;
             for i in 0..7 {
                 let b = ((v >> (i * 8)) & 0xFF) as u8;
                 if b == 0xFF {
-                    return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                    break;
                 }
                 buf[i] = b;
+                len += 1;
             }
-            unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+            match std::str::from_utf8(&buf[..len]) {
+                Ok(s) => s,
+                Err(_) => "",
+            }
         }
 
         let mut buf = [0u8; 7];

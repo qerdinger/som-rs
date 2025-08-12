@@ -475,14 +475,18 @@ impl StringLike {
                 let v = *tiny_str as u64;
                 let mut buf = [0u8; 7];
                 let mut len = 0usize;
+
                 for i in 0..7 {
                     let b = ((v >> (i * 8)) & 0xFF) as u8;
                     if b == 0xFF { break; }
                     buf[i] = b;
                     len += 1;
                 }
-                // Own it so the Cow is valid after this function returns
-                Cow::Owned(unsafe { String::from_utf8_unchecked(buf[..len].to_vec()) })
+
+                match std::str::from_utf8(&buf[..len]) {
+                    Ok(s)  => Cow::Owned(s.to_owned()),
+                    Err(_) => Cow::Borrowed(""),
+                }
             },
             StringLike::String(ref value) => Cow::from(value.as_str()),
             StringLike::Symbol(sym) => Cow::from(lookup_symbol_fn(*sym)),
@@ -495,14 +499,19 @@ impl StringLike {
     {
         #[inline]
         fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
+            let mut len = 0;
             for i in 0..7 {
                 let b = ((v >> (i * 8)) & 0xFF) as u8;
                 if b == 0xFF {
-                    return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                    break;
                 }
                 buf[i] = b;
+                len += 1;
             }
-            unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+            match std::str::from_utf8(&buf[..len]) {
+                Ok(s) => s,
+                Err(_) => "",
+            }
         }
 
         let mut buf = [0u8; 7];

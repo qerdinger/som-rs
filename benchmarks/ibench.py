@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-CSV_FILE = "som-rs-5547.csv"
+CSV_FILE = "som-rs-5549.csv"
 SEPARATOR  = ","
 
 
