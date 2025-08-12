@@ -206,7 +206,7 @@ where
 #[cfg(feature = "l4bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
-    TinyStr(i64),
+    TinyStr(u64),
     String(SPTR),
     Symbol(Interned),
 }
@@ -325,8 +325,7 @@ impl<SPTR: Deref<Target = String> + std::fmt::Debug> StringLike<SPTR> {
         F: Copy + Fn(Interned) -> &'a str,
     {
         #[inline]
-        fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-            let v = value as u64;
+        fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
             for i in 0..7 {
                 let b = ((v >> (i * 8)) & 0xFF) as u8;
                 if b == 0xFF {

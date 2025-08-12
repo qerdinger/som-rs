@@ -84,7 +84,7 @@ pub enum DoubleLike {
 #[cfg(feature = "l3bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike {
-    TinyStr(i64),
+    TinyStr(u64),
     String(Gc<String>),
     Symbol(Interned),
 }
@@ -494,8 +494,7 @@ impl StringLike {
         F: Copy + Fn(Interned) -> &'a str,
     {
         #[inline]
-        fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-            let v = value as u64;
+        fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
             for i in 0..7 {
                 let b = ((v >> (i * 8)) & 0xFF) as u8;
                 if b == 0xFF {
@@ -736,7 +735,7 @@ impl IntoValue for Gc<f64> {
 }
 
 #[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
-impl IntoValue for i64 {
+impl IntoValue for u64 {
     fn into_value(&self) -> Value {
         Value::TinyStr(*self)
     }

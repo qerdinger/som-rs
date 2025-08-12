@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-CSV_FILE = "som-rs-5516.csv"
+CSV_FILE = "som-rs-5546.csv"
 SEPARATOR  = ","
 
 
@@ -69,7 +69,7 @@ metrics = df.pivot_table(
     "gc time": "gc_time_ms",
 })
 
-os.makedirs('output', exist_ok=True)
+os.makedirs('output-only-active', exist_ok=True)
 
 for col, label in [
     ("time_ms",     "Time (ms)"),
@@ -83,5 +83,5 @@ for col, label in [
     ax.set_ylabel(label)
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    plt.savefig(os.path.join('output', f"{col}.png"))
+    plt.savefig(os.path.join('output-only-active', f"{col}.png"))
     plt.close()

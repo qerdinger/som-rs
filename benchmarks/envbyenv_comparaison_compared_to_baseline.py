@@ -5,11 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-CSV_PATH = "som-rs-5527.csv"
+CSV_PATH = "som-rs-5546.csv"
 
-GLOBAL_OUT_ROOT = "output3-without-tinystr"
-ENV_OUT_ROOT = "output3-without-tinystr/envs"
-SUMMARY_ROOT = "output3-without-tinystr/summaries"
+GLOBAL_OUT_ROOT = "output4-without-tinystr"
+ENV_OUT_ROOT = "output4-without-tinystr/envs"
+SUMMARY_ROOT = "output4-without-tinystr/summaries"
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
 
 BASELINE_EXE = "som-rs-bc-baseline"

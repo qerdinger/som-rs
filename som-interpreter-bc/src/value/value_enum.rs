@@ -39,7 +39,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A TinyStr, <= 7 chars, not allocated.
-    TinyStr(i64),
+    TinyStr(u64),
     /// A string value.
     String(Gc<String>),
     /// An array of values.
@@ -72,7 +72,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A TinyStr, <= 7 chars, not allocated.
-    TinyStr(i64),
+    TinyStr(u64),
     /// A string value.
     String(Gc<String>),
     /// An array of values.
@@ -103,7 +103,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A TinyStr, <= 7 chars, not allocated.
-    TinyStr(i64),
+    TinyStr(u64),
     /// A string value.
     String(Gc<String>),
     /// An array of values.
@@ -849,7 +849,7 @@ impl ValueEnum {
     /// Returns this value as a char, if such is its type.
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<i64> {
+    pub fn as_tiny_str(&self) -> Option<u64> {
         if let ValueEnum::TinyStr(v) = self {
             Some(*v)
         } else {
@@ -957,7 +957,7 @@ impl ValueEnum {
 
     #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<i64> {
+    pub fn as_tiny_str(&self) -> Option<u64> {
         if let ValueEnum::TinyStr(v) = self {
             Some(*v)
         } else {
@@ -989,7 +989,7 @@ impl ValueEnum {
 
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn new_tiny_str(value: i64) -> Self {
+    pub fn new_tiny_str(value: u64) -> Self {
         ValueEnum::TinyStr(value)
     }
 
