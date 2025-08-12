@@ -112,7 +112,7 @@ impl BaseValue {
     }
 
     #[inline(always)]
-    pub fn new_tiny_str(value: i64) -> Self {
+    pub fn new_tiny_str(value: u64) -> Self {
         Self::new(TINY_STRING_TAG, value as u64)
     }
 
@@ -235,8 +235,8 @@ impl BaseValue {
     // }
 
     #[inline(always)]
-    pub fn as_tiny_str(self) -> Option<i64> {
-        self.is_tiny_str().then_some(self.payload() as i64)
+    pub fn as_tiny_str(self) -> Option<u64> {
+        self.is_tiny_str().then_some(self.payload() as u64)
     }
     
     #[inline(always)]
@@ -359,7 +359,7 @@ impl BaseValue {
 
     #[allow(non_snake_case)]
     #[inline(always)]
-    pub fn TinyStr(value: i64) -> Self {
+    pub fn TinyStr(value: u64) -> Self {
         Self::new_tiny_str(value)
     }
 

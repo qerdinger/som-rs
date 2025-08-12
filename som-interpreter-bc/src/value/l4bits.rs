@@ -52,7 +52,7 @@ impl Value {
         new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
-        new_tiny_str(value: i64) -> Self,
+        new_tiny_str(value: u64) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Integer(value: i32) -> Self,
@@ -60,7 +60,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
-        TinyStr(value: i64) -> Self,
+        TinyStr(value: u64) -> Self,
         String(value: Gc<String>) -> Self,
         // new_char(value: char) -> Self,
         // Char(value: char) -> Self,
@@ -234,8 +234,7 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
 
         #[inline]
-        fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-            let v = value as u64;
+        fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
             for i in 0..7 {
                 let b = ((v >> (i * 8)) & 0xFF) as u8;
                 if b == 0xFF {

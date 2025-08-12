@@ -63,8 +63,7 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
     pop_args_from_stack!(interpreter, _a => Value, path => Value);
 
     #[inline]
-    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-        let v = value as u64;
+    fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
@@ -106,8 +105,7 @@ fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Val
     pop_args_from_stack!(interp, system => Value, string => Value);
 
     #[inline]
-    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-        let v = value as u64;
+    fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
@@ -156,8 +154,7 @@ fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     // let string = string.as_str(|sym| universe.lookup_symbol(sym));
 
     #[inline]
-    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-        let v = value as u64;
+    fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
@@ -195,8 +192,7 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
     pop_args_from_stack!(interp, system => Value, string => Value);
 
     #[inline]
-    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-        let v = value as u64;
+    fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {

@@ -104,8 +104,7 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     // let string = string.as_str(|sym| universe.lookup_symbol(sym));
     #[inline]
-    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
-        let v = value as u64;
+    fn tinystring_as_str<'a>(v: u64, buf: &'a mut [u8; 7]) -> &'a str {
         for i in 0..7 {
             let b = ((v >> (i * 8)) & 0xFF) as u8;
             if b == 0xFF {
@@ -163,14 +162,14 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
 
     if val_len <= 7 {
         let b = val.as_bytes();
-        let mut word: i64 = 0x00FF_FFFF_FFFF_FFFF;
-        if val_len > 0 { word = (word & !(0xFFi64 << 0 )) | ((b[0] as i64) << 0 ); }
-        if val_len > 1 { word = (word & !(0xFFi64 << 8 )) | ((b[1] as i64) << 8 ); }
-        if val_len > 2 { word = (word & !(0xFFi64 << 16)) | ((b[2] as i64) << 16); }
-        if val_len > 3 { word = (word & !(0xFFi64 << 24)) | ((b[3] as i64) << 24); }
-        if val_len > 4 { word = (word & !(0xFFi64 << 32)) | ((b[4] as i64) << 32); }
-        if val_len > 5 { word = (word & !(0xFFi64 << 40)) | ((b[5] as i64) << 40); }
-        if val_len > 6 { word = (word & !(0xFFi64 << 48)) | ((b[6] as i64) << 48); }
+        let mut word: u64 = 0x00FF_FFFF_FFFF_FFFF;
+        if val_len > 0 { word = (word & !(0xFFu64 << 0 )) | ((b[0] as u64) << 0 ); }
+        if val_len > 1 { word = (word & !(0xFFu64 << 8 )) | ((b[1] as u64) << 8 ); }
+        if val_len > 2 { word = (word & !(0xFFu64 << 16)) | ((b[2] as u64) << 16); }
+        if val_len > 3 { word = (word & !(0xFFu64 << 24)) | ((b[3] as u64) << 24); }
+        if val_len > 4 { word = (word & !(0xFFu64 << 32)) | ((b[4] as u64) << 32); }
+        if val_len > 5 { word = (word & !(0xFFu64 << 40)) | ((b[5] as u64) << 40); }
+        if val_len > 6 { word = (word & !(0xFFu64 << 48)) | ((b[6] as u64) << 48); }
         return Ok(Value::TinyStr(word));
     }
 
@@ -191,14 +190,14 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
 
     if val_len < 8 {
         let b = val.as_bytes();
-        let mut word: i64 = 0x00FF_FFFF_FFFF_FFFF;
-        if val_len > 0 { word = (word & !(0xFFi64 << 0 )) | ((b[0] as i64) << 0 ); }
-        if val_len > 1 { word = (word & !(0xFFi64 << 8 )) | ((b[1] as i64) << 8 ); }
-        if val_len > 2 { word = (word & !(0xFFi64 << 16)) | ((b[2] as i64) << 16); }
-        if val_len > 3 { word = (word & !(0xFFi64 << 24)) | ((b[3] as i64) << 24); }
-        if val_len > 4 { word = (word & !(0xFFi64 << 32)) | ((b[4] as i64) << 32); }
-        if val_len > 5 { word = (word & !(0xFFi64 << 40)) | ((b[5] as i64) << 40); }
-        if val_len > 6 { word = (word & !(0xFFi64 << 48)) | ((b[6] as i64) << 48); }
+        let mut word: u64 = 0x00FF_FFFF_FFFF_FFFF;
+        if val_len > 0 { word = (word & !(0xFFu64 << 0 )) | ((b[0] as u64) << 0 ); }
+        if val_len > 1 { word = (word & !(0xFFu64 << 8 )) | ((b[1] as u64) << 8 ); }
+        if val_len > 2 { word = (word & !(0xFFu64 << 16)) | ((b[2] as u64) << 16); }
+        if val_len > 3 { word = (word & !(0xFFu64 << 24)) | ((b[3] as u64) << 24); }
+        if val_len > 4 { word = (word & !(0xFFu64 << 32)) | ((b[4] as u64) << 32); }
+        if val_len > 5 { word = (word & !(0xFFu64 << 40)) | ((b[5] as u64) << 40); }
+        if val_len > 6 { word = (word & !(0xFFu64 << 48)) | ((b[6] as u64) << 48); }
         return Ok(Value::TinyStr(word));
     }
 
