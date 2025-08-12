@@ -190,10 +190,16 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val_len = val.len();
 
     if val_len < 8 {
-        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
-        // println!("buf : {:?}", data_buf);
-        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
+        let b = val.as_bytes();
+        let mut word: i64 = 0x00FF_FFFF_FFFF_FFFF;
+        if val_len > 0 { word = (word & !(0xFFi64 << 0 )) | ((b[0] as i64) << 0 ); }
+        if val_len > 1 { word = (word & !(0xFFi64 << 8 )) | ((b[1] as i64) << 8 ); }
+        if val_len > 2 { word = (word & !(0xFFi64 << 16)) | ((b[2] as i64) << 16); }
+        if val_len > 3 { word = (word & !(0xFFi64 << 24)) | ((b[3] as i64) << 24); }
+        if val_len > 4 { word = (word & !(0xFFi64 << 32)) | ((b[4] as i64) << 32); }
+        if val_len > 5 { word = (word & !(0xFFi64 << 40)) | ((b[5] as i64) << 40); }
+        if val_len > 6 { word = (word & !(0xFFi64 << 48)) | ((b[6] as i64) << 48); }
+        return Ok(Value::TinyStr(word));
     }
 
     Ok(Value::String(universe.gc_interface.alloc(receiver)))

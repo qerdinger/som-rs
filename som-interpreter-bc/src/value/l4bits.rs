@@ -52,7 +52,7 @@ impl Value {
         new_allocated_double(value: Gc<f64>) -> Self,
         new_symbol(value: Interned) -> Self,
         new_big_integer(value: Gc<BigInt>) -> Self,
-        new_tiny_str(value: Vec<u8>) -> Self,
+        new_tiny_str(value: i64) -> Self,
         new_string(value: Gc<String>) -> Self,
         Boolean(value: bool) -> Self,
         Integer(value: i32) -> Self,
@@ -60,7 +60,7 @@ impl Value {
         AllocatedDouble(value: Gc<f64>) -> Self,
         Symbol(value: Interned) -> Self,
         BigInteger(value: Gc<BigInt>) -> Self,
-        TinyStr(value: Vec<u8>) -> Self,
+        TinyStr(value: i64) -> Self,
         String(value: Gc<String>) -> Self,
         // new_char(value: char) -> Self,
         // Char(value: char) -> Self,
@@ -154,7 +154,28 @@ impl Value {
                     format!("#{}", symbol)
                 }
             }
-            TINY_STRING_TAG => String::from_utf8(self.as_tiny_str().unwrap().to_vec()).unwrap(),
+            TINY_STRING_TAG => {
+                let v = self.as_tiny_str().unwrap() as u64;
+                let b0 = (v & 0xFF) as u8;
+                let b1 = ((v >> 8) & 0xFF) as u8;
+                let b2 = ((v >> 16) & 0xFF) as u8;
+                let b3 = ((v >> 24) & 0xFF) as u8;
+                let b4 = ((v >> 32) & 0xFF) as u8;
+                let b5 = ((v >> 40) & 0xFF) as u8;
+                let b6 = ((v >> 48) & 0xFF) as u8;
+
+                let len = if b0 == 0xFF { 0 }
+                    else if b1 == 0xFF { 1 }
+                    else if b2 == 0xFF { 2 }
+                    else if b3 == 0xFF { 3 }
+                    else if b4 == 0xFF { 4 }
+                    else if b5 == 0xFF { 5 }
+                    else if b6 == 0xFF { 6 }
+                    else { 7 };
+
+                let bytes = [b0, b1, b2, b3, b4, b5, b6];
+                String::from_utf8(bytes[..len].to_vec()).unwrap()
+            },
             STRING_TAG => self.as_string::<Gc<String>>().unwrap().to_string(),
             ARRAY_TAG => {
                 let strings: Vec<String> = self
@@ -211,6 +232,21 @@ impl Value {
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
+
+        #[inline]
+        fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+            let v = value as u64;
+            for i in 0..7 {
+                let b = ((v >> (i * 8)) & 0xFF) as u8;
+                if b == 0xFF {
+                    return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+                }
+                buf[i] = b;
+            }
+            unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+        }
+
+        let mut buf = [0u8; 7];
         if self.as_u64() == other.as_u64() {
             true
         } else if let (Some(a), Some(b)) = (self.as_double(), other.as_double()) {
@@ -240,9 +276,9 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
             a == b
         } else if let (Some(a), Some(b)) = (self.as_string::<Gc<String>>(), other.as_tiny_str()) {
-            *a == String::from_utf8(b.to_vec()).expect("Cannot be converted into String")
+            *a == tinystring_as_str(b, &mut buf)
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_string::<Gc<String>>()) {
-            String::from_utf8(a.to_vec()).expect("Cannot be converted into String") == *b
+            tinystring_as_str(a, &mut buf) == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {
             a.eq(&b)
         } else {

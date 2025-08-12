@@ -148,10 +148,23 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     pop_args_from_stack!(interp, _a => Value, string => StringLike);
 
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+
     let string = match string {
-        StringLike::TinyStr(ref value) => {
-            std::str::from_utf8(value).unwrap()
-        },
+        StringLike::TinyStr(value) => tinystring_as_str(value, &mut buf),
         StringLike::String(ref value) => value.as_str(),
         StringLike::Symbol(sym) => universe.lookup_symbol(sym),
     };

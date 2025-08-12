@@ -69,7 +69,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(u64),
+    TinyStr(i64),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -446,7 +446,29 @@ impl ValueEnum {
                     format!("#{}", symbol)
                 }
             },
-            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::TinyStr(value) => {
+                let v = *value as u64;
+
+                let b0 = ( v & 0xFF) as u8;
+                let b1 = ((v >> 8) & 0xFF) as u8;
+                let b2 = ((v >> 16) & 0xFF) as u8;
+                let b3 = ((v >> 24) & 0xFF) as u8;
+                let b4 = ((v >> 32) & 0xFF) as u8;
+                let b5 = ((v >> 40) & 0xFF) as u8;
+                let b6 = ((v >> 48) & 0xFF) as u8;
+
+                let len = if b0 == 0xFF { 0 }
+                    else if b1 == 0xFF { 1 }
+                    else if b2 == 0xFF { 2 }
+                    else if b3 == 0xFF { 3 }
+                    else if b4 == 0xFF { 4 }
+                    else if b5 == 0xFF { 5 }
+                    else if b6 == 0xFF { 6 }
+                    else { 7 };
+
+                let bytes = [b0, b1, b2, b3, b4, b5, b6];
+                String::from_utf8(bytes[..len].to_vec()).expect("Invalid UTF-8 in TinyStr")
+            },
             Self::String(value) => value.as_str().to_string(),
             Self::Array(values) => {
                 // TODO (from nicolas): I think we can do better here (less allocations).
@@ -482,7 +504,29 @@ impl ValueEnum {
                     format!("#{}", symbol)
                 }
             },
-            Self::TinyStr(value) => String::from_utf8(value.to_vec()).expect("Cannot be converted into String"),
+            Self::TinyStr(value) => {
+                let v = *value as u64;
+
+                let b0 = ( v & 0xFF) as u8;
+                let b1 = ((v >> 8) & 0xFF) as u8;
+                let b2 = ((v >> 16) & 0xFF) as u8;
+                let b3 = ((v >> 24) & 0xFF) as u8;
+                let b4 = ((v >> 32) & 0xFF) as u8;
+                let b5 = ((v >> 40) & 0xFF) as u8;
+                let b6 = ((v >> 48) & 0xFF) as u8;
+
+                let len = if b0 == 0xFF { 0 }
+                    else if b1 == 0xFF { 1 }
+                    else if b2 == 0xFF { 2 }
+                    else if b3 == 0xFF { 3 }
+                    else if b4 == 0xFF { 4 }
+                    else if b5 == 0xFF { 5 }
+                    else if b6 == 0xFF { 6 }
+                    else { 7 };
+
+                let bytes = [b0, b1, b2, b3, b4, b5, b6];
+                String::from_utf8(bytes[..len].to_vec()).expect("Invalid UTF-8 in TinyStr")
+            },
             Self::String(value) => value.as_str().to_string(),
             Self::Array(values) => {
                 // TODO (from nicolas): I think we can do better here (less allocations).
@@ -908,9 +952,9 @@ impl ValueEnum {
 
     #[cfg(any(feature = "l4bits", feature = "l3bits"))]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+    pub fn as_tiny_str(&self) -> Option<i64> {
         if let ValueEnum::TinyStr(v) = self {
-            Some(v.clone())
+            Some(*v)
         } else {
             None
         }
