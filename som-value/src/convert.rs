@@ -206,7 +206,7 @@ where
 #[cfg(feature = "l4bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike<SPTR> {
-    TinyStr(Vec<u8>),
+    TinyStr(i64),
     String(SPTR),
     Symbol(Interned),
 }

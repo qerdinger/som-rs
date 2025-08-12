@@ -62,13 +62,22 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
 fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<Option<Gc<String>>, Error> {
     pop_args_from_stack!(interpreter, _a => Value, path => Value);
 
-    let path = match path.0 {
-        ValueEnum::TinyStr(ref value) => {
-            match std::str::from_utf8(value) {
-                Ok(s) => s,
-                Err(_) => ""
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
             }
-        },
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let path = match path.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
         _ => panic!()
@@ -96,13 +105,22 @@ fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Val
 fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, system => Value, string => Value);
 
-    let string = match string.0 {
-        ValueEnum::TinyStr(ref value) => {
-            match std::str::from_utf8(value) {
-                Ok(s) => s,
-                Err(_) => ""
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
             }
-        },
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
         _ => panic!()
@@ -137,13 +155,22 @@ fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
 
     // let string = string.as_str(|sym| universe.lookup_symbol(sym));
 
-    let string = match string.0 {
-        ValueEnum::TinyStr(ref value) => {
-            match std::str::from_utf8(value) {
-                Ok(s) => s,
-                Err(_) => ""
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
             }
-        },
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
         _ => panic!()
@@ -167,13 +194,22 @@ fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Va
 fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, system => Value, string => Value);
 
-    let string = match string.0 {
-        ValueEnum::TinyStr(ref value) => {
-            match std::str::from_utf8(value) {
-                Ok(s) => s,
-                Err(_) => ""
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
             }
-        },
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
         ValueEnum::String(ref value) => value.as_str(),
         ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
         _ => panic!()

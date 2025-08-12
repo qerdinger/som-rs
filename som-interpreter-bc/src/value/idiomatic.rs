@@ -92,11 +92,11 @@ impl Value {
         new_integer(value: i32),
         new_double(value: f64),
         new_symbol(value: Interned),
-        new_tiny_str(value: Vec<u8>),
+        new_tiny_str(value: i64),
         new_big_integer(value: Gc<BigInt>),
         new_string(value: Gc<String>),
         Boolean(value: bool),
-        TinyStr(value: Vec<u8>),
+        TinyStr(value: i64),
         Integer(value: i32),
         Double(value: f64),
         Symbol(value: Interned),
@@ -300,7 +300,7 @@ impl PartialEq for Value {
         } else if let (Some(a), Some(b)) = (self.as_integer(), other.as_big_integer()) {
             BigInt::from(a).eq(&*b)
         } else if let (Some(a), Some(b)) = (self.as_tiny_str(), other.as_tiny_str()) {
-            *a == *b
+            a == b
         } else if let (Some(a), Some(b)) = (self.as_string(), other.as_string()) {
             *a == *b
         } else if let (Some(a), Some(b)) = (self.as_symbol(), other.as_symbol()) {

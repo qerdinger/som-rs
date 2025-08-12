@@ -84,7 +84,7 @@ pub enum DoubleLike {
 #[cfg(feature = "l3bits")]
 #[derive(Debug, Clone)]
 pub enum StringLike {
-    TinyStr(Vec<u8>),
+    TinyStr(i64),
     String(Gc<String>),
     Symbol(Interned),
 }
@@ -719,9 +719,9 @@ impl IntoValue for Gc<f64> {
 }
 
 #[cfg(any(feature = "l4bits", feature = "l3bits", feature = "idiomatic"))]
-impl IntoValue for Vec<u8> {
+impl IntoValue for i64 {
     fn into_value(&self) -> Value {
-        Value::TinyStr(self.clone())
+        Value::TinyStr(*self)
     }
 }
 

@@ -38,7 +38,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(i64),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -69,7 +69,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(u64),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -99,7 +99,7 @@ pub enum ValueEnum {
     /// An interned symbol value.
     Symbol(Interned),
     /// A string value.
-    TinyStr(Vec<u8>),
+    TinyStr(i64),
     String(Gc<String>),
     /// An array of values.
     Array(GcSlice<Value>),
@@ -800,9 +800,9 @@ impl ValueEnum {
     /// Returns this value as a char, if such is its type.
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn as_tiny_str(&self) -> Option<Vec<u8>> {
+    pub fn as_tiny_str(&self) -> Option<i64> {
         if let ValueEnum::TinyStr(v) = self {
-            Some(v.clone())
+            Some(*v)
         } else {
             None
         }
@@ -940,7 +940,7 @@ impl ValueEnum {
 
     #[cfg(feature = "idiomatic")]
     #[inline(always)]
-    pub fn new_tiny_str(value: Vec<u8>) -> Self {
+    pub fn new_tiny_str(value: i64) -> Self {
         ValueEnum::TinyStr(value)
     }
 
