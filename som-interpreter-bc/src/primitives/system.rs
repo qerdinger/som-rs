@@ -8,7 +8,11 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
-use crate::value::convert::{Nil, Primitive, StringLike};
+use crate::value::convert::{Nil, Primitive};
+
+#[cfg(not(feature = "idiomatic"))]
+use crate::value::convert::StringLike;
+
 use crate::value::Value;
 use crate::vm_objects::class::Class;
 use anyhow::{Context, Error};
@@ -17,6 +21,9 @@ use once_cell::sync::Lazy;
 use som_gc::gc_interface::SOMAllocator;
 use som_gc::gcref::Gc;
 use som_value::interned::Interned;
+
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
 
 pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
     Box::new([
@@ -39,6 +46,7 @@ pub static INSTANCE_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| {
 });
 pub static CLASS_PRIMITIVES: Lazy<Box<[PrimInfo]>> = Lazy::new(|| Box::new([]));
 
+#[cfg(not(feature = "idiomatic"))]
 fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<Option<Gc<String>>, Error> {
     pop_args_from_stack!(interpreter, _a => Value, path => StringLike);
     let path = path.as_str(|sym| universe.lookup_symbol(sym));
@@ -50,10 +58,74 @@ fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<O
     Ok(Some(universe.gc_interface.alloc(value)))
 }
 
+#[cfg(feature = "idiomatic")]
+fn load_file(interpreter: &mut Interpreter, universe: &mut Universe) -> Result<Option<Gc<String>>, Error> {
+    pop_args_from_stack!(interpreter, _a => Value, path => Value);
+
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let path = match path.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    let Ok(value) = fs::read_to_string(&*path) else {
+        return Ok(None);
+    };
+
+    Ok(Some(universe.gc_interface.alloc(value)))
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, system => Value, string => StringLike);
 
     let string = string.as_str(|sym| universe.lookup_symbol(sym));
+    print!("{string}");
+    std::io::stdout().flush()?;
+
+    Ok(system)
+}
+
+#[cfg(feature = "idiomatic")]
+fn print_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => Value);
+
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
     print!("{string}");
     std::io::stdout().flush()?;
 
@@ -65,6 +137,7 @@ fn print_newline(_: Value) -> Result<Nil, Error> {
     Ok(Nil)
 }
 
+#[cfg(not(feature = "idiomatic"))]
 fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, system => Value, string => StringLike);
 
@@ -76,9 +149,73 @@ fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     Ok(system)
 }
 
+#[cfg(feature = "idiomatic")]
+fn error_print(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => Value);
+
+    // let string = string.as_str(|sym| universe.lookup_symbol(sym));
+
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    eprint!("{string}");
+    std::io::stderr().flush()?;
+
+    Ok(system)
+}
+
+#[cfg(not(feature = "idiomatic"))]
 fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, system => Value, string => StringLike);
     let string = string.as_str(|sym| universe.lookup_symbol(sym));
+    eprintln!("{string}");
+    Ok(system)
+}
+
+#[cfg(feature = "idiomatic")]
+fn error_println(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    pop_args_from_stack!(interp, system => Value, string => Value);
+
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    // let string = string.as_str(|sym| universe.lookup_symbol(sym));
     eprintln!("{string}");
     Ok(system)
 }

@@ -4,7 +4,17 @@ use crate::pop_args_from_stack;
 use crate::primitives::PrimInfo;
 use crate::primitives::PrimitiveFn;
 use crate::universe::Universe;
+
+#[cfg(not(feature = "idiomatic"))]
 use crate::value::convert::{DoubleLike, IntegerLike, IntoValue, Primitive, StringLike};
+
+
+#[cfg(feature = "idiomatic")]
+use crate::value::convert::{DoubleLike, IntegerLike, IntoValue, Primitive};
+
+#[cfg(feature = "idiomatic")]
+use crate::value::value_enum::ValueEnum;
+
 use crate::value::Value;
 use anyhow::{bail, Context, Error};
 use num_bigint::{BigInt, BigUint, ToBigInt};
@@ -65,6 +75,8 @@ macro_rules! demote {
     }};
 }
 
+
+#[cfg(not(feature = "idiomatic"))]
 fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     const _: &str = "Integer>>#fromString:";
 
@@ -84,6 +96,47 @@ fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Valu
     }
 }
 
+#[cfg(feature = "idiomatic")]
+fn from_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
+    const _: &str = "Integer>>#fromString:";
+
+    pop_args_from_stack!(interp, _a => Value, string => Value);
+
+    // let string = string.as_str(|sym| universe.lookup_symbol(sym));
+    #[inline]
+    fn tinystring_as_str<'a>(value: i64, buf: &'a mut [u8; 7]) -> &'a str {
+        let v = value as u64;
+        for i in 0..7 {
+            let b = ((v >> (i * 8)) & 0xFF) as u8;
+            if b == 0xFF {
+                return unsafe { std::str::from_utf8_unchecked(&buf[..i]) };
+            }
+            buf[i] = b;
+        }
+        unsafe { std::str::from_utf8_unchecked(&buf[..7]) }
+    }
+
+    let mut buf = [0u8; 7];
+    let string = match string.0 {
+        ValueEnum::TinyStr(value) => tinystring_as_str(value, &mut buf),
+        ValueEnum::String(ref value) => value.as_str(),
+        ValueEnum::Symbol(sym) => universe.lookup_symbol(sym),
+        _ => panic!()
+    };
+
+    // bad implem, can be improved
+    match string.parse::<i32>() {
+        Ok(a) => Ok(Value::Integer(a)),
+        Err(_) => match string.parse::<BigInt>() {
+            Ok(b) => {
+                Ok(Value::BigInteger(universe.gc_interface.alloc(b)))
+            },
+            _ => panic!("couldn't turn an int/bigint into a string"),
+        },
+    }
+}
+
+
 #[cfg(feature = "nan")]
 fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
@@ -97,7 +150,7 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
 }
 
 #[cfg(feature = "idiomatic")]
-fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<String>, Error> {
+fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value, Error> {
     pop_args_from_stack!(interp, receiver => IntegerLike);
 
     let receiver = match receiver {
@@ -105,7 +158,23 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Gc<Str
         IntegerLike::BigInteger(value) => value.to_string(),
     };
 
-    Ok(universe.gc_interface.alloc(receiver))
+    let val = receiver.to_string();
+    let val_len = val.len();
+
+    if val_len <= 7 {
+        let b = val.as_bytes();
+        let mut word: i64 = 0x00FF_FFFF_FFFF_FFFF;
+        if val_len > 0 { word = (word & !(0xFFi64 << 0 )) | ((b[0] as i64) << 0 ); }
+        if val_len > 1 { word = (word & !(0xFFi64 << 8 )) | ((b[1] as i64) << 8 ); }
+        if val_len > 2 { word = (word & !(0xFFi64 << 16)) | ((b[2] as i64) << 16); }
+        if val_len > 3 { word = (word & !(0xFFi64 << 24)) | ((b[3] as i64) << 24); }
+        if val_len > 4 { word = (word & !(0xFFi64 << 32)) | ((b[4] as i64) << 32); }
+        if val_len > 5 { word = (word & !(0xFFi64 << 40)) | ((b[5] as i64) << 40); }
+        if val_len > 6 { word = (word & !(0xFFi64 << 48)) | ((b[6] as i64) << 48); }
+        return Ok(Value::TinyStr(word));
+    }
+
+    Ok(Value::String(universe.gc_interface.alloc(receiver)))
 }
 
 #[cfg(any(feature = "l4bits", feature = "l3bits"))]
@@ -121,10 +190,16 @@ fn as_string(interp: &mut Interpreter, universe: &mut Universe) -> Result<Value,
     let val_len = val.len();
 
     if val_len < 8 {
-        let data_buf: Vec<u8> = (*val).as_bytes().to_vec();
-        // println!("buf : {:?}", data_buf);
-        // println!("readable : {}", std::str::from_utf8(&data_buf).unwrap());
-        return Ok(Value::TinyStr(data_buf));
+        let b = val.as_bytes();
+        let mut word: i64 = 0x00FF_FFFF_FFFF_FFFF;
+        if val_len > 0 { word = (word & !(0xFFi64 << 0 )) | ((b[0] as i64) << 0 ); }
+        if val_len > 1 { word = (word & !(0xFFi64 << 8 )) | ((b[1] as i64) << 8 ); }
+        if val_len > 2 { word = (word & !(0xFFi64 << 16)) | ((b[2] as i64) << 16); }
+        if val_len > 3 { word = (word & !(0xFFi64 << 24)) | ((b[3] as i64) << 24); }
+        if val_len > 4 { word = (word & !(0xFFi64 << 32)) | ((b[4] as i64) << 32); }
+        if val_len > 5 { word = (word & !(0xFFi64 << 40)) | ((b[5] as i64) << 40); }
+        if val_len > 6 { word = (word & !(0xFFi64 << 48)) | ((b[6] as i64) << 48); }
+        return Ok(Value::TinyStr(word));
     }
 
     Ok(Value::String(universe.gc_interface.alloc(receiver)))

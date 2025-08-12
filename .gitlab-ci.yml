@@ -24,7 +24,7 @@ build-and-test-interpreters:
 
     - cargo build --release --features=som-gc/marksweep --features=l3bits
     - cargo clippy --features=som-gc/marksweep --features=l3bits
-    #- RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l3bits
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l3bits
     #
     # Note:
     # Disable unit tests for lower 3-bit implementation due to signature refactoring for Symbol
