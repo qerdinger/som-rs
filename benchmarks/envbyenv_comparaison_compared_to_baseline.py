@@ -7,12 +7,18 @@ import seaborn as sns
 
 CSV_PATH = "som-rs-5553.csv"
 
-GLOBAL_OUT_ROOT = "output7553-without-imm-float"
-ENV_OUT_ROOT = "output7553-without-imm-float/envs"
-SUMMARY_ROOT = "output7553-without-imm-float/summaries"
+GLOBAL_OUT_ROOT = "output7553-without-imm-float-specific"
+ENV_OUT_ROOT = "output7553-without-imm-float-specific/envs"
+SUMMARY_ROOT = "without-imm-float-specific/summaries"
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
 
 BASELINE_EXE = "som-rs-bc-baseline"
+
+# Suites to exclude
+EXCLUDE_SUITES = [
+    "interpreter",
+    "macro-awfy"
+]
 
 SUBFOLDERS = {
     "time_ms":   {"criterion": "total",     "unit": "ms",    "xlabel": "Execution time (ms)", "fmt": "{:.2f} ms"},
@@ -22,6 +28,13 @@ SUBFOLDERS = {
 }
 
 df = pd.read_csv(CSV_PATH)
+
+print("Initial size : ", df.size)
+
+df = df[~df["suite"].isin(EXCLUDE_SUITES)].copy()
+
+print("After exclusion list size : ", df.size)
+
 sns.set(style="whitegrid")
 
 os.makedirs(GLOBAL_OUT_ROOT, exist_ok=True)
