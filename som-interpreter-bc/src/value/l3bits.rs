@@ -349,27 +349,27 @@ impl Value {
 
     #[inline(always)]
     pub fn Array(value: VecValue) -> Self {
-        Value(BaseValue::new(PTR_TAG, value.0.into()))
+        Value(BaseValue::new_ptr(PTR_TAG, value.0.into()))
     }
 
     #[inline(always)]
     pub fn Block(value: Gc<Block>) -> Self {
-        Value(BaseValue::new(PTR_TAG, value.into()))
+        Value(BaseValue::new_ptr(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Class(value: Gc<Class>) -> Self {
-        Value(BaseValue::new(PTR_TAG, value.into()))
+        Value(BaseValue::new_ptr(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Instance(value: Gc<Instance>) -> Self {
-        Value(BaseValue::new(PTR_TAG, value.into()))
+        Value(BaseValue::new_ptr(PTR_TAG, value.into()))
     }
 
     #[inline(always)]
     pub fn Invokable(value: Gc<Method>) -> Self {
-        Value(BaseValue::new(PTR_TAG, value.into()))
+        Value(BaseValue::new_ptr(PTR_TAG, value.into()))
     }
 }
 

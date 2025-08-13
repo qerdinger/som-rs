@@ -55,17 +55,6 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
-        if matches!(
-            tag,
-            STRING_TAG |
-            BIG_INTEGER_TAG |
-            ARRAY_TAG |
-            BLOCK_TAG |
-            CLASS_TAG |
-            INSTANCE_TAG |
-            INVOKABLE_TAG
-        ) { return Self::new_ptr(tag, value); }
-
         Self {
             encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
@@ -229,7 +218,7 @@ impl BaseValue {
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(BIG_INTEGER_TAG, ptr)
+        Self::new_ptr(BIG_INTEGER_TAG, ptr)
     }
 
     #[inline(always)]
@@ -239,7 +228,7 @@ impl BaseValue {
         StringPtr: Deref<Target = String> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(STRING_TAG, ptr)
+        Self::new_ptr(STRING_TAG, ptr)
     }
 
     #[inline(always)]

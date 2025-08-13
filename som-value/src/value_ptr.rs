@@ -32,6 +32,17 @@ where
     T: HasPointerTag,
     PTR: Deref<Target = T> + Into<u64> + From<u64>,
 {
+    #[cfg(any(feature = "l4bits", feature = "l3bits"))]
+    pub fn new(value: PTR) -> Self {
+        let ptr: u64 = value.into();
+        Self {
+            value: BaseValue::new_ptr(T::get_tag(), ptr),
+            _phantom: PhantomData,
+            _phantom2: PhantomData,
+        }
+    }
+
+    #[cfg(feature = "nan")]
     pub fn new(value: PTR) -> Self {
         let ptr: u64 = value.into();
         Self {

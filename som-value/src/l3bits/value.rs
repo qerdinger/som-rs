@@ -47,9 +47,6 @@ impl BaseValue {
 
     #[inline(always)]
     pub const fn new(tag: u64, value: u64) -> Self {
-        if matches!(tag, PTR_TAG) {
-            return Self::new_ptr(tag, value);
-        }
         Self {
             encoded: (value << VALUE_TAG_BITS) | (tag & TAG_BITS),
         }
@@ -156,7 +153,7 @@ impl BaseValue {
         u64: From<DoublePtr>,
         DoublePtr: Deref<Target = f64> + From<u64>,
     {
-        Self::new(PTR_TAG, value.into())
+        Self::new_ptr(PTR_TAG, value.into())
     }
 
     #[inline(always)]
@@ -176,7 +173,7 @@ impl BaseValue {
         BigIntPtr: Deref<Target = BigInt> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(PTR_TAG, ptr)
+        Self::new_ptr(PTR_TAG, ptr)
     }
 
     #[inline(always)]
@@ -186,7 +183,7 @@ impl BaseValue {
         StringPtr: Deref<Target = String> + From<u64>,
     {
         let ptr: u64 = value.into();
-        Self::new(PTR_TAG, ptr)
+        Self::new_ptr(PTR_TAG, ptr)
     }
 
     #[inline(always)]
