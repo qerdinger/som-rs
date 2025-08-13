@@ -106,12 +106,12 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
             Value::String(val.clone())
         },
         Literal::Double(val) => {
-            let bits = val.to_bits();
-            let exponent  = (bits >> 52) & 0x7FF;
-            if (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1 {
-                // In range
-                return Value::Double(*val);
-            }
+            // let bits = val.to_bits();
+            // let exponent  = (bits >> 52) & 0x7FF;
+            // if (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1 {
+            //     // In range
+            //     return Value::Double(*val);
+            // }
             Value::new_allocated_double(gc_interface.alloc(*val))
         },
         Literal::Integer(val) => Value::Integer(*val),
@@ -145,12 +145,12 @@ pub fn value_from_literal(literal: &Literal, gc_interface: &mut GCInterface) -> 
             Value::String(val.clone())
         },
         Literal::Double(val) => {
-            let bits = val.to_bits();
-            let exponent  = (bits >> 52) & 0x7FF;
-            if (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1 {
-                // In range
-                return Value::Double(*val);
-            }
+            // let bits = val.to_bits();
+            // let exponent  = (bits >> 52) & 0x7FF;
+            // if (exponent >= 0x380 && exponent <= 0x47F) || bits == 0 || bits == 1 {
+            //     // In range
+            //     return Value::Double(*val);
+            // }
             Value::new_allocated_double(gc_interface.alloc(*val))
         },
         Literal::Integer(val) => Value::Integer(*val),
