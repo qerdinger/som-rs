@@ -122,7 +122,16 @@ impl Slot for RefValueSlot {
         todo!("To be implemented");
     }
 
-    #[cfg(not(feature = "idiomatic"))]
+    #[cfg(any(feature = "l3bits", feature = "l4bits"))]
+    fn store(&self, object: ObjectReference) {
+        unsafe {
+            debug_assert!((*self.value).is_ptr_type());
+            *self.value = BaseValue::new_ptr((*self.value).tag(), object.to_raw_address().as_usize() as u64);
+            debug_assert!((*self.value).is_ptr_type());
+        }
+    }
+
+    #[cfg(feature = "nan")]
     fn store(&self, object: ObjectReference) {
         unsafe {
             debug_assert!((*self.value).is_ptr_type());

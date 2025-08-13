@@ -206,7 +206,7 @@ impl Value {
 
     #[inline(always)]
     pub fn Array(value: VecValue) -> Self {
-        Value(BaseValue::new(ARRAY_TAG, value.0.into()))
+        Value(BaseValue::new_ptr(ARRAY_TAG, value.0.into()))
     }
 
     #[inline(always)]
