@@ -11,6 +11,7 @@ build-and-test-interpreters:
   stage: build-test
   tags: [zullie1]
   script:
+    - cargo --version
     - cargo clean
 
     - cargo build --release --features=som-gc/marksweep --features=idiomatic
