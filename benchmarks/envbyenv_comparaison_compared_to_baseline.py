@@ -5,11 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-CSV_PATH = "som-rs-5527.csv"
+CSV_PATH = "som-rs-5553.csv"
 
-GLOBAL_OUT_ROOT = "output7_5527-without-tinystr-specific"
-ENV_OUT_ROOT = "output7_5527-without-tinystr-specific/envs"
-SUMMARY_ROOT = "output7_5527-without-tinystr-specific/summaries"
+GLOBAL_OUT_ROOT = "output7_5553-without-imm-float-micro-macro"
+ENV_OUT_ROOT = "output7_5553-without-imm-float-micro-macro/envs"
+SUMMARY_ROOT = "output7_5553-without-imm-float-micro-macro/summaries"
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
 
 BASELINE_EXE = "som-rs-bc-baseline"
@@ -17,7 +17,8 @@ BASELINE_EXE = "som-rs-bc-baseline"
 # Suites to exclude
 EXCLUDE_SUITES = [
     "interpreter",
-    "macro-awfy"
+    "macro-awfy",
+    "somsom"
 ]
 
 SUBFOLDERS = {
