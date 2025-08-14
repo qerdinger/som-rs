@@ -31,10 +31,10 @@ GraphSearch,som-rs-bc-baseline,0.0,0.0,0.0,0.0,0.0,20
 GraphSearch,som-rs-bc-l3bits,0.0,0.0,0.0,0.0,0.0,20
 GraphSearch,som-rs-bc-l4bits,0.0,0.0,0.0,0.0,0.0,20
 GraphSearch,som-rs-bc-nan,0.0,0.0,0.0,0.0,0.0,20
-IntegerLoop,som-rs-bc-baseline,11314.7,11890.5,1235.8260437967467,8248.0,12560.0,20
-IntegerLoop,som-rs-bc-l3bits,7588.05,8019.5,957.1673381169537,5564.0,8481.0,20
-IntegerLoop,som-rs-bc-l4bits,7653.6,8002.5,819.4926158107961,6111.0,8711.0,20
-IntegerLoop,som-rs-bc-nan,7562.35,7941.5,915.8712432490312,5552.0,8423.0,20
+IntegerLoop,som-rs-bc-baseline,11362.05,11821.5,1070.4716360951415,8976.0,12745.0,20
+IntegerLoop,som-rs-bc-l3bits,7864.0,7990.0,927.6105126387338,6041.0,9379.0,20
+IntegerLoop,som-rs-bc-l4bits,7645.1,8060.0,903.159769044798,5258.0,8401.0,20
+IntegerLoop,som-rs-bc-nan,7757.5,8017.5,563.9287468988857,6514.0,8294.0,20
 JsonSmall,som-rs-bc-baseline,0.0,0.0,0.0,0.0,0.0,20
 JsonSmall,som-rs-bc-l3bits,0.0,0.0,0.0,0.0,0.0,20
 JsonSmall,som-rs-bc-l4bits,0.0,0.0,0.0,0.0,0.0,20
