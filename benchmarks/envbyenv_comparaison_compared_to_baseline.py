@@ -5,9 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-CSV_PATH = "som-rs-5552.csv"
+CSV_PATH = "som-rs-5553.csv"
 
-GLOBAL_OUT_ROOT = "output7_5552-with-safe-tinystr-micro-macro_v2"
+GLOBAL_OUT_ROOT = "output7_5553-without-imm-float-micro-macro_v2"
 ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
 SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
