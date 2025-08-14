@@ -7,7 +7,7 @@ import seaborn as sns
 
 CSV_PATH = "som-rs-5553.csv"
 
-GLOBAL_OUT_ROOT = "output7_5553-without-imm-float-micro-macro_v2"
+GLOBAL_OUT_ROOT = "output7_5553-without-imm-float_v2"
 ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
 SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
@@ -22,9 +22,9 @@ SUMMARY_IMG_DASH = os.path.join(GLOBAL_OUT_ROOT, "summary_dashboard.png")
 BASELINE_EXE = "som-rs-bc-baseline"
 
 EXCLUDE_SUITES: list[str] = [
-    "interpreter",
-    "macro-awfy",
-    "somsom"
+    # "interpreter",
+    # "macro-awfy",
+    # "somsom"
 ]
 
 SUBFOLDERS = {
@@ -548,10 +548,10 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
             if vals.empty:
                 continue
             stats_text = (
-                f"min={vals.min():.2f}×  "
-                f"mean={vals.mean():.2f}×  "
-                f"median={vals.median():.2f}×  "
-                f"max={vals.max():.2f}×"
+                f"min={vals.min():.3f}×  "
+                f"mean={vals.mean():.3f}×  "
+                f"median={vals.median():.3f}×  "
+                f"max={vals.max():.3f}×"
             )
             ax3.text(xmax + 0.01 * (xmax - xmin), j, stats_text,
                      va="center", ha="left", fontsize=7, color="#333",
