@@ -7,7 +7,7 @@ import seaborn as sns
 
 CSV_PATH = "som-rs-5527.csv"
 
-GLOBAL_OUT_ROOT = "benchmarks/output7_5527-without-tinystr-micro-macro_v2"
+GLOBAL_OUT_ROOT = "output7_5527-without-tinystr-micro-macro_v2"
 ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
 SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
@@ -23,7 +23,7 @@ BASELINE_EXE = "som-rs-bc-baseline"
 
 EXCLUDE_SUITES: list[str] = [
     "interpreter",
-    "macro-afwy",
+    "macro-awfy",
     "somsom"
 ]
 
