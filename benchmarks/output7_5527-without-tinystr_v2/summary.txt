@@ -1,22 +1,22 @@
-=== OVERALL PERFORMANCE — time_ms ===
+=== OVERALL PERFORMANCE | time_ms ===
   1. som-rs-bc-nan            gmean (×) vs base:  1.290 | median (×):  1.277 | best (winning) rate:   48.8% 
   2. som-rs-bc-l4bits         gmean (×) vs base:  1.285 | median (×):  1.273 | best (winning) rate:   37.2% 
   3. som-rs-bc-l3bits         gmean (×) vs base:  1.267 | median (×):  1.247 | best (winning) rate:   14.0% 
   4. som-rs-bc-baseline       gmean (×) vs base:  1.000 | median (×):  1.000 | best (winning) rate:    0.0%    (baseline)
 
-=== OVERALL PERFORMANCE — bytes ===
+=== OVERALL PERFORMANCE | bytes ===
   1. som-rs-bc-l3bits         gmean (×) vs base:  1.415 | median (×):  1.570 | best (winning) rate:   85.7% 
   2. som-rs-bc-l4bits         gmean (×) vs base:  1.415 | median (×):  1.570 | best (winning) rate:   85.7% 
   3. som-rs-bc-nan            gmean (×) vs base:  1.413 | median (×):  1.570 | best (winning) rate:   85.7% 
   4. som-rs-bc-baseline       gmean (×) vs base:  1.000 | median (×):  1.000 | best (winning) rate:   45.2%    (baseline)
 
-=== OVERALL PERFORMANCE — gc_time_ms ===
+=== OVERALL PERFORMANCE | gc_time_ms ===
   1. som-rs-bc-nan            gmean (×) vs base:  1.568 | median (×):  1.723 | best (winning) rate:   90.5% 
   2. som-rs-bc-l3bits         gmean (×) vs base:  1.567 | median (×):  1.716 | best (winning) rate:   90.5% 
   3. som-rs-bc-l4bits         gmean (×) vs base:  1.565 | median (×):  1.724 | best (winning) rate:   85.7% 
   4. som-rs-bc-baseline       gmean (×) vs base:  1.000 | median (×):  1.000 | best (winning) rate:   83.3%    (baseline)
 
-=== OVERALL PERFORMANCE — gc_count ===
+=== OVERALL PERFORMANCE | gc_count ===
   1. som-rs-bc-l3bits         gmean (×) vs base:  1.597 | median (×):  1.727 | best (winning) rate:  100.0% 
   2. som-rs-bc-l4bits         gmean (×) vs base:  1.597 | median (×):  1.727 | best (winning) rate:  100.0% 
   3. som-rs-bc-nan            gmean (×) vs base:  1.597 | median (×):  1.727 | best (winning) rate:  100.0% 
