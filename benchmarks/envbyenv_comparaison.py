@@ -76,7 +76,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path):
         )
 
     envs = ", ".join(map(str, sorted(bench_data["envid"].unique())))
-    ax.set_title(f"{bench} — Environment(s): {envs}")
+    ax.set_title(f"{bench} | Environment(s): {envs}")
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Interpreter")
     ax.legend([], [], frameon=False)
