@@ -9,7 +9,7 @@ before_script:
 
 build-and-test-interpreters:
   stage: build-test
-  tags: [yuria2]
+  tags: [zullie1]
   script:
     - cargo clean
 
@@ -40,27 +40,27 @@ build-and-test-interpreters:
 
 
     # Package and Upload
-    - |
-      sftp tmp-artifacts << EOF
-        -mkdir incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_l3bits.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_l4bits.lz4 incoming/${CI_PIPELINE_ID}/
-      EOF
+    # - |
+    #   sftp tmp-artifacts << EOF
+    #     -mkdir incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_l3bits.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_l4bits.lz4 incoming/${CI_PIPELINE_ID}/
+    #   EOF
 
-benchmark:
-  parallel:
-    matrix:
-      - MACHINE:
-          # - zullie1
-          - yuria
-          - yuria2
-          - yuria3
-          - yuria4
-  stage: benchmark
-  tags: [$MACHINE]
-  script:
+# benchmark:
+#   parallel:
+#     matrix:
+#       - MACHINE:
+#           - zullie1
+#           - yuria
+#           - yuria2
+#           - yuria3
+#           - yuria4
+#   stage: benchmark
+#   tags: [$MACHINE]
+#   script:
     - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_idiomatic.lz4
     - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l3bits.lz4
     - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l4bits.lz4
@@ -76,6 +76,6 @@ benchmark:
 
 report-completion:
   stage: benchmark-completion
-  tags: [yuria2]
+  tags: [zullie1]
   script:
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --report-completion rebench.conf
