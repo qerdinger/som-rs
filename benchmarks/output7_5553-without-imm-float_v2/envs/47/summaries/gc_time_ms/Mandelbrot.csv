@@ -1,0 +1,5 @@
+exe,mean,median,std,min,max,n,pct_vs_baseline,cov
+som-rs-bc-baseline,0.0,0.0,0.0,0.0,0.0,10,,
+som-rs-bc-l3bits,0.0,0.0,0.0,0.0,0.0,10,,
+som-rs-bc-l4bits,0.0,0.0,0.0,0.0,0.0,10,,
+som-rs-bc-nan,0.0,0.0,0.0,0.0,0.0,10,,

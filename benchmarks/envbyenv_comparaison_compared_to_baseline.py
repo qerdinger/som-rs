@@ -7,19 +7,21 @@ import seaborn as sns
 
 CSV_PATH = "som-rs-5527.csv"
 
-GLOBAL_OUT_ROOT = "output7_5527-without-tinystr-micro-macro"
-ENV_OUT_ROOT = "output7_5527-without-tinystr-micro-macro/envs"
-SUMMARY_ROOT = "output7_5527-without-tinystr-micro-macro/summaries"
+GLOBAL_OUT_ROOT = "output7_5527-without-tinystr_v2"
+ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
+SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
+SUMMARY_TXT = os.path.join(GLOBAL_OUT_ROOT, "summary.txt")
+
+SUMMARY_IMG_TIME     = os.path.join(GLOBAL_OUT_ROOT, "summary_time.png")
+SUMMARY_IMG_BYTES    = os.path.join(GLOBAL_OUT_ROOT, "summary_bytes.png")
+SUMMARY_IMG_GCTIME   = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_time.png")
+SUMMARY_IMG_GCCOUNT  = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_count.png")
+SUMMARY_IMG_DASH     = os.path.join(GLOBAL_OUT_ROOT, "summary_dashboard.png")
 
 BASELINE_EXE = "som-rs-bc-baseline"
 
-# Suites to exclude
-EXCLUDE_SUITES = [
-    "interpreter",
-    "macro-awfy",
-    "somsom"
-]
+EXCLUDE_SUITES: list[str] = []
 
 SUBFOLDERS = {
     "time_ms":   {"criterion": "total",     "unit": "ms",    "xlabel": "Execution time (ms)", "fmt": "{:.2f} ms"},
@@ -29,11 +31,9 @@ SUBFOLDERS = {
 }
 
 df = pd.read_csv(CSV_PATH)
-
 print("Initial size : ", df.size)
 
 df = df[~df["suite"].isin(EXCLUDE_SUITES)].copy()
-
 print("After exclusion list size : ", df.size)
 
 sns.set(style="whitegrid")
@@ -99,7 +99,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
 
     for i, exe in enumerate(exe_order):
         row = stats[stats["exe"] == exe].iloc[0]
-        mean_val = row["mean"]; n = int(row["n"])
+        mean_val = row["mean"]
         if np.isfinite(row["pct_vs_baseline"]):
             pct = row["pct_vs_baseline"]
             sign = "+" if pct >= 0 else "−"
@@ -249,16 +249,15 @@ def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     bench_means = bench_means.loc[have_base].copy()
     if bench_means.empty:
         print(f"[overall] No benches with baseline for {metric_name}.")
-        return
+        return None
 
     pivot = bench_means.pivot(index="bench", columns="exe", values="value")
     if BASELINE_EXE not in pivot.columns:
         print(f"[overall] Baseline '{BASELINE_EXE}' missing for {metric_name}.")
-        return
+        return None
 
     speedup = pivot.apply(lambda col: pivot[BASELINE_EXE] / col)
 
-    # Geometric mean & median speedup across benches (skip NaN/inf)
     gmeans = speedup.apply(geometric_mean, axis=0)
     medians = speedup.median(axis=0, skipna=True)
 
@@ -278,16 +277,7 @@ def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
 
     out_csv = os.path.join(outdir, f"OVERALL_{metric_name}.csv")
     summary.to_csv(out_csv, index=False)
-
-    print("\n=== OVERALL PERFORMANCE —", metric_name, "===")
-    for _, r in summary.iterrows():
-        ex = r["exe"]
-        g = r["geo_mean_speedup_vs_baseline"]
-        m = r["median_speedup_vs_baseline"]
-        w = r["win_rate"]
-        star = "  (baseline)" if ex == BASELINE_EXE else ""
-        print(f"{int(r['rank']):>2}. {ex:<24} "
-              f"gmean (×) vs base: {g:6.3f} | median (×): {m:6.3f} | best (winning) rate: {w*100:5.1f}% {star}")
+    return summary
 
 overall_specs = [
     ("time_ms",   {"criterion": "total",     "unit": "ms"}),
@@ -296,10 +286,172 @@ overall_specs = [
     ("gc_count",  {"criterion": "GC count",  "unit": "n"}),
 ]
 
+overall_results: dict[str, pd.DataFrame | None] = {}
+df_by_metric: dict[str, pd.DataFrame] = {}
+
 for metric_name, spec in overall_specs:
     scope = df[(df["criterion"] == spec["criterion"]) & (df["unit"] == spec["unit"])]
     if scope.empty:
         continue
-    overall_comparison(scope, metric_name, SUMMARY_ROOT)
+    df_by_metric[metric_name] = scope.copy()
+    overall_results[metric_name] = overall_comparison(scope, metric_name, SUMMARY_ROOT)
 
-print("Done!")
+def format_overall_block(metric_name: str, summary: pd.DataFrame) -> str:
+    header = f"=== OVERALL PERFORMANCE — {metric_name} ==="
+    if summary is None or summary.empty:
+        return header + "\n(no result)\n"
+
+    lines = [header]
+    for _, r in summary.iterrows():
+        ex = str(r["exe"])
+        g = r["geo_mean_speedup_vs_baseline"]
+        m = r["median_speedup_vs_baseline"]
+        w = r["win_rate"]
+        star = "   (baseline)" if ex == BASELINE_EXE else ""
+        lines.append(
+            f" {int(r['rank']):>2}. {ex:<24}"
+            f" gmean (×) vs base: {g:6.3f} | median (×): {m:6.3f} |"
+            f" best (winning) rate: {w*100:6.1f}% {star}"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+blocks = []
+for metric_name, _ in overall_specs:
+    blocks.append(format_overall_block(metric_name, overall_results.get(metric_name)))
+
+pretty_summary = "\n".join(blocks)
+
+print(pretty_summary)
+with open(SUMMARY_TXT, "w", encoding="utf-8") as f:
+    f.write(pretty_summary)
+print("Done!\nsaved as summary.txt")
+
+def overall_raw_means(scope: pd.DataFrame) -> pd.Series:
+    bench_means = scope.groupby(["bench", "exe"])["value"].mean().reset_index()
+    return bench_means.groupby("exe")["value"].mean().sort_values(ascending=False)
+
+def plot_overall_metric(metric_key: str,
+                        summary: pd.DataFrame | None,
+                        scope: pd.DataFrame | None,
+                        out_path: str,
+                        unit_label: str,
+                        title_suffix: str):
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+    if summary is None or summary.empty:
+        plt.figure(figsize=(7, 3))
+        plt.axis("off")
+        plt.text(0.5, 0.5, f"No data for {metric_key}", ha="center", va="center")
+        plt.savefig(out_path, dpi=220, bbox_inches="tight")
+        plt.close()
+        return
+
+    summary = summary.sort_values("geo_mean_speedup_vs_baseline", ascending=True).reset_index(drop=True)
+
+    raw_means = None
+    if scope is not None and not scope.empty:
+        raw_means = overall_raw_means(scope)
+
+    fig_h = 8.5 if raw_means is not None else 6.5
+    fig = plt.figure(figsize=(10.5, fig_h))
+
+    ax1 = fig.add_axes([0.10, 0.63, 0.80, 0.30])  # [left, bottom, width, height]
+    y = np.arange(len(summary))
+    ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
+    ax1.set_yticks(y, summary["exe"].values)
+    ax1.set_xlabel("Geometric mean speedup vs baseline (×) — higher is better")
+    ax1.set_title(f"{metric_key} — {title_suffix}")
+
+    for i, v in enumerate(summary["geo_mean_speedup_vs_baseline"].values):
+        ax1.text(v, i, f" {v:.3f}×", va="center")
+
+    ax2 = fig.add_axes([0.10, 0.33, 0.80, 0.24])
+    wins_pct = summary["win_rate"].values * 100.0
+    ax2.barh(y, wins_pct)
+    ax2.set_yticks(y, summary["exe"].values)
+    ax2.set_xlabel("Winning rate across benches (%) — higher is better")
+    for i, v in enumerate(wins_pct):
+        ax2.text(v, i, f" {v:.1f}%", va="center")
+
+    if raw_means is not None:
+        ax3 = fig.add_axes([0.10, 0.08, 0.80, 0.20])
+        ax3.axis("off")
+        rows = []
+        for ex in summary["exe"].values:
+            val = raw_means.get(ex, np.nan)
+            rows.append((ex, val))
+        lines = [f"\n\nOverall mean (of bench means) by interpreter — {unit_label}"]
+        for ex, v in rows:
+            if np.isfinite(v):
+                if unit_label == "bytes":
+                    lines.append(f"• {ex:<24} : {v:,.0f} {unit_label}")
+                elif unit_label == "n":
+                    lines.append(f"• {ex:<24} : {v:.2f} {unit_label}")
+                else:
+                    lines.append(f"• {ex:<24} : {v:.3f} {unit_label}")
+            else:
+                lines.append(f"• {ex:<24} : n/a")
+        text = "\n".join(lines)
+        ax3.text(0, 1, text, va="top", ha="left", family="monospace")
+
+    plt.savefig(out_path, dpi=220, bbox_inches="tight")
+    plt.close()
+
+plot_overall_metric(
+    "time_ms",
+    overall_results.get("time_ms"),
+    df_by_metric.get("time_ms"),
+    SUMMARY_IMG_TIME,
+    unit_label="ms",
+    title_suffix="speedups & wins (time)"
+)
+plot_overall_metric(
+    "bytes",
+    overall_results.get("bytes"),
+    df_by_metric.get("bytes"),
+    SUMMARY_IMG_BYTES,
+    unit_label="bytes",
+    title_suffix="speedups & wins (allocated bytes)"
+)
+plot_overall_metric(
+    "gc_time_ms",
+    overall_results.get("gc_time_ms"),
+    df_by_metric.get("gc_time_ms"),
+    SUMMARY_IMG_GCTIME,
+    unit_label="ms",
+    title_suffix="speedups & wins (GC time)"
+)
+plot_overall_metric(
+    "gc_count",
+    overall_results.get("gc_count"),
+    df_by_metric.get("gc_count"),
+    SUMMARY_IMG_GCCOUNT,
+    unit_label="n",
+    title_suffix="speedups & wins (GC count)"
+)
+
+def make_dashboard(out_path: str):
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
+    items = [
+        ("time_ms", overall_results.get("time_ms")),
+        ("bytes", overall_results.get("bytes")),
+        ("gc_time_ms", overall_results.get("gc_time_ms")),
+        ("gc_count", overall_results.get("gc_count")),
+    ]
+    for ax, (name, summ) in zip(axes.ravel(), items):
+        if summ is None or summ.empty:
+            ax.axis("off")
+            ax.set_title(f"{name}: (no data)")
+            continue
+        show = summ.sort_values("geo_mean_speedup_vs_baseline", ascending=True)
+        y = np.arange(len(show))
+        ax.barh(y, show["geo_mean_speedup_vs_baseline"].values)
+        ax.set_yticks(y, show["exe"].values, fontsize=8)
+        ax.set_title(f"{name} — gmean speedup (×), higher is better")
+        for i, v in enumerate(show["geo_mean_speedup_vs_baseline"].values):
+            ax.text(v, i, f" {v:.2f}×", va="center", fontsize=8)
+    plt.savefig(out_path, dpi=220, bbox_inches="tight")
+    plt.close()
+
+make_dashboard(SUMMARY_IMG_DASH)
