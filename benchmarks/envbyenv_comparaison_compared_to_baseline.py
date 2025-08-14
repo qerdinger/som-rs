@@ -13,11 +13,11 @@ SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
 SUMMARY_TXT = os.path.join(GLOBAL_OUT_ROOT, "summary.txt")
 
-SUMMARY_IMG_TIME     = os.path.join(GLOBAL_OUT_ROOT, "summary_time.png")
-SUMMARY_IMG_BYTES    = os.path.join(GLOBAL_OUT_ROOT, "summary_bytes.png")
-SUMMARY_IMG_GCTIME   = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_time.png")
-SUMMARY_IMG_GCCOUNT  = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_count.png")
-SUMMARY_IMG_DASH     = os.path.join(GLOBAL_OUT_ROOT, "summary_dashboard.png")
+SUMMARY_IMG_TIME = os.path.join(GLOBAL_OUT_ROOT, "summary_time.png")
+SUMMARY_IMG_BYTES = os.path.join(GLOBAL_OUT_ROOT, "summary_bytes.png")
+SUMMARY_IMG_GCTIME = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_time.png")
+SUMMARY_IMG_GCCOUNT = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_count.png")
+SUMMARY_IMG_DASH = os.path.join(GLOBAL_OUT_ROOT, "summary_dashboard.png")
 
 BASELINE_EXE = "som-rs-bc-baseline"
 
@@ -113,7 +113,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
         annotate_text_side(ax, i, mean_val, label, xmin, xmax)
 
     envs = ", ".join(map(str, sorted(bench_data["envid"].unique())))
-    ax.set_title(f"{bench} — Environment(s): {envs}")
+    ax.set_title(f"{bench} | Environment(s): {envs}")
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Interpreter")
     ax.legend([], [], frameon=False)
@@ -185,7 +185,7 @@ def plot_bench_panel(bench, out_path):
         i += 1
 
     envs = ", ".join(map(str, sorted(df[df["bench"] == bench]["envid"].unique())))
-    fig.suptitle(f"{bench} — Environment(s): {envs}", fontsize=12)
+    fig.suptitle(f"{bench} | Environment(s): {envs}", fontsize=12)
 
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -300,7 +300,7 @@ for metric_name, spec in overall_specs:
     overall_results[metric_name] = overall_comparison(scope, metric_name, SUMMARY_ROOT)
 
 def format_overall_block(metric_name: str, summary: pd.DataFrame) -> str:
-    header = f"=== OVERALL PERFORMANCE — {metric_name} ==="
+    header = f"=== OVERALL PERFORMANCE | {metric_name} ==="
     if summary is None or summary.empty:
         return header + "\n(no result)\n"
 
@@ -334,12 +334,7 @@ def overall_raw_means(scope: pd.DataFrame) -> pd.Series:
     bench_means = scope.groupby(["bench", "exe"])["value"].mean().reset_index()
     return bench_means.groupby("exe")["value"].mean().sort_values(ascending=False)
 
-def plot_overall_metric(metric_key: str,
-                        summary: pd.DataFrame | None,
-                        scope: pd.DataFrame | None,
-                        out_path: str,
-                        unit_label: str,
-                        title_suffix: str):
+def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd.DataFrame | None, out_path: str, unit_label: str, title_suffix: str):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     if summary is None or summary.empty:
@@ -363,8 +358,8 @@ def plot_overall_metric(metric_key: str,
     y = np.arange(len(summary))
     ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
     ax1.set_yticks(y, summary["exe"].values)
-    ax1.set_xlabel("Geometric mean speedup vs baseline (×) — higher is better")
-    ax1.set_title(f"{metric_key} — {title_suffix}")
+    ax1.set_xlabel("Geometric mean speedup vs baseline (×) | higher is better")
+    ax1.set_title(f"{metric_key} | {title_suffix}")
 
     for i, v in enumerate(summary["geo_mean_speedup_vs_baseline"].values):
         ax1.text(v, i, f" {v:.3f}×", va="center")
@@ -373,7 +368,7 @@ def plot_overall_metric(metric_key: str,
     wins_pct = summary["win_rate"].values * 100.0
     ax2.barh(y, wins_pct)
     ax2.set_yticks(y, summary["exe"].values)
-    ax2.set_xlabel("Winning rate across benches (%) — higher is better")
+    ax2.set_xlabel("Winning rate across benches (%) | higher is better")
     for i, v in enumerate(wins_pct):
         ax2.text(v, i, f" {v:.1f}%", va="center")
 
@@ -384,7 +379,7 @@ def plot_overall_metric(metric_key: str,
         for ex in summary["exe"].values:
             val = raw_means.get(ex, np.nan)
             rows.append((ex, val))
-        lines = [f"\n\nOverall mean (of bench means) by interpreter — {unit_label}"]
+        lines = [f"\n\nOverall mean (of bench means) by interpreter | {unit_label}"]
         for ex, v in rows:
             if np.isfinite(v):
                 if unit_label == "bytes":
@@ -451,10 +446,147 @@ def make_dashboard(out_path: str):
         y = np.arange(len(show))
         ax.barh(y, show["geo_mean_speedup_vs_baseline"].values)
         ax.set_yticks(y, show["exe"].values, fontsize=8)
-        ax.set_title(f"{name} — gmean speedup (×), higher is better")
+        ax.set_title(f"{name} | gmean speedup (×), higher is better")
         for i, v in enumerate(show["geo_mean_speedup_vs_baseline"].values):
             ax.text(v, i, f" {v:.2f}×", va="center", fontsize=8)
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
 make_dashboard(SUMMARY_IMG_DASH)
+
+def speedup_pivot_vs_baseline(scope: pd.DataFrame) -> pd.DataFrame | None:
+    bench_means = (scope.groupby(["bench", "exe"])["value"]
+                   .mean()
+                   .reset_index())
+
+    have_base = bench_means["bench"].isin(
+        bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
+    )
+    bench_means = bench_means.loc[have_base].copy()
+    if bench_means.empty:
+        return None
+
+    pivot = bench_means.pivot(index="bench", columns="exe", values="value")
+    if BASELINE_EXE not in pivot.columns:
+        return None
+
+    speedup = pivot.apply(lambda col: pivot[BASELINE_EXE] / col)
+    return speedup
+
+def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, scope: pd.DataFrame | None, out_path: str, title_suffix: str):
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+    if summary is None or summary.empty or scope is None or scope.empty:
+        fig = plt.figure(figsize=(8, 3))
+        plt.axis("off")
+        plt.text(0.5, 0.5, f"No data for {metric_key}", ha="center", va="center")
+        plt.savefig(out_path, dpi=220, bbox_inches="tight")
+        plt.close()
+        return
+
+    summary = summary.sort_values("geo_mean_speedup_vs_baseline", ascending=True).reset_index(drop=True)
+    exe_order = summary["exe"].tolist()
+
+    speedup = speedup_pivot_vs_baseline(scope)
+    if speedup is None:
+        fig = plt.figure(figsize=(8, 3))
+        plt.axis("off")
+        plt.text(0.5, 0.5, f"No baseline to compute speedups for {metric_key}", ha="center", va="center")
+        plt.savefig(out_path, dpi=220, bbox_inches="tight")
+        plt.close()
+        return
+
+    present = [ex for ex in exe_order if ex in speedup.columns]
+    if not present:
+        fig = plt.figure(figsize=(8, 3))
+        plt.axis("off")
+        plt.text(0.5, 0.5, f"No overlapping executables for {metric_key}", ha="center", va="center")
+        plt.savefig(out_path, dpi=220, bbox_inches="tight")
+        plt.close()
+        return
+
+    fig_h = 12
+    fig = plt.figure(figsize=(11.5, fig_h))
+
+    ax1 = fig.add_axes([0.10, 0.705, 0.80, 0.23])
+    y = np.arange(len(summary))
+    ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
+    ax1.set_yticks(y, summary["exe"].values)
+    ax1.set_xlabel("Geometric mean speedup vs baseline (×) | higher is better")
+    ax1.set_title(f"{metric_key} | {title_suffix}")
+    for i, v in enumerate(summary["geo_mean_speedup_vs_baseline"].values):
+        ax1.text(v, i, f" {v:.3f}×", va="center")
+
+    ax2 = fig.add_axes([0.10, 0.405, 0.80, 0.23])
+    ax2.barh(y, summary["median_speedup_vs_baseline"].values)
+    ax2.set_yticks(y, summary["exe"].values)
+    ax2.set_xlabel("Median speedup vs baseline (×) | higher is better")
+    for i, v in enumerate(summary["median_speedup_vs_baseline"].values):
+        ax2.text(v, i, f" {v:.3f}×", va="center")
+
+    ax3 = fig.add_axes([0.10, 0.08, 0.80, 0.25])
+
+    dist_rows = []
+    for ex in present:
+        vals = speedup[ex].dropna().values
+        for s in vals:
+            if np.isfinite(s):
+                dist_rows.append({"exe": ex, "speedup": float(s)})
+
+    if dist_rows:
+        dist_df = pd.DataFrame(dist_rows)
+        sns.boxplot(
+            data=dist_df, x="speedup", y="exe", order=exe_order,
+            dodge=False, width=0.5, showmeans=False, showfliers=False, whis=(0, 100), ax=ax3
+        )
+        ax3.set_xlabel("Per-benchmark speedup vs baseline (×)")
+
+        xmin, xmax = ax3.get_xlim()
+        for j, ex in enumerate(exe_order):
+            vals = dist_df.loc[dist_df["exe"] == ex, "speedup"].dropna()
+            if vals.empty:
+                continue
+            stats_text = (
+                f"min={vals.min():.2f}×  "
+                f"mean={vals.mean():.2f}×  "
+                f"median={vals.median():.2f}×  "
+                f"max={vals.max():.2f}×"
+            )
+            ax3.text(xmax + 0.01 * (xmax - xmin), j, stats_text,
+                     va="center", ha="left", fontsize=7, color="#333",
+                     clip_on=False)
+    else:
+        ax3.axis("off")
+        ax3.text(0.5, 0.5, "No per-benchmark speedup distribution", ha="center", va="center")
+
+    plt.savefig(out_path, dpi=220, bbox_inches="tight")
+    plt.close()
+
+plot_overall_metric_detailed(
+    "time_ms",
+    overall_results.get("time_ms"),
+    df_by_metric.get("time_ms"),
+    SUMMARY_IMG_TIME.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (time)"
+)
+plot_overall_metric_detailed(
+    "bytes",
+    overall_results.get("bytes"),
+    df_by_metric.get("bytes"),
+    SUMMARY_IMG_BYTES.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (allocated bytes)"
+)
+plot_overall_metric_detailed(
+    "gc_time_ms",
+    overall_results.get("gc_time_ms"),
+    df_by_metric.get("gc_time_ms"),
+    SUMMARY_IMG_GCTIME.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (GC time)"
+)
+plot_overall_metric_detailed(
+    "gc_count",
+    overall_results.get("gc_count"),
+    df_by_metric.get("gc_count"),
+    SUMMARY_IMG_GCCOUNT.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (GC count)"
+)
