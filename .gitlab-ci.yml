@@ -72,10 +72,12 @@ benchmark:
     - lz4 -d som-interpreter-bc_l4bits.lz4 ./target/release/som-interpreter-bc_l4bits
     - lz4 -d som-interpreter-bc_idiomatic.lz4 ./target/release/som-interpreter-bc_idiomatic
 
+    - export PATH=$PATH:/Users/gitlab-runner/Library/Python/3.12/bin
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf #t:$MACHINE
 
 report-completion:
   stage: benchmark-completion
   tags: [yuria2]
   script:
+    - export PATH=$PATH:/Users/gitlab-runner/Library/Python/3.12/bin
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --report-completion rebench.conf
