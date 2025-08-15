@@ -9,73 +9,68 @@ before_script:
 
 build-and-test-interpreters:
   stage: build-test
-  tags: [yuria2]
+  tags: [zullie1]
   script:
+    - cargo --version
     - cargo clean
 
     - cargo build --release --features=som-gc/marksweep --features=idiomatic
     # - cargo clippy --features=som-gc/marksweep --features=nan
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_idiomatic.lz4
+    - mv ./target/release/som-interpreter-bc ./target/release/som-interpreter-bc_idiomatic
 
     - cargo build --release --features=som-gc/marksweep --features=nan
     - cargo clippy --features=som-gc/marksweep --features=nan
     - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=nan
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_nan.lz4
+    - mv ./target/release/som-interpreter-bc ./target/release/som-interpreter-bc_nan
 
     - cargo build --release --features=som-gc/marksweep --features=l3bits
     - cargo clippy --features=som-gc/marksweep --features=l3bits
-    #- RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l3bits
+    - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l3bits
     #
     # Note:
     # Disable unit tests for lower 3-bit implementation due to signature refactoring for Symbol
     # From Symbol(Interned) To Symbol(Gc<Interned>)
     # Needs to bring modification inside the unit test
     #
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_l3bits.lz4
+
+    - mv ./target/release/som-interpreter-bc ./target/release/som-interpreter-bc_l3bits
     
     - cargo build --release --features=som-gc/marksweep --features=l4bits
     - cargo clippy --features=som-gc/marksweep --features=l4bits
     - RUST_TEST_THREADS=1 cargo test --features som-gc/marksweep --features=l4bits
-    - lz4 ./target/release/som-interpreter-bc som-interpreter-bc_l4bits.lz4
+    - mv ./target/release/som-interpreter-bc ./target/release/som-interpreter-bc_l4bits
 
 
     # Package and Upload
-    - |
-      sftp tmp-artifacts << EOF
-        -mkdir incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_l3bits.lz4 incoming/${CI_PIPELINE_ID}/
-        put som-interpreter-bc_l4bits.lz4 incoming/${CI_PIPELINE_ID}/
-      EOF
+    # - |
+    #   sftp tmp-artifacts << EOF
+    #     -mkdir incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_idiomatic.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_nan.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_l3bits.lz4 incoming/${CI_PIPELINE_ID}/
+    #     put som-interpreter-bc_l4bits.lz4 incoming/${CI_PIPELINE_ID}/
+    #   EOF
 
-benchmark:
-  parallel:
-    matrix:
-      - MACHINE:
-          # - zullie1
-          - yuria
-          - yuria2
-          - yuria3
-          - yuria4
-  stage: benchmark
-  tags: [$MACHINE]
-  script:
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_idiomatic.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l3bits.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_l4bits.lz4
-    - sftp tmp-artifacts:incoming/${CI_PIPELINE_ID}/som-interpreter-bc_nan.lz4
+# benchmark:
+#   parallel:
+#     matrix:
+#       - MACHINE:
+#           - zullie1
+#           - yuria
+#           - yuria2
+#           - yuria3
+#           - yuria4
+#   stage: benchmark
+#   tags: [$MACHINE]
+#   script:
 
-    - mkdir -p ./target/release
-    - lz4 -d som-interpreter-bc_nan.lz4 ./target/release/som-interpreter-bc_nan
-    - lz4 -d som-interpreter-bc_l3bits.lz4 ./target/release/som-interpreter-bc_l3bits
-    - lz4 -d som-interpreter-bc_l4bits.lz4 ./target/release/som-interpreter-bc_l4bits
-    - lz4 -d som-interpreter-bc_idiomatic.lz4 ./target/release/som-interpreter-bc_idiomatic
-
+    - export PATH=$PATH:/Users/gitlab-runner/Library/Python/3.12/bin
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --branch="$CI_COMMIT_REF_NAME" -c rebench.conf #t:$MACHINE
 
 report-completion:
   stage: benchmark-completion
-  tags: [yuria2]
+  tags: [zullie1]
   script:
+    - export PATH=$PATH:/Users/gitlab-runner/Library/Python/3.12/bin
     - rebench --experiment="CI ID $CI_PIPELINE_ID" --report-completion rebench.conf
+
