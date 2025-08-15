@@ -5,9 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# CSV file to be read
 CSV_PATH = "som-rs-5553.csv"
 
-GLOBAL_OUT_ROOT = "output7_5553-without-imm-float-micro-macro_v2"
+# Output folder
+GLOBAL_OUT_ROOT = "output7_5553-without-imm-float_v2"
 ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
 SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
@@ -19,22 +21,26 @@ SUMMARY_IMG_GCTIME = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_time.png")
 SUMMARY_IMG_GCCOUNT = os.path.join(GLOBAL_OUT_ROOT, "summary_gc_count.png")
 SUMMARY_IMG_DASH = os.path.join(GLOBAL_OUT_ROOT, "summary_dashboard.png")
 
+# Baseline
 BASELINE_EXE = "som-rs-bc-baseline"
 
 EXCLUDE_SUITES: list[str] = [
-    "interpreter",
-    "macro-awfy",
-    "somsom"
+    # "interpreter",
+    # "macro-awfy",
+    # "somsom"
 ]
 
 SUBFOLDERS = {
-    "time_ms":   {"criterion": "total",     "unit": "ms",    "xlabel": "Execution time (ms)", "fmt": "{:.2f} ms"},
-    "gc_count":  {"criterion": "GC count",  "unit": "n",     "xlabel": "GC count (n)",        "fmt": "{:.0f}"},
-    "gc_time_ms":{"criterion": "GC time",   "unit": "ms",    "xlabel": "GC time (ms)",        "fmt": "{:.2f} ms"},
-    "bytes":     {"criterion": "Allocated", "unit": "bytes", "xlabel": "Allocated (bytes)",   "fmt": "{:.0f}"},
+    "time_ms": {"criterion": "total", "unit": "ms", "xlabel": "Execution time (ms)", "fmt": "{:.2f} ms"},
+    "gc_count": {"criterion": "GC count", "unit": "n", "xlabel": "GC count (n)", "fmt": "{:.0f}"},
+    "gc_time_ms": {"criterion": "GC time", "unit": "ms", "xlabel": "GC time (ms)", "fmt": "{:.2f} ms"},
+    "bytes": {"criterion": "Allocated", "unit": "bytes", "xlabel": "Allocated (bytes)", "fmt": "{:.0f}"},
 }
 
+# Read csv file
 df = pd.read_csv(CSV_PATH)
+
+# Show insights
 print("Initial size : ", df.size)
 
 df = df[~df["suite"].isin(EXCLUDE_SUITES)].copy()
@@ -51,8 +57,8 @@ for sub in SUBFOLDERS:
 
 def bench_summary(bench_df: pd.DataFrame) -> pd.DataFrame:
     stats = (bench_df.groupby("exe")["value"]
-             .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
-             .reset_index())
+            .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
+            .reset_index())
     if BASELINE_EXE in stats["exe"].values:
         base_mean = stats.loc[stats["exe"] == BASELINE_EXE, "mean"].iloc[0]
         stats["pct_vs_baseline"] = base_mean / stats["mean"] - 1.0
@@ -81,7 +87,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
 
     stats = bench_summary(bench_data)
     exe_order = (bench_data.groupby("exe")["value"]
-                 .mean().sort_values(ascending=True).index.tolist())
+                .mean().sort_values(ascending=True).index.tolist())
 
     n_exe = max(1, len(exe_order))
     fig_h = max(3.2, 0.9 * n_exe + 1.2)
@@ -96,8 +102,8 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
         base_mean = stats.loc[stats["exe"] == BASELINE_EXE, "mean"].iloc[0]
         ax.axvline(base_mean, linestyle="--", linewidth=1, color="grey", alpha=0.9)
         ax.text(base_mean, -0.6, f"Baseline mean: {value_fmt.format(base_mean)}",
-                ha="center", va="bottom", fontsize=8, color="grey",
-                bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1))
+            ha="center", va="bottom", fontsize=8, color="grey",
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1))
 
     xmin, xmax = ax.get_xlim()
 
@@ -121,9 +127,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
 
     best_exe = stats.loc[stats["mean"].idxmin(), "exe"]
     overall_min, overall_max = bench_data["value"].min(), bench_data["value"].max()
-    fig.text(0.01, 0.01,
-             f"Best mean: {best_exe} - Range: {value_fmt.format(overall_min)}–{value_fmt.format(overall_max)}",
-             ha="left", va="bottom", fontsize=8, color="#444")
+    fig.text(0.01, 0.01, f"Best mean: {best_exe} - Range: {value_fmt.format(overall_min)}-{value_fmt.format(overall_max)}", ha="left", va="bottom", fontsize=8, color="#444")
 
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -136,8 +140,8 @@ def save_summaries(df_scope, out_dir):
 
 def save_master_summary(df_scope, out_csv_path):
     stats = (df_scope.groupby(["bench", "exe"])["value"]
-             .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
-             .reset_index())
+        .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
+        .reset_index())
     stats.to_csv(out_csv_path, index=False)
 
 def box_no_dots(ax, data, order, xlabel):
@@ -243,9 +247,7 @@ def geometric_mean(x):
 def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     os.makedirs(outdir, exist_ok=True)
 
-    bench_means = (df_scope.groupby(["bench", "exe"])["value"]
-                   .mean()
-                   .reset_index())
+    bench_means = (df_scope.groupby(["bench", "exe"])["value"].mean().reset_index())
 
     have_base = bench_means["bench"].isin(
         bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
@@ -284,10 +286,10 @@ def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     return summary
 
 overall_specs = [
-    ("time_ms",   {"criterion": "total",     "unit": "ms"}),
-    ("bytes",     {"criterion": "Allocated", "unit": "bytes"}),
-    ("gc_time_ms",{"criterion": "GC time",   "unit": "ms"}),
-    ("gc_count",  {"criterion": "GC count",  "unit": "n"}),
+    ("time_ms", {"criterion": "total", "unit": "ms"}),
+    ("bytes", {"criterion": "Allocated", "unit": "bytes"}),
+    ("gc_time_ms", {"criterion": "GC time", "unit": "ms"}),
+    ("gc_count", {"criterion": "GC count", "unit": "n"}),
 ]
 
 overall_results: dict[str, pd.DataFrame | None] = {}
@@ -456,9 +458,7 @@ def make_dashboard(out_path: str):
 make_dashboard(SUMMARY_IMG_DASH)
 
 def speedup_pivot_vs_baseline(scope: pd.DataFrame) -> pd.DataFrame | None:
-    bench_means = (scope.groupby(["bench", "exe"])["value"]
-                   .mean()
-                   .reset_index())
+    bench_means = (scope.groupby(["bench", "exe"])["value"].mean().reset_index())
 
     have_base = bench_means["bench"].isin(
         bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
