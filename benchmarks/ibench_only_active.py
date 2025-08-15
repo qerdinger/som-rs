@@ -22,17 +22,17 @@ time_df = df[(df["criterion"].str.lower() == "total") & (df["unit"].str.lower() 
 group_iter = ["bench","exe","suite","inputsize","invocation"]
 per_invocation = (
     time_df.groupby(group_iter, dropna=False)["value"]
-           .median()
-           .rename("median_ms_per_invocation")
-           .reset_index()
+    .median()
+    .rename("median_ms_per_invocation")
+    .reset_index()
 )
 
 group_final = ["bench","exe","suite","inputsize"]
 time_summary = (
     per_invocation.groupby(group_final, dropna=False)["median_ms_per_invocation"]
-                  .median()
-                  .rename("median_ms")
-                  .reset_index()
+    .median()
+    .rename("median_ms")
+    .reset_index()
 )
 
 print("\n***** Collapsed timing summary (per bench/exe/suite/inputsize) *****")
@@ -42,16 +42,16 @@ alloc_df = df[(df["criterion"].str.lower() == "allocated") & (df["unit"].str.low
 
 alloc_per_invocation = (
     alloc_df.groupby(group_iter, dropna=False)["value"]
-            .median()
-            .rename("median_bytes_per_invocation")
-            .reset_index()
+    .median()
+    .rename("median_bytes_per_invocation")
+    .reset_index()
 )
 
 alloc_summary = (
     alloc_per_invocation.groupby(group_final, dropna=False)["median_bytes_per_invocation"]
-                        .median()
-                        .rename("median_bytes")
-                        .reset_index()
+    .median()
+    .rename("median_bytes")
+    .reset_index()
 )
 
 print("\n***** Allocation summary  *****")
