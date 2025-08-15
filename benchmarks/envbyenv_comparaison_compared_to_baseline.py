@@ -316,7 +316,7 @@ def format_overall_block(metric_name: str, summary: pd.DataFrame) -> str:
         star = "   (baseline)" if ex == BASELINE_EXE else ""
         lines.append(
             f" {int(r['rank']):>2}. {ex:<24}"
-            f" gmean (×) vs base: {g:6.3f} | median (×): {m:6.3f} |"
+            f" gmean (x) vs base: {g:6.3f} | median (x): {m:6.3f} |"
             f" best (winning) rate: {w*100:6.1f}% {star}"
         )
     lines.append("")
@@ -361,11 +361,11 @@ def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd
     y = np.arange(len(summary))
     ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
     ax1.set_yticks(y, summary["exe"].values)
-    ax1.set_xlabel("Geometric mean speedup vs baseline (×) | higher is better")
+    ax1.set_xlabel("Geometric mean speedup vs baseline (x) | higher is better")
     ax1.set_title(f"{metric_key} | {title_suffix}")
 
     for i, v in enumerate(summary["geo_mean_speedup_vs_baseline"].values):
-        ax1.text(v, i, f" {v:.3f}×", va="center")
+        ax1.text(v, i, f" {v:.3f}x", va="center")
 
     ax2 = fig.add_axes([0.10, 0.33, 0.80, 0.24])
     wins_pct = summary["win_rate"].values * 100.0
@@ -421,9 +421,9 @@ def make_dashboard(out_path: str):
         y = np.arange(len(show))
         ax.barh(y, show["geo_mean_speedup_vs_baseline"].values)
         ax.set_yticks(y, show["exe"].values, fontsize=8)
-        ax.set_title(f"{name} | gmean speedup (×), higher is better")
+        ax.set_title(f"{name} | gmean speedup (x), higher is better")
         for i, v in enumerate(show["geo_mean_speedup_vs_baseline"].values):
-            ax.text(v, i, f" {v:.2f}×", va="center", fontsize=8)
+            ax.text(v, i, f" {v:.2f}x", va="center", fontsize=8)
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
@@ -485,17 +485,17 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
     y = np.arange(len(summary))
     ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
     ax1.set_yticks(y, summary["exe"].values)
-    ax1.set_xlabel("Geometric mean speedup vs baseline (×) | higher is better")
+    ax1.set_xlabel("Geometric mean speedup vs baseline (x) | higher is better")
     ax1.set_title(f"{metric_key} | {title_suffix}")
     for i, v in enumerate(summary["geo_mean_speedup_vs_baseline"].values):
-        ax1.text(v, i, f" {v:.3f}×", va="center")
+        ax1.text(v, i, f" {v:.3f}x", va="center")
 
     ax2 = fig.add_axes([0.10, 0.405, 0.80, 0.23])
     ax2.barh(y, summary["median_speedup_vs_baseline"].values)
     ax2.set_yticks(y, summary["exe"].values)
-    ax2.set_xlabel("Median speedup vs baseline (×) | higher is better")
+    ax2.set_xlabel("Median speedup vs baseline (x) | higher is better")
     for i, v in enumerate(summary["median_speedup_vs_baseline"].values):
-        ax2.text(v, i, f" {v:.3f}×", va="center")
+        ax2.text(v, i, f" {v:.3f}x", va="center")
 
     ax3 = fig.add_axes([0.10, 0.08, 0.80, 0.25])
 
@@ -512,7 +512,7 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
             data=dist_df, x="speedup", y="exe", order=exe_order,
             dodge=False, width=0.5, showmeans=False, showfliers=False, whis=(0, 100), ax=ax3
         )
-        ax3.set_xlabel("Per-benchmark speedup vs baseline (×)")
+        ax3.set_xlabel("Per-benchmark speedup vs baseline (x)")
 
         xmin, xmax = ax3.get_xlim()
         for j, ex in enumerate(exe_order):
@@ -520,10 +520,10 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
             if vals.empty:
                 continue
             stats_text = (
-                f"min={vals.min():.3f}×  "
-                f"mean={vals.mean():.3f}×  "
-                f"median={vals.median():.3f}×  "
-                f"max={vals.max():.3f}×"
+                f"min={vals.min():.3f}x  "
+                f"mean={vals.mean():.3f}x  "
+                f"median={vals.median():.3f}x  "
+                f"max={vals.max():.3f}x"
             )
             ax3.text(xmax + 0.01 * (xmax - xmin), j, stats_text,
                      va="center", ha="left", fontsize=7, color="#333",
