@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # CSV file to be read
-CSV_PATH = "som-rs-5557.csv"
+CSV_PATH = "som-rs-5559.csv"
 
 # Output folder
-GLOBAL_OUT_ROOT = "output7_5557-with-safe-tinystr_micro-macro_v2-on-zullie1"
+GLOBAL_OUT_ROOT = "output7_5559-without-tinystr-micro-macro_v2-on-zullie1"
 ENV_OUT_ROOT = os.path.join(GLOBAL_OUT_ROOT, "envs")
 SUMMARY_ROOT = os.path.join(GLOBAL_OUT_ROOT, "summaries")
 PANEL_OUT = os.path.join(GLOBAL_OUT_ROOT, "panels")
