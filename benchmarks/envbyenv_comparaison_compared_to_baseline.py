@@ -331,7 +331,7 @@ pretty_summary = "\n".join(blocks)
 print(pretty_summary)
 with open(SUMMARY_TXT, "w", encoding="utf-8") as f:
     f.write(pretty_summary)
-print("Done!\nsaved as summary.txt")
+print("Summary saved !")
 
 def overall_raw_means(scope: pd.DataFrame) -> pd.Series:
     bench_means = scope.groupby(["bench", "exe"])["value"].mean().reset_index()
@@ -357,7 +357,7 @@ def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd
     fig_h = 8.5 if raw_means is not None else 6.5
     fig = plt.figure(figsize=(10.5, fig_h))
 
-    ax1 = fig.add_axes([0.10, 0.63, 0.80, 0.30])  # [left, bottom, width, height]
+    ax1 = fig.add_axes([0.10, 0.63, 0.80, 0.30])
     y = np.arange(len(summary))
     ax1.barh(y, summary["geo_mean_speedup_vs_baseline"].values)
     ax1.set_yticks(y, summary["exe"].values)
@@ -386,51 +386,23 @@ def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd
         for ex, v in rows:
             if np.isfinite(v):
                 if unit_label == "bytes":
-                    lines.append(f"• {ex:<24} : {v:,.0f} {unit_label}")
+                    lines.append(f"- {ex:<24} : {v:,.0f} {unit_label}")
                 elif unit_label == "n":
-                    lines.append(f"• {ex:<24} : {v:.2f} {unit_label}")
+                    lines.append(f"- {ex:<24} : {v:.2f} {unit_label}")
                 else:
-                    lines.append(f"• {ex:<24} : {v:.3f} {unit_label}")
+                    lines.append(f"- {ex:<24} : {v:.3f} {unit_label}")
             else:
-                lines.append(f"• {ex:<24} : n/a")
+                lines.append(f"- {ex:<24} : n/a")
         text = "\n".join(lines)
         ax3.text(0, 1, text, va="top", ha="left", family="monospace")
 
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
-plot_overall_metric(
-    "time_ms",
-    overall_results.get("time_ms"),
-    df_by_metric.get("time_ms"),
-    SUMMARY_IMG_TIME,
-    unit_label="ms",
-    title_suffix="speedups & wins (time)"
-)
-plot_overall_metric(
-    "bytes",
-    overall_results.get("bytes"),
-    df_by_metric.get("bytes"),
-    SUMMARY_IMG_BYTES,
-    unit_label="bytes",
-    title_suffix="speedups & wins (allocated bytes)"
-)
-plot_overall_metric(
-    "gc_time_ms",
-    overall_results.get("gc_time_ms"),
-    df_by_metric.get("gc_time_ms"),
-    SUMMARY_IMG_GCTIME,
-    unit_label="ms",
-    title_suffix="speedups & wins (GC time)"
-)
-plot_overall_metric(
-    "gc_count",
-    overall_results.get("gc_count"),
-    df_by_metric.get("gc_count"),
-    SUMMARY_IMG_GCCOUNT,
-    unit_label="n",
-    title_suffix="speedups & wins (GC count)"
-)
+plot_overall_metric("time_ms", overall_results.get("time_ms"), df_by_metric.get("time_ms"), SUMMARY_IMG_TIME, unit_label="ms", title_suffix="speedups & wins (time)")
+plot_overall_metric("bytes", overall_results.get("bytes"), df_by_metric.get("bytes"), SUMMARY_IMG_BYTES, unit_label="bytes", title_suffix="speedups & wins (allocated bytes)")
+plot_overall_metric("gc_time_ms", overall_results.get("gc_time_ms"), df_by_metric.get("gc_time_ms"), SUMMARY_IMG_GCTIME, unit_label="ms", title_suffix="speedups & wins (GC time)")
+plot_overall_metric("gc_count", overall_results.get("gc_count"), df_by_metric.get("gc_count"), SUMMARY_IMG_GCCOUNT, unit_label="n", title_suffix="speedups & wins (GC count)")
 
 def make_dashboard(out_path: str):
     fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
