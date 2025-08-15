@@ -31,10 +31,30 @@ EXCLUDE_SUITES: list[str] = [
 ]
 
 SUBFOLDERS = {
-    "time_ms": {"criterion": "total", "unit": "ms", "xlabel": "Execution time (ms)", "fmt": "{:.2f} ms"},
-    "gc_count": {"criterion": "GC count", "unit": "n", "xlabel": "GC count (n)", "fmt": "{:.0f}"},
-    "gc_time_ms": {"criterion": "GC time", "unit": "ms", "xlabel": "GC time (ms)", "fmt": "{:.2f} ms"},
-    "bytes": {"criterion": "Allocated", "unit": "bytes", "xlabel": "Allocated (bytes)", "fmt": "{:.0f}"},
+    "time_ms": {
+        "criterion": "total",
+        "unit": "ms",
+        "xlabel": "Execution time (ms)",
+        "fmt": "{:.2f} ms",
+    },
+    "gc_count": {
+        "criterion": "GC count",
+        "unit": "n",
+        "xlabel": "GC count (n)",
+        "fmt": "{:.0f}",
+    },
+    "gc_time_ms": {
+        "criterion": "GC time",
+        "unit": "ms",
+        "xlabel": "GC time (ms)",
+        "fmt": "{:.2f} ms",
+    },
+    "bytes": {
+        "criterion": "Allocated",
+        "unit": "bytes",
+        "xlabel": "Allocated (bytes)",
+        "fmt": "{:.0f}",
+    },
 }
 
 # Read csv file
@@ -55,10 +75,13 @@ os.makedirs(PANEL_OUT, exist_ok=True)
 for sub in SUBFOLDERS:
     os.makedirs(os.path.join(GLOBAL_OUT_ROOT, sub), exist_ok=True)
 
+
 def bench_summary(bench_df: pd.DataFrame) -> pd.DataFrame:
-    stats = (bench_df.groupby("exe")["value"]
-            .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
-            .reset_index())
+    stats = (
+        bench_df.groupby("exe")["value"]
+        .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
+        .reset_index()
+    )
     if BASELINE_EXE in stats["exe"].values:
         base_mean = stats.loc[stats["exe"] == BASELINE_EXE, "mean"].iloc[0]
         stats["pct_vs_baseline"] = base_mean / stats["mean"] - 1.0
@@ -67,18 +90,29 @@ def bench_summary(bench_df: pd.DataFrame) -> pd.DataFrame:
     stats["cov"] = stats["std"] / stats["mean"]
     return stats
 
+
 def annotate_text_side(ax, y_idx, x_val, label, xmin, xmax):
     xspan = xmax - xmin
     offset = 0.02 * xspan
     edge_pad = 0.10 * xspan
     if x_val > xmax - edge_pad:
-        x = x_val - offset; ha = "right"
+        x = x_val - offset
+        ha = "right"
     else:
-        x = x_val + offset; ha = "left"
-    ax.text(x, y_idx, label,
-            va="center", ha=ha, fontsize=9, color="black",
-            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", pad=1.5),
-            clip_on=False)
+        x = x_val + offset
+        ha = "left"
+    ax.text(
+        x,
+        y_idx,
+        label,
+        va="center",
+        ha=ha,
+        fontsize=9,
+        color="black",
+        bbox=dict(facecolor="white", alpha=0.7, edgecolor="none", pad=1.5),
+        clip_on=False,
+    )
+
 
 def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True):
     bench_data = df_all[df_all["bench"] == bench]
@@ -86,24 +120,43 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
         return
 
     stats = bench_summary(bench_data)
-    exe_order = (bench_data.groupby("exe")["value"]
-                .mean().sort_values(ascending=True).index.tolist())
+    exe_order = (
+        bench_data.groupby("exe")["value"]
+        .mean()
+        .sort_values(ascending=True)
+        .index.tolist()
+    )
 
     n_exe = max(1, len(exe_order))
     fig_h = max(3.2, 0.9 * n_exe + 1.2)
     fig, ax = plt.subplots(figsize=(10, fig_h), constrained_layout=True)
 
     sns.boxplot(
-        data=bench_data, x="value", y="exe", order=exe_order,
-        dodge=False, width=0.5, showmeans=False, showfliers=False, whis=(0, 100), ax=ax
+        data=bench_data,
+        x="value",
+        y="exe",
+        order=exe_order,
+        dodge=False,
+        width=0.5,
+        showmeans=False,
+        showfliers=False,
+        whis=(0, 100),
+        ax=ax,
     )
 
     if draw_baseline and BASELINE_EXE in stats["exe"].values:
         base_mean = stats.loc[stats["exe"] == BASELINE_EXE, "mean"].iloc[0]
         ax.axvline(base_mean, linestyle="--", linewidth=1, color="grey", alpha=0.9)
-        ax.text(base_mean, -0.6, f"Baseline mean: {value_fmt.format(base_mean)}",
-            ha="center", va="bottom", fontsize=8, color="grey",
-            bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1))
+        ax.text(
+            base_mean,
+            -0.6,
+            f"Baseline mean: {value_fmt.format(base_mean)}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="grey",
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1),
+        )
 
     xmin, xmax = ax.get_xlim()
 
@@ -113,7 +166,7 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
         if np.isfinite(row["pct_vs_baseline"]):
             pct = row["pct_vs_baseline"]
             sign = "+" if pct >= 0 else "−"
-            pct_txt = f" ({sign}{abs(pct)*100:.1f}% vs base)"
+            pct_txt = f" ({sign}{abs(pct) * 100:.1f}% vs base)"
         else:
             pct_txt = ""
         label = f"{value_fmt.format(mean_val)} {pct_txt}"
@@ -127,10 +180,19 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
 
     best_exe = stats.loc[stats["mean"].idxmin(), "exe"]
     overall_min, overall_max = bench_data["value"].min(), bench_data["value"].max()
-    fig.text(0.01, 0.01, f"Best mean: {best_exe} - Range: {value_fmt.format(overall_min)}-{value_fmt.format(overall_max)}", ha="left", va="bottom", fontsize=8, color="#444")
+    fig.text(
+        0.01,
+        0.01,
+        f"Best mean: {best_exe} - Range: {value_fmt.format(overall_min)}-{value_fmt.format(overall_max)}",
+        ha="left",
+        va="bottom",
+        fontsize=8,
+        color="#444",
+    )
 
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
+
 
 def save_summaries(df_scope, out_dir):
     os.makedirs(out_dir, exist_ok=True)
@@ -138,31 +200,49 @@ def save_summaries(df_scope, out_dir):
         stats = bench_summary(bdf).sort_values("mean")
         stats.to_csv(os.path.join(out_dir, f"{bench}.csv"), index=False)
 
+
 def save_master_summary(df_scope, out_csv_path):
-    stats = (df_scope.groupby(["bench", "exe"])["value"]
+    stats = (
+        df_scope.groupby(["bench", "exe"])["value"]
         .agg(mean="mean", median="median", std="std", min="min", max="max", n="count")
-        .reset_index())
+        .reset_index()
+    )
     stats.to_csv(out_csv_path, index=False)
+
 
 def box_no_dots(ax, data, order, xlabel):
     sns.boxplot(
-        data=data, x="value", y="exe", order=order,
-        dodge=False, width=0.5, showmeans=False, showfliers=False, whis=(0, 100), ax=ax
+        data=data,
+        x="value",
+        y="exe",
+        order=order,
+        dodge=False,
+        width=0.5,
+        showmeans=False,
+        showfliers=False,
+        whis=(0, 100),
+        ax=ax,
     )
-    ax.set_xlabel(xlabel); ax.set_ylabel("")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("")
     ax.legend([], [], frameon=False)
+
 
 def plot_bench_panel(bench, out_path):
     slices = {}
     for key, spec in SUBFOLDERS.items():
-        d = df[(df["criterion"] == spec["criterion"]) & (df["unit"] == spec["unit"]) & (df["bench"] == bench)]
+        d = df[
+            (df["criterion"] == spec["criterion"])
+            & (df["unit"] == spec["unit"])
+            & (df["bench"] == bench)
+        ]
         if not d.empty:
             slices[key] = (d.copy(), spec["xlabel"], spec["fmt"])
     if not slices:
         return
 
     order_src = slices.get("time_ms", next(iter(slices.values())))[0]
-    exe_order = (order_src.groupby("exe")["value"].mean().sort_values().index.tolist())
+    exe_order = order_src.groupby("exe")["value"].mean().sort_values().index.tolist()
 
     h = max(4.5, 0.75 * max(1, len(exe_order)) + 2)
     fig, axes = plt.subplots(2, 2, figsize=(13, h), constrained_layout=True)
@@ -178,7 +258,9 @@ def plot_bench_panel(bench, out_path):
     i = 0
     for key in ["time_ms", "bytes", "gc_count", "gc_time_ms"]:
         if key not in slices:
-            axes[i].axis("off"); i += 1; continue
+            axes[i].axis("off")
+            i += 1
+            continue
         data, xlabel, fmt = slices[key]
         box_no_dots(axes[i], data, exe_order, xlabel)
 
@@ -195,8 +277,14 @@ def plot_bench_panel(bench, out_path):
     fig.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
+
 for folder, spec in SUBFOLDERS.items():
-    crit, unit, xlabel, fmt = spec["criterion"], spec["unit"], spec["xlabel"], spec["fmt"]
+    crit, unit, xlabel, fmt = (
+        spec["criterion"],
+        spec["unit"],
+        spec["xlabel"],
+        spec["fmt"],
+    )
     df_metric = df[(df["criterion"] == crit) & (df["unit"] == unit)]
     if df_metric.empty:
         continue
@@ -218,7 +306,12 @@ for env in sorted(df["envid"].unique()):
     os.makedirs(env_folder, exist_ok=True)
 
     for folder, spec in SUBFOLDERS.items():
-        crit, unit, xlabel, fmt = spec["criterion"], spec["unit"], spec["xlabel"], spec["fmt"]
+        crit, unit, xlabel, fmt = (
+            spec["criterion"],
+            spec["unit"],
+            spec["xlabel"],
+            spec["fmt"],
+        )
         df_metric = env_df[(env_df["criterion"] == crit) & (env_df["unit"] == unit)]
         if df_metric.empty:
             continue
@@ -231,12 +324,15 @@ for env in sorted(df["envid"].unique()):
             plot_metric(df_metric, bench, xlabel, fmt, out_path, draw_baseline=True)
 
         save_summaries(df_metric, os.path.join(env_folder, "summaries", folder))
-        save_master_summary(df_metric, os.path.join(env_folder, "summaries", f"MASTER_{folder}.csv"))
+        save_master_summary(
+            df_metric, os.path.join(env_folder, "summaries", f"MASTER_{folder}.csv")
+        )
 
     panel_dir = os.path.join(env_folder, "panels")
     os.makedirs(panel_dir, exist_ok=True)
     for bench in sorted(env_df["bench"].unique()):
         plot_bench_panel(bench, os.path.join(panel_dir, f"{bench}.png"))
+
 
 def geometric_mean(x):
     x = np.asarray([v for v in x if np.isfinite(v) and v > 0])
@@ -244,10 +340,11 @@ def geometric_mean(x):
         return np.nan
     return float(np.exp(np.mean(np.log(x))))
 
+
 def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     os.makedirs(outdir, exist_ok=True)
 
-    bench_means = (df_scope.groupby(["bench", "exe"])["value"].mean().reset_index())
+    bench_means = df_scope.groupby(["bench", "exe"])["value"].mean().reset_index()
 
     have_base = bench_means["bench"].isin(
         bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
@@ -270,20 +367,27 @@ def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     winners = pivot.eq(pivot.min(axis=1), axis=0)
     win_rates = winners.sum(axis=0) / winners.shape[0]
 
-    summary = pd.DataFrame({
-        "exe": speedup.columns,
-        "geo_mean_speedup_vs_baseline": gmeans.values,
-        "median_speedup_vs_baseline": medians.values,
-        "win_rate": win_rates.values,
-    }).sort_values(
-        ["geo_mean_speedup_vs_baseline", "win_rate", "median_speedup_vs_baseline"],
-        ascending=False
-    ).reset_index(drop=True)
+    summary = (
+        pd.DataFrame(
+            {
+                "exe": speedup.columns,
+                "geo_mean_speedup_vs_baseline": gmeans.values,
+                "median_speedup_vs_baseline": medians.values,
+                "win_rate": win_rates.values,
+            }
+        )
+        .sort_values(
+            ["geo_mean_speedup_vs_baseline", "win_rate", "median_speedup_vs_baseline"],
+            ascending=False,
+        )
+        .reset_index(drop=True)
+    )
     summary.insert(0, "rank", np.arange(1, len(summary) + 1))
 
     out_csv = os.path.join(outdir, f"OVERALL_{metric_name}.csv")
     summary.to_csv(out_csv, index=False)
     return summary
+
 
 overall_specs = [
     ("time_ms", {"criterion": "total", "unit": "ms"}),
@@ -302,6 +406,7 @@ for metric_name, spec in overall_specs:
     df_by_metric[metric_name] = scope.copy()
     overall_results[metric_name] = overall_comparison(scope, metric_name, SUMMARY_ROOT)
 
+
 def format_overall_block(metric_name: str, summary: pd.DataFrame) -> str:
     header = f"=== OVERALL PERFORMANCE | {metric_name} ==="
     if summary is None or summary.empty:
@@ -317,10 +422,11 @@ def format_overall_block(metric_name: str, summary: pd.DataFrame) -> str:
         lines.append(
             f" {int(r['rank']):>2}. {ex:<24}"
             f" gmean (x) vs base: {g:6.3f} | median (x): {m:6.3f} |"
-            f" best (winning) rate: {w*100:6.1f}% {star}"
+            f" best (winning) rate: {w * 100:6.1f}% {star}"
         )
     lines.append("")
     return "\n".join(lines)
+
 
 blocks = []
 for metric_name, _ in overall_specs:
@@ -333,11 +439,20 @@ with open(SUMMARY_TXT, "w", encoding="utf-8") as f:
     f.write(pretty_summary)
 print("Summary saved !")
 
+
 def overall_raw_means(scope: pd.DataFrame) -> pd.Series:
     bench_means = scope.groupby(["bench", "exe"])["value"].mean().reset_index()
     return bench_means.groupby("exe")["value"].mean().sort_values(ascending=False)
 
-def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd.DataFrame | None, out_path: str, unit_label: str, title_suffix: str):
+
+def plot_overall_metric(
+    metric_key: str,
+    summary: pd.DataFrame | None,
+    scope: pd.DataFrame | None,
+    out_path: str,
+    unit_label: str,
+    title_suffix: str,
+):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     if summary is None or summary.empty:
@@ -348,7 +463,9 @@ def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd
         plt.close()
         return
 
-    summary = summary.sort_values("geo_mean_speedup_vs_baseline", ascending=True).reset_index(drop=True)
+    summary = summary.sort_values(
+        "geo_mean_speedup_vs_baseline", ascending=True
+    ).reset_index(drop=True)
 
     raw_means = None
     if scope is not None and not scope.empty:
@@ -399,10 +516,40 @@ def plot_overall_metric(metric_key: str, summary: pd.DataFrame | None, scope: pd
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
-plot_overall_metric("time_ms", overall_results.get("time_ms"), df_by_metric.get("time_ms"), SUMMARY_IMG_TIME, unit_label="ms", title_suffix="speedups & wins (time)")
-plot_overall_metric("bytes", overall_results.get("bytes"), df_by_metric.get("bytes"), SUMMARY_IMG_BYTES, unit_label="bytes", title_suffix="speedups & wins (allocated bytes)")
-plot_overall_metric("gc_time_ms", overall_results.get("gc_time_ms"), df_by_metric.get("gc_time_ms"), SUMMARY_IMG_GCTIME, unit_label="ms", title_suffix="speedups & wins (GC time)")
-plot_overall_metric("gc_count", overall_results.get("gc_count"), df_by_metric.get("gc_count"), SUMMARY_IMG_GCCOUNT, unit_label="n", title_suffix="speedups & wins (GC count)")
+
+plot_overall_metric(
+    "time_ms",
+    overall_results.get("time_ms"),
+    df_by_metric.get("time_ms"),
+    SUMMARY_IMG_TIME,
+    unit_label="ms",
+    title_suffix="speedups & wins (time)",
+)
+plot_overall_metric(
+    "bytes",
+    overall_results.get("bytes"),
+    df_by_metric.get("bytes"),
+    SUMMARY_IMG_BYTES,
+    unit_label="bytes",
+    title_suffix="speedups & wins (allocated bytes)",
+)
+plot_overall_metric(
+    "gc_time_ms",
+    overall_results.get("gc_time_ms"),
+    df_by_metric.get("gc_time_ms"),
+    SUMMARY_IMG_GCTIME,
+    unit_label="ms",
+    title_suffix="speedups & wins (GC time)",
+)
+plot_overall_metric(
+    "gc_count",
+    overall_results.get("gc_count"),
+    df_by_metric.get("gc_count"),
+    SUMMARY_IMG_GCCOUNT,
+    unit_label="n",
+    title_suffix="speedups & wins (GC count)",
+)
+
 
 def make_dashboard(out_path: str):
     fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
@@ -427,10 +574,12 @@ def make_dashboard(out_path: str):
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
+
 make_dashboard(SUMMARY_IMG_DASH)
 
+
 def speedup_pivot_vs_baseline(scope: pd.DataFrame) -> pd.DataFrame | None:
-    bench_means = (scope.groupby(["bench", "exe"])["value"].mean().reset_index())
+    bench_means = scope.groupby(["bench", "exe"])["value"].mean().reset_index()
 
     have_base = bench_means["bench"].isin(
         bench_means.loc[bench_means["exe"] == BASELINE_EXE, "bench"]
@@ -446,7 +595,14 @@ def speedup_pivot_vs_baseline(scope: pd.DataFrame) -> pd.DataFrame | None:
     speedup = pivot.apply(lambda col: pivot[BASELINE_EXE] / col)
     return speedup
 
-def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, scope: pd.DataFrame | None, out_path: str, title_suffix: str):
+
+def plot_overall_metric_detailed(
+    metric_key: str,
+    summary: pd.DataFrame | None,
+    scope: pd.DataFrame | None,
+    out_path: str,
+    title_suffix: str,
+):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     if summary is None or summary.empty or scope is None or scope.empty:
@@ -457,14 +613,22 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
         plt.close()
         return
 
-    summary = summary.sort_values("geo_mean_speedup_vs_baseline", ascending=True).reset_index(drop=True)
+    summary = summary.sort_values(
+        "geo_mean_speedup_vs_baseline", ascending=True
+    ).reset_index(drop=True)
     exe_order = summary["exe"].tolist()
 
     speedup = speedup_pivot_vs_baseline(scope)
     if speedup is None:
         fig = plt.figure(figsize=(8, 3))
         plt.axis("off")
-        plt.text(0.5, 0.5, f"No baseline to compute speedups for {metric_key}", ha="center", va="center")
+        plt.text(
+            0.5,
+            0.5,
+            f"No baseline to compute speedups for {metric_key}",
+            ha="center",
+            va="center",
+        )
         plt.savefig(out_path, dpi=220, bbox_inches="tight")
         plt.close()
         return
@@ -473,7 +637,13 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
     if not present:
         fig = plt.figure(figsize=(8, 3))
         plt.axis("off")
-        plt.text(0.5, 0.5, f"No overlapping executables for {metric_key}", ha="center", va="center")
+        plt.text(
+            0.5,
+            0.5,
+            f"No overlapping executables for {metric_key}",
+            ha="center",
+            va="center",
+        )
         plt.savefig(out_path, dpi=220, bbox_inches="tight")
         plt.close()
         return
@@ -509,8 +679,16 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
     if dist_rows:
         dist_df = pd.DataFrame(dist_rows)
         sns.boxplot(
-            data=dist_df, x="speedup", y="exe", order=exe_order,
-            dodge=False, width=0.5, showmeans=False, showfliers=False, whis=(0, 100), ax=ax3
+            data=dist_df,
+            x="speedup",
+            y="exe",
+            order=exe_order,
+            dodge=False,
+            width=0.5,
+            showmeans=False,
+            showfliers=False,
+            whis=(0, 100),
+            ax=ax3,
         )
         ax3.set_xlabel("Per-benchmark speedup vs baseline (x)")
 
@@ -525,17 +703,51 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
                 f"median={vals.median():.3f}x  "
                 f"max={vals.max():.3f}x"
             )
-            ax3.text(xmax + 0.01 * (xmax - xmin), j, stats_text,
-                     va="center", ha="left", fontsize=7, color="#333",
-                     clip_on=False)
+            ax3.text(
+                xmax + 0.01 * (xmax - xmin),
+                j,
+                stats_text,
+                va="center",
+                ha="left",
+                fontsize=7,
+                color="#333",
+                clip_on=False,
+            )
     else:
         ax3.axis("off")
-        ax3.text(0.5, 0.5, "No per-benchmark speedup distribution", ha="center", va="center")
+        ax3.text(
+            0.5, 0.5, "No per-benchmark speedup distribution", ha="center", va="center"
+        )
 
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
-plot_overall_metric_detailed("time_ms", overall_results.get("time_ms"), df_by_metric.get("time_ms"), SUMMARY_IMG_TIME.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (time)")
-plot_overall_metric_detailed("bytes", overall_results.get("bytes"), df_by_metric.get("bytes"), SUMMARY_IMG_BYTES.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (allocated bytes)")
-plot_overall_metric_detailed("gc_time_ms", overall_results.get("gc_time_ms"), df_by_metric.get("gc_time_ms"), SUMMARY_IMG_GCTIME.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (GC time)")
-plot_overall_metric_detailed("gc_count", overall_results.get("gc_count"), df_by_metric.get("gc_count"), SUMMARY_IMG_GCCOUNT.replace(".png", "_detailed.png"),title_suffix="GMean | Median | Distribution (GC count)")
+
+plot_overall_metric_detailed(
+    "time_ms",
+    overall_results.get("time_ms"),
+    df_by_metric.get("time_ms"),
+    SUMMARY_IMG_TIME.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (time)",
+)
+plot_overall_metric_detailed(
+    "bytes",
+    overall_results.get("bytes"),
+    df_by_metric.get("bytes"),
+    SUMMARY_IMG_BYTES.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (allocated bytes)",
+)
+plot_overall_metric_detailed(
+    "gc_time_ms",
+    overall_results.get("gc_time_ms"),
+    df_by_metric.get("gc_time_ms"),
+    SUMMARY_IMG_GCTIME.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (GC time)",
+)
+plot_overall_metric_detailed(
+    "gc_count",
+    overall_results.get("gc_count"),
+    df_by_metric.get("gc_count"),
+    SUMMARY_IMG_GCCOUNT.replace(".png", "_detailed.png"),
+    title_suffix="GMean | Median | Distribution (GC count)",
+)
