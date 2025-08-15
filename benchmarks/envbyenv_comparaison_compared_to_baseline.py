@@ -348,12 +348,10 @@ def overall_comparison(df_scope: pd.DataFrame, metric_name: str, outdir: str):
     )
     bench_means = bench_means.loc[have_base].copy()
     if bench_means.empty:
-        print(f"[overall] No benches with baseline for {metric_name}.")
         return None
 
     pivot = bench_means.pivot(index="bench", columns="exe", values="value")
     if BASELINE_EXE not in pivot.columns:
-        print(f"[overall] Baseline '{BASELINE_EXE}' missing for {metric_name}.")
         return None
 
     speedup = pivot.apply(lambda col: pivot[BASELINE_EXE] / col)
