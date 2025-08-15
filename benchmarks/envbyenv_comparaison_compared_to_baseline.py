@@ -113,7 +113,6 @@ def annotate_text_side(ax, y_idx, x_val, label, xmin, xmax):
         clip_on=False,
     )
 
-
 def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True):
     bench_data = df_all[df_all["bench"] == bench]
     if bench_data.empty:
@@ -193,7 +192,6 @@ def plot_metric(df_all, bench, xlabel, value_fmt, save_path, draw_baseline=True)
     fig.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
-
 def save_summaries(df_scope, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     for bench, bdf in df_scope.groupby("bench"):
@@ -226,7 +224,6 @@ def box_no_dots(ax, data, order, xlabel):
     ax.set_xlabel(xlabel)
     ax.set_ylabel("")
     ax.legend([], [], frameon=False)
-
 
 def plot_bench_panel(bench, out_path):
     slices = {}
