@@ -535,31 +535,7 @@ def plot_overall_metric_detailed(metric_key: str, summary: pd.DataFrame | None, 
     plt.savefig(out_path, dpi=220, bbox_inches="tight")
     plt.close()
 
-plot_overall_metric_detailed(
-    "time_ms",
-    overall_results.get("time_ms"),
-    df_by_metric.get("time_ms"),
-    SUMMARY_IMG_TIME.replace(".png", "_detailed.png"),
-    title_suffix="GMean | Median | Distribution (time)"
-)
-plot_overall_metric_detailed(
-    "bytes",
-    overall_results.get("bytes"),
-    df_by_metric.get("bytes"),
-    SUMMARY_IMG_BYTES.replace(".png", "_detailed.png"),
-    title_suffix="GMean | Median | Distribution (allocated bytes)"
-)
-plot_overall_metric_detailed(
-    "gc_time_ms",
-    overall_results.get("gc_time_ms"),
-    df_by_metric.get("gc_time_ms"),
-    SUMMARY_IMG_GCTIME.replace(".png", "_detailed.png"),
-    title_suffix="GMean | Median | Distribution (GC time)"
-)
-plot_overall_metric_detailed(
-    "gc_count",
-    overall_results.get("gc_count"),
-    df_by_metric.get("gc_count"),
-    SUMMARY_IMG_GCCOUNT.replace(".png", "_detailed.png"),
-    title_suffix="GMean | Median | Distribution (GC count)"
-)
+plot_overall_metric_detailed("time_ms", overall_results.get("time_ms"), df_by_metric.get("time_ms"), SUMMARY_IMG_TIME.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (time)")
+plot_overall_metric_detailed("bytes", overall_results.get("bytes"), df_by_metric.get("bytes"), SUMMARY_IMG_BYTES.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (allocated bytes)")
+plot_overall_metric_detailed("gc_time_ms", overall_results.get("gc_time_ms"), df_by_metric.get("gc_time_ms"), SUMMARY_IMG_GCTIME.replace(".png", "_detailed.png"), title_suffix="GMean | Median | Distribution (GC time)")
+plot_overall_metric_detailed("gc_count", overall_results.get("gc_count"), df_by_metric.get("gc_count"), SUMMARY_IMG_GCCOUNT.replace(".png", "_detailed.png"),title_suffix="GMean | Median | Distribution (GC count)")
