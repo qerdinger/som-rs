@@ -5,18 +5,14 @@ import matplotlib.pyplot as plt
 CSV_FILE = "som-rs-5523.csv"
 SEPARATOR = ","
 
-
 # Load csv file
 df = pd.read_csv(CSV_FILE, sep=SEPARATOR)
 
-# Make column names easy to type
 df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-# Ensure numeric
 for col in ["value", "inputsize", "iteration", "invocation"]:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-
 
 time_df = df[
     (df["criterion"].str.lower() == "total") & (df["unit"].str.lower() == "ms")
